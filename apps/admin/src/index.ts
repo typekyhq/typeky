@@ -1,8 +1,9 @@
 /**
- * 后台管理端 —— React + Vite + Tailwind CSS + shadcn/ui 的独立 SPA。
+ * Admin panel -- a standalone SPA built with React + Vite + Tailwind CSS + shadcn/ui.
  *
- * 落地里程碑：M2（脚手架）
- * 形态与边界见 CONTRIBUTING.md §2；必须与站点资产物理隔离。
+ * Milestone: M2 (scaffolding)
+ * Shape and boundaries: CONTRIBUTING.md section 2. It must stay physically
+ * isolated from the site assets.
  */
 
 export {}

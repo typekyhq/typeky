@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * 资产边界断言（CONTRIBUTING.md §3 架构红线）
+ * Asset boundary assertions (CONTRIBUTING.md section 3, red lines 1 / 2 / 6).
  *
- * 在 CI 与本地构建后运行，确保：
- *   1. 站点 Worker 源码未 import @typeky/editor（编辑器只属于后台 SPA）
- *   2. 站点构建产物中不含前端框架 / 编辑器运行时代码
+ * Runs in CI and after local builds to ensure:
+ *   1. The site Worker source never imports @typeky/editor (the editor belongs to the admin SPA).
+ *   2. The site build output contains no frontend framework or editor runtime code.
  *
- * 尚无构建产物时跳过资产扫描，不视为失败。
+ * When no build output exists yet, the asset scan is skipped -- that is not a failure.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -14,14 +14,14 @@ import { join, resolve } from 'node:path'
 const root = resolve(import.meta.dirname, '..')
 const failures = []
 
-/** 去掉注释，避免"说明文字里提到某包名"被误判为真实引用 */
+/** Strip comments so that merely *mentioning* a package name in prose is not flagged. */
 function stripComments(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
 }
 
 /**
- * 只匹配 import / export-from / require / 动态 import 的**说明符**。
- * 说明符一定被引号包裹，因此注释与普通文本不会误命中。
+ * Collect only import / export-from / require / dynamic-import *specifiers*.
+ * Specifiers are always quoted, so comments and prose never match.
  */
 function importedSpecifiers(src) {
   const clean = stripComments(src)
@@ -49,7 +49,7 @@ function walk(dir) {
 
 const FORBIDDEN_FOR_SITE = [/^@typeky\/editor(?:\/|$)/]
 
-// ---- 1. 站点 Worker 不得引用编辑器包 ----
+// ---- 1. The site Worker must not reference the editor package ----
 const siteSrc = join(root, 'apps/site/src')
 let siteFilesScanned = 0
 for (const file of walk(siteSrc)) {
@@ -58,13 +58,13 @@ for (const file of walk(siteSrc)) {
   for (const spec of importedSpecifiers(readFileSync(file, 'utf8'))) {
     for (const re of FORBIDDEN_FOR_SITE) {
       if (re.test(spec)) {
-        failures.push(`站点 Worker 引用了禁止的包：${file} → ${spec}`)
+        failures.push(`site Worker imports a forbidden package: ${file} -> ${spec}`)
       }
     }
   }
 }
 
-// ---- 2. 站点构建产物不得含框架 / 编辑器运行时 ----
+// ---- 2. Site build output must not contain framework or editor runtime ----
 const frameworkSignatures = [
   'react-dom',
   'React.createElement',
@@ -80,19 +80,19 @@ for (const rel of ['public/theme', 'public/static']) {
     assetsScanned++
     const src = readFileSync(file, 'utf8')
     for (const sig of frameworkSignatures) {
-      if (src.includes(sig)) failures.push(`站点资产疑似含框架代码（${sig}）：${file}`)
+      if (src.includes(sig)) failures.push(`site asset looks like framework code (${sig}): ${file}`)
     }
   }
 }
 
 if (failures.length > 0) {
-  console.error('\n资产边界检查失败：')
-  for (const f of failures) console.error(`  ✗ ${f}`)
+  console.error('\nAsset boundary check failed:')
+  for (const f of failures) console.error(`  x ${f}`)
   process.exit(1)
 }
 
 const note =
   assetsScanned === 0
-    ? '（暂无站点构建产物，已跳过资产扫描）'
-    : `（扫描站点源码 ${siteFilesScanned} 个文件、构建产物 ${assetsScanned} 个文件）`
-console.log(`check:boundaries — 通过 ${note}`)
+    ? '(no site build output yet, asset scan skipped)'
+    : `(scanned ${siteFilesScanned} source files and ${assetsScanned} build files)`
+console.log(`check:boundaries -- passed ${note}`)

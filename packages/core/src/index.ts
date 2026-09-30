@@ -1,8 +1,8 @@
 /**
- * @typeky/core —— 逻辑模型、Block JSON 规范、UUIDv7、codec、零依赖 blockToHtml()
+ * @typeky/core -- Domain model, Block JSON spec, UUIDv7, codec, zero-dependency blockToHtml()
  *
- * 落地里程碑：M1
- * 目录划分见 CONTRIBUTING.md §6；架构红线见 §3。
+ * Layout and responsibilities: CONTRIBUTING.md section 6
+ * Architecture red lines: CONTRIBUTING.md section 3
  */
 
 export {}

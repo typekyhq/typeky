@@ -1,2 +1,3 @@
-# 站点与后台构建产物的输出根（见 CONTRIBUTING.md §6）。
-# 保留此占位文件以确保目录存在——wrangler 的 assets.directory 指向它。
+# Build output root for the site and the admin panel (see CONTRIBUTING.md section 6).
+# This placeholder keeps the directory under version control -- wrangler's
+# assets.directory option points here.

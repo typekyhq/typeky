@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# 推送前把关：类型检查 + 资产边界断言
-# 完整检查（含测试）见 CONTRIBUTING.md §7；本钩子刻意只跑快检查，避免拖慢日常推送。
+# Gate before pushing: typecheck plus asset boundary assertions.
+# The full check (including tests) is documented in CONTRIBUTING.md section 7;
+# this hook deliberately runs only the fast checks so everyday pushes stay quick.
 set -euo pipefail
 
-echo "pre-push → pnpm typecheck"
+echo "pre-push -> pnpm typecheck"
 pnpm --silent typecheck
-echo "pre-push → pnpm check:boundaries"
+echo "pre-push -> pnpm check:boundaries"
 pnpm --silent check:boundaries
-echo "pre-push → 通过"
+echo "pre-push -> ok"

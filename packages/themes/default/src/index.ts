@@ -1,8 +1,8 @@
 /**
- * @typeky/theme-default —— 内置主题基线：layouts / templates / snippets / assets
+ * @typeky/theme-default -- Default theme baseline: layouts / templates / snippets / assets
  *
- * 落地里程碑：M1
- * 目录划分见 CONTRIBUTING.md §6；架构红线见 §3。
+ * Layout and responsibilities: CONTRIBUTING.md section 6
+ * Architecture red lines: CONTRIBUTING.md section 3
  */
 
 export {}

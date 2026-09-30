@@ -1,8 +1,8 @@
 /**
- * @typeky/api —— admin JSON API 契约（Zod schema + 类型）
+ * @typeky/api -- Admin JSON API contract (Zod schemas and types)
  *
- * 落地里程碑：M2
- * 目录划分见 CONTRIBUTING.md §6；架构红线见 §3。
+ * Layout and responsibilities: CONTRIBUTING.md section 6
+ * Architecture red lines: CONTRIBUTING.md section 3
  */
 
 export {}

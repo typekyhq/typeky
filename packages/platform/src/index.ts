@@ -1,8 +1,8 @@
 /**
- * @typeky/platform —— StoragePort 定义 + Cloudflare 适配（D1 / R2 / KV / Cache）
+ * @typeky/platform -- StoragePort definition and Cloudflare adapters (D1 / R2 / KV / Cache)
  *
- * 落地里程碑：M1
- * 目录划分见 CONTRIBUTING.md §6；架构红线见 §3。
+ * Layout and responsibilities: CONTRIBUTING.md section 6
+ * Architecture red lines: CONTRIBUTING.md section 3
  */
 
 export {}
