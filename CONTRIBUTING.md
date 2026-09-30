@@ -1,103 +1,103 @@
 # Contributing
 
-感谢你考虑为 Typeky 做贡献。本文件是**工程规则的唯一事实来源**；提交前请至少读完[第 3 节（架构红线）](#3-架构红线code-review-一票否决)与[第 5 节（提交规范）](#5-提交规范)。
+Thanks for considering a contribution to Typeky. This file is the **single source of truth for engineering rules**. Before submitting, please read at least [section 3 (architecture red lines)](#3-architecture-red-lines-vetoed-in-review) and [section 5 (commit conventions)](#5-commit-conventions).
 
-## 1. 项目一句话
+## 1. What this is
 
-面向**个人博客、企业网站与垂直 niche 站**的轻量建站平台：部署到**用户自己的 Cloudflare 账号**，月成本从 $0 起；内容分**页面 / 文章 / 产品**三类；**主题模板可在后台在线编辑，改完即时生效**。
+A lightweight site builder for **personal blogs, business websites and niche sites**: deploy to **your own Cloudflare account** with **$0 monthly cost**; content comes in three types — **pages, posts and products**; **theme templates can be edited right in the admin panel and take effect immediately**.
 
-阶段范围见 [README](README.md) 的路线图。**不在其中的能力请先开 issue 讨论，不要直接动手实现** —— 这个项目刻意保持小范围，避免功能膨胀。
+The current scope is in the [README](README.md#roadmap) roadmap. **Anything not on it should be discussed in an issue first — please do not implement it directly.** The project deliberately stays small to avoid feature sprawl.
 
-## 2. 技术栈（已定，不要替换）
+## 2. Stack (decided, do not substitute)
 
-| 层 | 选型 |
+| Layer | Choice |
 | :---- | :---- |
-| 语言 | TypeScript（`strict`，ESM only） |
-| 站点运行时 | Cloudflare Workers（Hono + LiquidJS 服务端渲染） |
-| 后台运行时 | 浏览器（React + Vite + Tailwind CSS + shadcn/ui，独立 SPA） |
-| 块编辑器 | Tiptap + `@tiptap/react` |
-| 数据库 | Cloudflare D1（SQLite）+ Drizzle |
-| 对象存储 | R2（媒体资产与主题静态资源） |
-| 缓存 / 会话 | KV + Cache API |
-| 包管理 | pnpm workspace（monorepo） |
+| Language | TypeScript (`strict`, ESM only) |
+| Site runtime | Cloudflare Workers (Hono + LiquidJS server-side rendering) |
+| Admin runtime | Browser (React + Vite + Tailwind CSS + shadcn/ui, a separate SPA) |
+| Block editor | Tiptap + `@tiptap/react` |
+| Database | Cloudflare D1 (SQLite) + Drizzle |
+| Object storage | R2 (media assets and theme static assets) |
+| Cache / sessions | KV + Cache API |
+| Package manager | pnpm workspace (monorepo) |
 
-**为什么分两套渲染**：站点侧必须为 SEO、静态缓存与主题契约付出"无框架"的代价；后台侧没有这些约束，却集中了最高的 UI 复杂度。让两侧各自取最优，但**必须物理隔离** —— 这是很多约束的来源。
+**Why two rendering paths.** The site side has to pay the "no framework" price to get SEO, cacheable static output and a readable theme contract. The admin side has none of those constraints but concentrates the highest UI complexity. Each side gets the better tool, and the two **must stay physically isolated** — that isolation is the source of many rules below.
 
-## 3. 架构红线（Code Review 一票否决）
+## 3. Architecture red lines (vetoed in review)
 
-### 3.1 边界
+### 3.1 Boundaries
 
-1. **站点侧**（`apps/site`、`packages/themes/**`、任何模板）引入前端框架（React / Vue / Svelte / Solid / Astro / Next / Nuxt / Remix）、SPA 或状态库，或使用 Hono JSX。
-2. 站点构建产物中出现框架代码，或后台 SPA 被站点路由引用。
-3. 站点 Worker `import` `@typeky/editor`（编辑器只属于后台）。
-4. `packages/*` 中除 `@typeky/platform` 外，直接 `import` Cloudflare 绑定类型（`D1Database`、`R2Bucket`、`KVNamespace`）。
-5. 在路由或 handler 里直接拼 SQL —— 所有数据访问必须经过 `@typeky/db` 的仓储方法。
+1. Introducing a frontend framework (React / Vue / Svelte / Solid / Astro / Next / Nuxt / Remix), a SPA, or a state library into the **site side** (`apps/site`, `packages/themes/**`, any template), or using Hono JSX there.
+2. Frontend framework code appearing in the site build output, or the admin SPA being referenced by a site route.
+3. The site Worker importing `@typeky/editor` (the editor belongs to the admin only).
+4. Any `packages/*` other than `@typeky/platform` importing Cloudflare binding types (`D1Database`, `R2Bucket`, `KVNamespace`) directly.
+5. Building SQL in routes or handlers — all data access must go through the repositories in `@typeky/db`.
 
-### 3.2 内容与模板
+### 3.2 Content and templates
 
-6. 引入自定义内容模型（集合、动态字段、动态表单引擎）—— 内容类型固定为三种。
-7. 允许后台创建**新**模板文件或上传整套主题包 —— 只允许编辑主题既有的模板。
-8. 对用户可控内容使用 `| raw`，或在模板里手拼 `<script>` / JSON-LD。
-9. 把宿主函数、类实例或带 `toValue()` 的对象放进渲染上下文（模板只允许消费纯 JSON 数据）。
-10. 新增自定义 Liquid 标签 / 过滤器时不设限制就开放给可编辑模板。
+6. Introducing a custom content model (collections, dynamic fields, a dynamic form engine) — the content types are fixed at three.
+7. Letting the admin create **new** template files or upload a whole theme package — only editing the theme's existing templates is allowed.
+8. Using `| raw` on user-controlled content, or hand-writing `<script>` / JSON-LD inside a template.
+9. Putting host functions, class instances or anything with `toValue()` into the render context (templates may only consume plain JSON data).
+10. Adding a custom Liquid tag or filter and exposing it to editable templates without limits.
 
-### 3.3 依赖与运行
+### 3.3 Dependencies and runtime
 
-11. 引入 **GPL / AGPL 系**依赖 —— 其传染性会与项目的双许可模式冲突（见 §9）。永久排除的具体项见 §4。
-12. 引入 Redis / Docker / Kubernetes / Nginx / Caddy。
-13. 在单个请求内执行超过 1 秒的数据库事务，或一次性载入超过 50 MB 数据到内存。
-14. 在请求路径中同步调用第三方 API（一律走队列或异步）。
-15. 用 KV 承载会话之外的强一致判断（会话允许存 KV，其余读缓存必须可重建）。
-16. 把模板源码存进 R2 再在渲染时多次读取 —— 模板走 D1 两级查找 + 记忆化。
+11. Introducing a **GPL / AGPL** dependency — its copyleft would conflict with the project's dual-licensing model (see §9). Specific permanent exclusions are in §4.
+12. Introducing Redis / Docker / Kubernetes / Nginx / Caddy.
+13. Running a database transaction longer than 1 second inside a single request, or loading more than 50 MB into memory at once.
+14. Calling third-party APIs synchronously on the request path (use a queue or go async).
+15. Using KV for strong-consistency decisions beyond sessions (sessions may live in KV; all other read caches must be rebuildable).
+16. Storing template sources in R2 and reading them repeatedly at render time — templates go through the two-level D1 lookup plus memoization.
 
-## 4. 代码约定
+## 4. Code conventions
 
-**通用**
+**General**
 
-- TypeScript `strict`；只写 ESM；`verbatimModuleSyntax` 已开启，类型导入必须写 `import type`。
-- 禁用 `any`（用 `unknown` + 收窄）；禁用 `@ts-ignore`（用 `@ts-expect-error` 并写明原因）。
-- 优先具名导出；唯一例外是 Worker 的 `export default`。
-- 文件名 kebab-case；变量/函数 camelCase；类型 PascalCase。
-- 内部包互相引用一律用 workspace 协议：`"@typeky/core": "workspace:*"`。
-- 每个包的公开入口是它的 `src/index.ts`；跨包只从入口导入。
+- TypeScript `strict`; ESM only; `verbatimModuleSyntax` is on, so type imports must use `import type`.
+- No `any` (use `unknown` and narrow); no `@ts-ignore` (use `@ts-expect-error` with a written reason).
+- Prefer named exports; the only exception is a Worker's `export default`.
+- File names kebab-case; variables and functions camelCase; types PascalCase.
+- Reference internal packages through the workspace protocol: `"@typeky/core": "workspace:*"`.
+- Each package's public entry point is its `src/index.ts`; cross-package imports go through the entry point only.
 
-**数据**
+**Data**
 
-- 时间一律 **UTC ISO 8601 字符串**（`YYYY-MM-DDTHH:mm:ss.sssZ`）。
-- 主键一律 **UUIDv7**，由应用层生成（`@typeky/core/id`），不依赖数据库函数。
-- JSON 字段在 D1 中存 TEXT，读写必须经过 `@typeky/core/codec`。
-- 产品价格目前是**文本标签**，不做金额计算。
+- Time is always a **UTC ISO 8601 string** (`YYYY-MM-DDTHH:mm:ss.sssZ`).
+- Primary keys are always **UUIDv7**, generated in the application layer (`@typeky/core/id`), never by a database function.
+- JSON columns are stored as TEXT in D1; all reads and writes go through `@typeky/core/codec`.
+- Product prices are currently **text labels**; no monetary arithmetic is performed.
 
-**依赖**
+**Dependencies**
 
-- 新增依赖前先自问：标准库或已有依赖能否解决？三个包能写完的东西不要引入一个框架。
-- 许可证白名单：**MIT / BSD-2 / BSD-3 / Apache-2.0 / ISC**。其他一律先开 issue 确认。
-- 永久排除：TinyMCE（v7+ 转 GPLv2+，v8 自托管强制许可证密钥）、CKEditor 5（GPLv2 / 商业双授权）、任何 AGPL 依赖。
+- Before adding one, ask: can the standard library or an existing dependency do this? Do not pull in a framework to write what three packages' worth of code covers.
+- License allowlist: **MIT / BSD-2 / BSD-3 / Apache-2.0 / ISC**. Anything else needs an issue first.
+- Permanently excluded: TinyMCE (GPLv2+ since v7, and v8 self-hosting requires a license key), CKEditor 5 (GPLv2 or commercial), and any AGPL dependency.
 
-**注释与文案**
+**Comments and copy**
 
-- 代码注释、内部 JSDoc 用**中文**（本项目的日常工作语言）。
-- 面向用户的字符串（后台界面、错误提示、邮件模板）用**英文**，中文界面属后续需求。
-- 注释解释**为什么**，不复述代码在做什么。
+- All committed content is **English** — code comments, JSDoc, configuration comments and tool messages. The private maintainer notes under `internal/` are the only Chinese content, and they are not committed.
+- Write comments that explain **why**, not what the code already says.
+- User-facing strings (admin UI, error messages, email templates) are English; a Chinese admin locale is a later feature.
 
-**安全**
+**Security**
 
-- 环境变量与密钥绝不硬编码。本地用 `.dev.vars`（已忽略），生产用 `wrangler secret`。
-- 提交前自检：有没有把密钥、`.dev.vars`、构建产物带进去？
+- Never hardcode environment variables or secrets. Locally use `.dev.vars` (gitignored); in production use `wrangler secret`.
+- Before committing, check: did I bring in a secret, `.dev.vars`, or a build artifact?
 
-## 5. 提交规范
+## 5. Commit conventions
 
-> 提交历史是本公开仓库的**开发日志**。任何人都能通过它判断：项目是否在推进、改动方向是否可信、某次行为变更发生在哪一版。因此格式与粒度都是硬要求。
+> The commit log is this public repository's **development journal**. Anyone can use it to judge whether the project is moving, whether changes are credible, and which version introduced a behaviour change. Both format and granularity are therefore hard requirements.
 
-### 5.1 频率：一次「切片」一次提交
+### 5.1 Frequency: one commit per "slice"
 
-- **一次提交 = 一个切片**：一个**能自测通过**的最小增量（约 2 小时工作量）。
-- 预期节奏：**每周 5~7 次提交**。
-- 每个提交必须自洽：`pnpm check` 通过，不留半成品。
-- **禁止攒批**。不要把几天的活攒成一次"大提交"——那会同时毁掉可读性、可回滚性和进度可见性。
-- 里程碑打附注标签：`git tag -a v0.1.0 -m "..."`。
+- **One commit = one slice**: the smallest increment you can **verify yourself** (roughly 2 hours of work).
+- Expected cadence: **5–7 commits per week**.
+- Every commit must be self-consistent: `pnpm check` passes, nothing left half-finished.
+- **No batching.** Do not pile three days of work into one "big commit" — that destroys readability, revertability and progress visibility all at once.
+- Tag milestones with an annotated tag: `git tag -a v0.1.0 -m "..."`.
 
-### 5.2 格式：Conventional Commits
+### 5.2 Format: Conventional Commits
 
 ```
 <type>(<scope>): <subject>
@@ -107,104 +107,104 @@
 <footer>
 ```
 
-| 字段 | 规则 |
+| Field | Rule |
 | :---- | :---- |
 | `type` | `feat` `fix` `refactor` `perf` `test` `docs` `chore` `build` `ci` `revert` |
 | `scope` | `site` `admin` `core` `db` `platform` `theme-kit` `themes` `api` `editor` `scripts` `repo` |
-| `subject` | **英文** · 祈使句 · 小写开头 · 不加句号 · ≤ 72 字符 |
-| `body` | 可选，说明**为什么**这么做（不复述改了什么） |
-| `footer` | 可选：`BREAKING CHANGE:` / `Refs: #12` / `Closes: #12` |
+| `subject` | **English** · imperative · lowercase first letter · no trailing period · ≤ 72 characters |
+| `body` | Optional. Explain **why**, not what changed |
+| `footer` | Optional: `BREAKING CHANGE:` / `Refs: #12` / `Closes: #12` |
 
-破坏性变更在 type 后加 `!`，例如 `feat(core)!: change block json top-level shape`。
+Mark breaking changes with `!` after the type, for example `feat(core)!: change block json top-level shape`.
 
-### 5.3 好与坏
+### 5.3 Good and bad
 
 ```
 ✅ feat(db): add d1 schema for pages posts and products
 ✅ fix(theme-kit): stop caching parsed templates across revisions
 ✅ refactor(core): extract block serializer behind a single entry point
 
-❌ 更新代码                       ← 无 type、无信息量
-❌ feat: 加了数据库                ← subject 必须是英文
-❌ feat(db): Added the schema.     ← 过去式 + 句号
+❌ updated the code                ← no type, no information
+❌ feat: added the database        ← must be imperative, not past tense
+❌ feat(db): Added the schema.     ← past tense + trailing period
 ❌ feat(db): add d1 schema for pages posts and products and media
-                                   ← 超过 72 字符且混了多件事
+                                   ← over 72 characters and mixes several changes
 ```
 
-### 5.4 强制手段
+### 5.4 Enforcement
 
-- `.githooks/commit-msg` 校验上述格式，不合规直接拒绝提交。
-- `.githooks/pre-push` 运行类型检查与资产边界断言。
-- 钩子通过 `core.hooksPath` 启用；根 `package.json` 的 `prepare` 会在安装依赖后自动配置，**新克隆无需手动设置**。
-- 紧急情况可以 `git commit --no-verify`，但不要把不合规的提交推到远端。
+- `.githooks/commit-msg` validates the format above and rejects non-conforming commits.
+- `.githooks/pre-push` runs typechecking and the asset boundary assertions.
+- Hooks are enabled through `core.hooksPath`; the root `package.json` `prepare` script configures it after install, so **a fresh clone needs no manual setup**.
+- In an emergency you may use `git commit --no-verify`, but do not push non-conforming commits to a remote.
 
-### 5.5 分支与标签
+### 5.5 Branches and tags
 
-- 默认**主干开发**：直接提交到 `main`，因为每个提交都要求自洽通过检查。
-- 仅在两类情况开短分支：① 风险较高的重构；② 需要多天完成的特性。
-- 标签用语义化版本：`v0.1.0` 为 MVP 首个可用版本，此后按里程碑递增。
+- **Trunk-based by default**: commit straight to `main`, since every commit is required to pass checks on its own.
+- Open a short-lived branch only for ① risky refactors, or ② features that need several days.
+- Tags follow semantic versioning: `v0.1.0` will be the first usable MVP release, then one per milestone.
 
-## 6. 目录与职责
+## 6. Layout and responsibilities
 
 ```
 apps/
-  site/           站点 Worker —— Hono + LiquidJS + D1/R2/KV；禁止任何前端框架
-  admin/          后台 SPA —— React + Vite + Tailwind + shadcn/ui
+  site/           Site Worker — Hono + LiquidJS + D1/R2/KV; no frontend framework allowed
+  admin/          Admin SPA — React + Vite + Tailwind + shadcn/ui
 packages/
-  core/           逻辑模型、Block JSON 规范、UUIDv7、codec、零依赖 blockToHtml()
-  db/             Drizzle schema（SQLite）与仓储 —— 数据访问的唯一入口
-  platform/       StoragePort 定义与 Cloudflare 适配（D1 / R2 / KV / Cache）
-  theme-kit/      Liquid 运行时、两级模板加载器、自定义过滤器
-  themes/default/ 内置主题基线：layouts / templates / snippets / assets
-  api/            admin JSON API 契约（Zod schema + 类型）
-  design-tokens/  站点与后台共享的 Tailwind 设计变量
-  editor/         块编辑器（Tiptap 封装 + Block JSON 映射）—— 仅后台可引用
-scripts/          代码生成、模板编译、静态检查、资产边界断言
-public/           构建产物输出根（theme / static / admin 三份，均已忽略）
+  core/           Domain model, Block JSON spec, UUIDv7, codec, zero-dependency blockToHtml()
+  db/             Drizzle schema (SQLite) and repositories — the only entry point for data access
+  platform/       StoragePort definition and Cloudflare adapters (D1 / R2 / KV / Cache)
+  theme-kit/      Liquid runtime, two-level template loader, custom filters
+  themes/default/ Default theme baseline: layouts / templates / snippets / assets
+  api/            Admin JSON API contract (Zod schemas and types)
+  design-tokens/  Tailwind design tokens shared by the site and the admin
+  editor/         Block editor (Tiptap wrapper + Block JSON mapping) — admin-only
+scripts/          Code generation, template compilation, static checks, boundary assertions
+public/           Build output root (theme / static / admin; all gitignored)
 ```
 
-**三条关键边界**
+**Three boundaries that matter**
 
-1. `blockToHtml()` 放在 `packages/core` 且**保持零依赖** —— 它是 HTML 的唯一产出点。
-2. 任何 React / Tiptap 依赖只能出现在 `packages/editor` 与 `apps/admin`。
-3. `apps/site` 不得引用 `@typeky/editor`；由 `pnpm check:boundaries` 断言。
+1. `blockToHtml()` lives in `packages/core` and **stays dependency-free** — it is the single place that produces HTML.
+2. Any React / Tiptap dependency may only appear in `packages/editor` and `apps/admin`.
+3. `apps/site` must not import `@typeky/editor`; `pnpm check:boundaries` asserts this.
 
-## 7. 本地开发与验证
+## 7. Local development and verification
 
 ```bash
-pnpm install             # 安装依赖（同时自动启用提交钩子）
-pnpm dev                 # 本地起站点 Worker（wrangler dev）
-pnpm dev:admin           # 本地起后台 SPA
+pnpm install             # install dependencies (also enables the commit hooks)
+pnpm dev                 # start the site Worker (wrangler dev)
+pnpm dev:admin           # start the admin SPA
 
-pnpm typecheck           # 全部 workspace 包类型检查
-pnpm test                # 单元测试（vitest）
-pnpm check:boundaries    # 资产边界断言
-pnpm check               # 以上三者一次跑完 —— 提交前的标准动作
+pnpm typecheck           # typecheck every workspace package
+pnpm test                # unit tests (vitest)
+pnpm check:boundaries    # asset boundary assertions
+pnpm check               # all three at once — the standard pre-commit action
 ```
 
-**提交前的最低要求**：`pnpm check` 通过。
+**Minimum requirement before committing**: `pnpm check` passes.
 
-## 8. 文档
+## 8. Documentation
 
-| 层级 | 位置 | 内容 |
+| Tier | Location | Content |
 | :---- | :---- | :---- |
-| 用户文档 | [`docs/`](docs/) | 部署指南、使用手册、主题开发指南、FAQ |
-| 贡献者文档 | 仓库根 | [README](README.md)、本文件、[CHANGELOG](CHANGELOG.md)、[SECURITY](SECURITY.md)、[LICENSE](LICENSE) |
-| 维护者资料 | 不在本仓库 | 由维护者自行保管，不随仓库分发 |
+| User docs | [`docs/`](docs/) | Deployment guide, user manual, theme development guide, FAQ |
+| Contributor docs | repository root | [README](README.md), this file, [CHANGELOG](CHANGELOG.md), [SECURITY](SECURITY.md), [LICENSE](LICENSE) |
+| Maintainer notes | not in this repository | Kept by the maintainer, never distributed |
 
-规则：
+Rules:
 
-- 公开文档不得出现内部经营数据、未发布的功能承诺、维护者的待办与优先级。
-- 公开文档里的每条命令必须**实际跑过**，做到可复制即用。
-- 中文为主；面向国际贡献者的部分补 `*.en.md`。
+- Public documentation must not contain internal business data, unreleased commitments, or the maintainer's todo list and priorities.
+- Every command in a public document must have been **actually run**, so it is copy-pasteable as-is.
+- Public documentation is **English**. The [README](README.md) also ships a [Chinese version](README.zh-CN.md); other translations use a `*.zh-CN.md` style suffix when needed.
 
-## 9. 贡献者协议（CLA）
+## 9. Contributor License Agreement (CLA)
 
-外部 PR 需要签署贡献者协议，将贡献的版权授权给项目方 —— 这样项目才能同时以 AGPLv3 提供开源版本、并以商业许可提供白标授权。没有这一步，双许可模式在法律上无法成立。
+External pull requests require signing a Contributor License Agreement that assigns the contribution's copyright to the project. That is what allows the project to offer both an AGPLv3 build and a commercial white-label license; without it, the dual-licensing model cannot stand up legally.
 
-签署流程会在正式发布前接入（自动化 CLA 校验），当前阶段提交 PR 时维护者会与你确认。
+The signing flow (automated CLA checks) will land before the public launch. Until then the maintainer will confirm with you in the pull request.
 
-## 10. 报告问题
+## 10. Reporting issues
 
-- **功能缺陷 / 功能建议**：开 issue，附上复现步骤或使用场景。
-- **安全漏洞**：请**不要**开公开 issue，按 [SECURITY.md](SECURITY.md) 的渠道私下报告。
+- **Bugs and feature requests**: open an issue with reproduction steps or the use case.
+- **Security vulnerabilities**: do **not** open a public issue. Report privately via the channel described in [SECURITY.md](SECURITY.md).

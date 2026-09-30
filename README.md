@@ -1,58 +1,61 @@
 # Typeky
 
-面向**个人博客、企业网站与垂直 niche 站**的轻量建站平台。
+A lightweight site builder for **personal blogs, business websites and niche sites**.
 
-把站点部署到**你自己的 Cloudflare 账号**，月成本从 **$0** 起；内容分**页面 / 文章 / 产品**三类；**主题模板可以在后台直接编辑，改完即时生效**。
+Deploy to **your own Cloudflare account** with **$0 monthly cost**. Content comes in three types — **pages, posts and products**. **Theme templates can be edited right in the admin panel and take effect immediately.**
 
-> **状态：开发中（v1 MVP）**。当前仓库是刚打好的工程骨架，**还不能用于实际建站**。
-> 进度可以直接看提交历史；每个里程碑会在 [CHANGELOG](CHANGELOG.md) 中登记。
+> **Status: early development.** This repository is a working skeleton; the product is **not yet usable**.
+> Progress lives in the commit log; each milestone is recorded in the [CHANGELOG](CHANGELOG.md).
+
+**English** | [简体中文](README.zh-CN.md)
 
 ---
 
-## 为什么需要它
+## Why another site builder
 
-现有选择各有硬伤：
+Every existing option has a sharp edge:
 
-| 现状 | 问题 |
+| Option | Problem |
 | :---- | :---- |
-| WordPress | 要维护服务器、PHP 环境与插件更新，安全补丁不断 |
-| Wix / Squarespace | 月费不低，且**改不了底层模板**，被平台绑死 |
-| Hugo / Astro 等静态生成器 | 快、便宜，但**对非技术用户门槛太高**，改一次版式就要动代码 |
-| Notion 类工具 | 写东西舒服，但**没有真正的 SEO 与主题体系**，做不了正经站点 |
+| WordPress | You maintain a server, a PHP runtime and a plugin tree that keeps sprouting security patches |
+| Wix / Squarespace | Monthly fees, and **you cannot touch the underlying templates** — the platform owns your site's structure |
+| Hugo / Astro and friends | Fast and cheap, but **too technical for non-developers**: changing a layout means editing code |
+| Notion-style tools | Pleasant to write in, but **no real SEO and no theme system** — they cannot host a serious website |
 
-Typeky 想做的是这三者的交集：**零服务器的托管成本 + 真正可编辑的模板 + 开箱的 SEO**。
+Typeky aims at the intersection of those three: **serverless hosting cost + genuinely editable templates + SEO out of the box**.
 
-## 目标用户
+## Who it is for
 
-- **个人博客 / 独立作者** —— 不想付主机月费，又希望能自己调版式
-- **企业官网 / 工作室** —— 快速上线，产品与服务能展示，后续自己能改
-- **niche 站长** —— 极低边际成本、多站复制、SEO 资产可迁移
+- **Personal blogs / independent writers** — no hosting bill, but still able to reshape the layout
+- **Business sites / studios** — get online quickly, showcase products and services, stay able to edit it later yourself
+- **Niche site operators** — near-zero marginal cost, reusable across many sites, portable SEO assets
 
-## 规划中的能力
+## Planned capabilities
 
-| 能力 | 说明 |
+| Capability | Description |
 | :---- | :---- |
-| 三种内容类型 | 页面、文章、产品（展示型：图集、规格、价格标签、外链按钮） |
-| 块级编辑器 | 段落 / 标题 / 列表 / 引用 / 代码 / 图片 / 视频 / 分隔线 / 行动号召；输出结构化 JSON 而非脏 HTML |
-| **主题模板在线编辑** | 后台直接改 `templates/*`、`snippets/*`、`layouts/*`；保存前服务端校验并定位错误行；支持草稿预览与一键还原默认 |
-| 媒体库 | 直传对象存储，网格浏览、检索、引用检查 |
-| SEO | Slug 与 301、canonical、`sitemap.xml`、`robots.txt`、OpenGraph、JSON-LD |
-| 部署 | 一键部署到空白 Cloudflare 账号；**数据完全在你自己的账号里** |
+| Three content types | Pages, posts, and products (showcase-only: gallery, specs, price label, outbound CTA) |
+| Block editor | Paragraph, heading, list, quote, code, image, video, divider, call-to-action. Stores structured JSON, never dirty HTML |
+| **Online theme editing** | Edit `templates/*`, `snippets/*` and `layouts/*` in the admin panel; server-side validation with error line numbers; draft preview; one-click reset to default |
+| Media library | Direct-to-object-storage upload, grid browsing, search, reference checking |
+| SEO | Slugs with 301 redirects, canonical URLs, `sitemap.xml`, `robots.txt`, OpenGraph, JSON-LD |
+| Deployment | One-click deploy to an empty Cloudflare account. **Your data stays in your own account** |
 
-**技术上怎么做到 $0**：站点运行在 Cloudflare Workers，数据在 D1，媒体在 R2，缓存与会话在 KV —— 全部走 Cloudflare 的免费额度（个人博客与企业站通常远用不到上限）。你只需要一个自己的 Cloudflare 账号。
+## How $0 works
 
-## 技术栈
+The site runs entirely on Cloudflare's free tier: Workers for rendering, D1 for structured data, R2 for media, KV for cache and sessions. A personal blog or a business site normally stays far below the free limits. All you need is your own Cloudflare account.
+
+## Stack
 
 TypeScript · Cloudflare Workers · [Hono](https://hono.dev) · [LiquidJS](https://liquidjs.com) · React + Vite + Tailwind CSS + [shadcn/ui](https://ui.shadcn.com) · [Tiptap](https://tiptap.dev) · D1 / R2 / KV
 
-**设计取舍**：面向买家的**公开站点不用任何前端框架**，只做服务端渲染 —— 这是为了 SEO、可缓存的静态输出，以及让主题模板保持为一个普通人也能读懂的格式（Liquid）。前端框架与组件库只用在**后台管理端**，两侧代码与产物严格隔离。
+**A deliberate split.** The customer-facing site uses **no frontend framework** — server-rendered Liquid only. That buys SEO, cacheable static output, and theme templates that are readable by non-developers. Frontend frameworks and a component library are confined to the **admin panel**, with strictly isolated build outputs. See [CONTRIBUTING](CONTRIBUTING.md#2-stack-decided-do-not-substitute) for the reasoning.
 
-## 快速开始
+## Quick start
 
-> ⚠️ 尚未可用。以下为计划中的流程，M6 完成后本文档会替换为经过实跑验证的步骤。
+> ⚠️ Not usable yet. The steps below are the intended flow; this section will be replaced with a verified, copy-pasteable guide once the renderer is done.
 
 ```bash
-# 计划中的形态（当前还不能用）
 git clone <repo>
 pnpm install
 pnpm --filter @typeky/site exec wrangler d1 create typeky
@@ -61,60 +64,48 @@ pnpm --filter @typeky/site exec wrangler kv namespace create CACHE
 pnpm --filter @typeky/site deploy
 ```
 
-## 本地开发
+## Local development
 
 ```bash
-pnpm install          # 安装依赖（同时自动启用提交钩子）
-pnpm dev              # 起站点 Worker（wrangler dev）
-pnpm dev:admin        # 起后台 SPA
+pnpm install          # install dependencies (also enables the commit hooks)
+pnpm dev              # start the site Worker (wrangler dev)
+pnpm dev:admin        # start the admin SPA
 
-pnpm check            # 类型检查 + 测试 + 资产边界断言，提交前跑这个
+pnpm check            # typecheck + tests + asset boundary assertions
 ```
 
-贡献前请读 [CONTRIBUTING.md](CONTRIBUTING.md)——里面有架构红线、代码约定与提交规范。
+Read [CONTRIBUTING](CONTRIBUTING.md) before opening a pull request — it holds the architecture red lines and the commit conventions.
 
-## 路线图
+## Roadmap
 
-| 阶段 | 内容 | 状态 |
+| Milestone | Scope | Status |
 | :---- | :---- | :---- |
-| M1 | 工程骨架、数据模型、Liquid 运行时 | 进行中 |
-| M2 | 后台管理端与登录 | 待开始 |
-| M3 | 块编辑器 | 待开始 |
-| M4 | 三种内容类型的增删改查与媒体库 | 待开始 |
-| M5 | **主题模板在线编辑** | 待开始 |
-| M6 | 前台渲染与 SEO | 待开始 |
-| M7 | 白标授权、一键部署、MVP 发布 | 待开始 |
+| M1 | Monorepo skeleton, data model, Liquid runtime | in progress |
+| M2 | Admin panel and authentication | planned |
+| M3 | Block editor | planned |
+| M4 | CRUD for the three content types, media library | planned |
+| M5 | **Online theme editing** | planned |
+| M6 | Site rendering and SEO | planned |
+| M7 | White-label licensing, one-click deploy, MVP release | planned |
 
-## 许可
+## License
 
-**AGPLv3** —— 详见 [LICENSE](LICENSE)。
+**AGPLv3** — see [LICENSE](LICENSE).
 
-使用、修改、自部署都免费，但**网络服务提供者必须按 AGPLv3 开放修改后的源码**。这条封死了"把开源核心包装成商业云服务"的路径。
+Free to use, modify and self-host, but **network service providers must release their modifications under AGPLv3**. This closes the door on wrapping the open core into a proprietary hosted service.
 
-作为交换，免费使用需要保留页脚的 `Powered by Typeky` 署名与有效反向链接；如果你要把站点作为自己的品牌交付，可以购买**白标授权**移除全部官方署名（价格见官网）。
+In exchange, free usage requires keeping the `Powered by Typeky` footer attribution and a working backlink. If you are delivering the site under your own brand, a **white-label license** removes all official attribution (pricing on the website).
 
-## 参与贡献
+## Contributing
 
-欢迎 issue 与 PR。提交前请确认：
+Issues and pull requests are welcome. Before submitting:
 
-- 读过 [CONTRIBUTING.md](CONTRIBUTING.md) 的架构红线与提交规范
-- `pnpm check` 通过
-- 提交信息符合 `<type>(<scope>): <subject>` 格式（钩子会自动校验）
+- Read the architecture red lines and commit conventions in [CONTRIBUTING](CONTRIBUTING.md)
+- Run `pnpm check`
+- Follow the `<type>(<scope>): <subject>` commit format (a hook enforces it)
 
-外部 PR 需要签署贡献者协议（CLA），以保证项目可以继续维护双许可模式。相关文档将在 M7 补充。
+External pull requests require signing a Contributor License Agreement (CLA) so the project can keep offering both the AGPLv3 build and the commercial white-label license. See [CONTRIBUTING §9](CONTRIBUTING.md#9-contributor-license-agreement-cla).
 
----
+## Security
 
-## English Summary
-
-**Typeky** is a lightweight site builder for personal blogs, business websites and niche sites.
-
-Deploy to **your own Cloudflare account** with **$0 monthly cost**; content comes in three fixed types (pages, posts, products); **theme templates can be edited right in the admin panel and take effect immediately**.
-
-Stack: TypeScript · Cloudflare Workers · Hono · LiquidJS · React + Vite + Tailwind + shadcn/ui · Tiptap · D1 / R2 / KV.
-
-The customer-facing site deliberately uses **no frontend framework** — server-rendered Liquid only — for SEO, cacheable static output, and readable theme templates. Frameworks are confined to the admin SPA, with strictly isolated build outputs.
-
-**Status: early development.** The repo is a working skeleton; the product is not yet usable. See the commit log and [CHANGELOG](CHANGELOG.md) for progress.
-
-Licensed under **AGPLv3**. Free to use and self-host, but network service providers must release their modifications under AGPLv3. Free usage requires keeping the `Powered by Typeky` attribution; a white-label license removes it.
+Please **do not** open a public issue for vulnerabilities. See [SECURITY](SECURITY.md) for the private reporting channel.

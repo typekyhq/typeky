@@ -1,31 +1,31 @@
 # Security Policy
 
-## 报告漏洞
+## Reporting a vulnerability
 
-**请不要开公开 issue。** 请通过 [GitHub 的私密漏洞报告](../../security/advisories/new) 提交。
+**Please do not open a public issue.** Report it through [GitHub's private vulnerability reporting](../../security/advisories/new).
 
-报告里请尽量包含：受影响的提交或版本、复现步骤、影响范围，以及你希望的署名方式。
+Please include: the affected commit or version, reproduction steps, the impact you believe it has, and how you would like to be credited.
 
-## 响应预期
+## What to expect
 
-- 收到后 3 个工作日内确认
-- 修复后会在 [CHANGELOG](CHANGELOG.md) 中说明，并在可能的范围内致谢报告者
-- 在修复发布前，请勿公开细节
+- Acknowledgement within 3 business days
+- A note in the [CHANGELOG](CHANGELOG.md) once fixed, with credit to the reporter where possible
+- Please keep the details private until a fix is released
 
-## 值得关注的问题类型
+## What we care about most
 
-本项目是**自部署软件**：站点数据存储在部署者**自己的 Cloudflare 账号**内，项目方不持有任何用户数据。因此以下问题优先级最高：
+This is **self-hosted software**: site data lives in the deployer's **own Cloudflare account**, and the project does not hold any user data. The highest-priority issues are therefore:
 
-| 类型 | 说明 |
+| Category | Description |
 | :---- | :---- |
-| 模板渲染沙箱绕过 | 导致任意代码执行、越权读取，或资源耗尽（渲染限额失效） |
-| 资产边界失效 | 站点构建产物中混入前端框架代码或编辑器运行时 |
-| 后台鉴权 / CSRF 绕过 | 未授权访问管理接口 |
-| 模板校验绕过 | 绕过保存前的服务端预编译校验 |
-| 依赖供应链 | 引入的依赖被投毒或存在已知高危漏洞 |
+| Template sandbox escape | Arbitrary code execution, privilege escalation, or resource exhaustion (render limits bypassed) |
+| Asset boundary failure | Frontend framework code or editor runtime leaking into the site build output |
+| Admin auth / CSRF bypass | Unauthorized access to administrative endpoints |
+| Template validation bypass | Getting an invalid template saved despite server-side compilation checks |
+| Supply chain | A dependency that is compromised or carries a known high-severity vulnerability |
 
-## 不在范围内
+## Out of scope
 
-- 需要攻击者已完全控制部署者 Cloudflare 账号的攻击场景
-- 部署者自行修改源码或配置引入的问题
-- 纯理论性、无可复现步骤的报告
+- Attacks that require an attacker to already fully control the deployer's Cloudflare account
+- Issues introduced by deployers modifying the source or configuration themselves
+- Purely theoretical reports without reproduction steps
