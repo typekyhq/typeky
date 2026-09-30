@@ -1,0 +1,28 @@
+{
+  "name": "typeky",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
+    "dev": "pnpm --filter @typeky/site dev",
+    "dev:site": "pnpm --filter @typeky/site dev",
+    "dev:admin": "pnpm --filter @typeky/admin dev",
+    "types": "pnpm --filter @typeky/site types",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "build": "pnpm -r --if-present build",
+    "test": "vitest run --passWithNoTests",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check": "pnpm typecheck && pnpm test && pnpm check:boundaries"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2",
+    "wrangler": "^4.143.1"
+  }
+}

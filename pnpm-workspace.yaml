@@ -1,0 +1,14 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'packages/themes/*'
+
+# pnpm 10+ 默认禁止依赖执行构建脚本（供应链安全策略），需显式放行。
+# 以下两个必须允许——它们要下载并安装各自的二进制，否则 wrangler dev 与
+# vitest 都无法启动：
+#   esbuild  —— vitest / vite 的打包器
+#   workerd  —— wrangler 的本地 Workers 运行时
+# 注：pnpm 12 的键名是 allowBuilds（映射）；旧版是 onlyBuiltDependencies（数组）。
+allowBuilds:
+  esbuild: true
+  workerd: true

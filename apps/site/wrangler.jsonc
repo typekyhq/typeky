@@ -1,0 +1,26 @@
+{
+  // 首次使用前需创建资源（id 填入下面的注释块后取消注释）：
+  //   pnpm --filter @typeky/site exec wrangler d1 create typeky
+  //   pnpm --filter @typeky/site exec wrangler r2 bucket create typeky-media
+  //   pnpm --filter @typeky/site exec wrangler kv namespace create CACHE
+  //
+  // "d1_databases": [{ "binding": "DB", "database_name": "typeky", "database_id": "<D1_ID>" }],
+  // "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "typeky-media" }],
+  // "kv_namespaces": [{ "binding": "CACHE", "id": "<KV_ID>" }],
+
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "typeky",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // 站点与后台的构建产物统一落在仓库根 public/ 下（见 CONTRIBUTING.md §6）
+  "assets": {
+    "directory": "../../public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "vars": { "APP_ENV": "development" }
+}
