@@ -97,6 +97,27 @@ The current scope is in the [README](README.md#roadmap) roadmap. **Anything not 
 - **No batching.** Do not pile three days of work into one "big commit" — that destroys readability, revertability and progress visibility all at once.
 - Tag milestones with an annotated tag: `git tag -a v0.1.0 -m "..."`.
 
+**Push cadence**
+
+- **Push at the end of every working day**, after that evening's last commit. The remote is the off-machine backup: a dead disk should cost at most one day of work.
+- If a day produced several commits, push them together. That is *not* batching — the commits stay separate in the log, only the transfer is batched.
+- **Push immediately** after anything that would be painful to reconstruct (a risky refactor, a schema migration), and **always at the end of a weekend session**.
+- At a milestone, use `git push --follow-tags` so the annotated tag travels with the release commit.
+- Never push a state where `pnpm check` fails — the `pre-push` hook runs typechecking and the boundary assertions to enforce this.
+- Once a remote exists and others may have pulled from it, **never force-push `main`**.
+
+In short: **5–7 commits and 5–6 pushes per week.**
+
+**The daily ritual**
+
+```bash
+pnpm check                                     # must pass
+git add -A && git commit -m "feat(db): ..."     # one slice, one commit
+git push                                       # end of the working day
+```
+
+`.githooks/post-commit` prints a reminder when a commit lands inside the late-evening window (22:00–04:00 by default) and anything is still uncommitted or unpushed. It stays silent during working hours and once everything is pushed — tune the window with `TYPEKY_REMIND_FROM` / `TYPEKY_REMIND_UNTIL`.
+
 ### 5.2 Format: Conventional Commits
 
 ```
@@ -134,6 +155,7 @@ Mark breaking changes with `!` after the type, for example `feat(core)!: change 
 ### 5.4 Enforcement
 
 - `.githooks/commit-msg` validates the format above and rejects non-conforming commits.
+- `.githooks/post-commit` prints an end-of-day reminder when work is left uncommitted or unpushed.
 - `.githooks/pre-push` runs typechecking and the asset boundary assertions.
 - Hooks are enabled through `core.hooksPath`; the root `package.json` `prepare` script configures it after install, so **a fresh clone needs no manual setup**.
 - In an emergency you may use `git commit --no-verify`, but do not push non-conforming commits to a remote.
