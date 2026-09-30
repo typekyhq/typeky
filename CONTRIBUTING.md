@@ -116,7 +116,7 @@ git add -A && git commit -m "feat(db): ..."     # one slice, one commit
 git push                                       # end of the working day
 ```
 
-`.githooks/post-commit` prints a reminder when a commit lands inside the late-evening window (22:00–04:00 by default) and anything is still uncommitted or unpushed. It stays silent during working hours and once everything is pushed — tune the window with `TYPEKY_REMIND_FROM` / `TYPEKY_REMIND_UNTIL`.
+`pnpm check` is the gate; the two hooks in `.githooks/` cover format validation (`commit-msg`) and pre-push verification (`pre-push`).
 
 ### 5.2 Format: Conventional Commits
 
@@ -155,7 +155,6 @@ Mark breaking changes with `!` after the type, for example `feat(core)!: change 
 ### 5.4 Enforcement
 
 - `.githooks/commit-msg` validates the format above and rejects non-conforming commits.
-- `.githooks/post-commit` prints an end-of-day reminder when work is left uncommitted or unpushed.
 - `.githooks/pre-push` runs typechecking and the asset boundary assertions.
 - Hooks are enabled through `core.hooksPath`; the root `package.json` `prepare` script configures it after install, so **a fresh clone needs no manual setup**.
 - In an emergency you may use `git commit --no-verify`, but do not push non-conforming commits to a remote.
