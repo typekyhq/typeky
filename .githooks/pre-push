@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# 推送前把关：类型检查 + 资产边界断言
+# 完整检查（含测试）见 CONTRIBUTING.md §7；本钩子刻意只跑快检查，避免拖慢日常推送。
+set -euo pipefail
+
+echo "pre-push → pnpm typecheck"
+pnpm --silent typecheck
+echo "pre-push → pnpm check:boundaries"
+pnpm --silent check:boundaries
+echo "pre-push → 通过"

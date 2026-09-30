@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# 提交信息校验 —— 规则与示例见 CONTRIBUTING.md §5
+# 紧急情况可用 git commit --no-verify 跳过，但不要把不合规提交推到远端。
+set -uo pipefail
+
+msg_file="${1:-}"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+
+subject="$(head -n1 "$msg_file")"
+
+# 放行自动生成的提交
+case "$subject" in
+  Revert\ *|Merge\ *|fixup!\ *|squash!\ *) exit 0 ;;
+esac
+
+types='feat|fix|refactor|perf|test|docs|chore|build|ci|revert'
+scopes='site|admin|core|db|platform|theme-kit|themes|api|editor|scripts|repo'
+
+errors=()
+
+if ! printf '%s' "$subject" | grep -Eq "^(${types})(\((${scopes})\))?!?: "; then
+  errors+=("格式不符：应为 <type>(<scope>): <subject>")
+else
+  body="${subject#*: }"
+  printf '%s' "$body" | grep -Eq '^[a-z]' || errors+=("subject 需小写开头 → '$body'")
+  case "$body" in *.) errors+=("subject 结尾不要加句号") ;; esac
+  if printf '%s' "$body" | LC_ALL=C grep -q '[^ -~]'; then
+    errors+=("subject 请用英文（body 可用中文）→ '$body'")
+  fi
+  [ "${#subject}" -le 72 ] || errors+=("subject 超过 72 字符（当前 ${#subject}）")
+fi
+
+if [ ${#errors[@]} -gt 0 ]; then
+  printf '\n  ✗ 提交信息不符合规范：\n' >&2
+  for e in "${errors[@]}"; do printf '      · %s\n' "$e" >&2; done
+  cat >&2 <<'USAGE'
+
+  格式：<type>(<scope>): <subject>
+    type      feat | fix | refactor | perf | test | docs | chore | build | ci | revert
+    scope     site | admin | core | db | platform | theme-kit | themes | api | editor | scripts | repo
+    subject   英文 · 祈使句 · 小写开头 · 不加句号 · ≤ 72 字符
+
+  示例：
+    feat(db): add d1 schema for pages posts and products
+    fix(theme-kit): stop caching parsed templates across revisions
+
+  规则见 CONTRIBUTING.md §5。跳过：git commit --no-verify
+USAGE
+  exit 1
+fi
+
+exit 0
