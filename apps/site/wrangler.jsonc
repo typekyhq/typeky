@@ -4,9 +4,21 @@
   //   pnpm --filter @typeky/site exec wrangler r2 bucket create typeky-media
   //   pnpm --filter @typeky/site exec wrangler kv namespace create CACHE
   //
-  // "d1_databases": [{ "binding": "DB", "database_name": "typeky", "database_id": "<D1_ID>" }],
   // "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "typeky-media" }],
   // "kv_namespaces": [{ "binding": "CACHE", "id": "<KV_ID>" }],
+
+  // The binding, database name and migrations directory are final. Only the
+  // placeholder id has to be replaced, with the value printed by
+  // `wrangler d1 create typeky`, before the first deploy. Local development
+  // (`wrangler dev`, `d1 migrations apply --local`, `pnpm seed`) never reads it.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "typeky",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
 
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "typeky",

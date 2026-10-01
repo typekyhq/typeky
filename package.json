@@ -17,10 +17,16 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm -r --if-present build",
     "test": "vitest run --passWithNoTests",
+    "db:generate": "tsx packages/db/scripts/schema.ts generate",
+    "check:schema-drift": "tsx packages/db/scripts/schema.ts check",
+    "db:migrate": "wrangler d1 migrations apply DB --local --config apps/site/wrangler.jsonc",
+    "seed": "tsx packages/db/scripts/seed.ts",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "check": "pnpm typecheck && pnpm test && pnpm check:boundaries"
+    "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm check:boundaries"
   },
   "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2",
     "wrangler": "^4.143.1"

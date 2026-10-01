@@ -34,6 +34,11 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Fails when the generated Drizzle schema or the DDL migration no longer
+      # matches packages/core/src/model (architecture section 5.1).
+      - name: Schema drift
+        run: pnpm check:schema-drift
+
       # Asserts the site side stays free of frontend framework code and that the
       # site Worker never imports the editor package (CONTRIBUTING section 3).
       - name: Asset boundaries

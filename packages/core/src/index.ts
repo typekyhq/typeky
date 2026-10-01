@@ -5,4 +5,4 @@
  * Architecture red lines: CONTRIBUTING.md section 3
  */
 
-export {}
+export * from './model'
