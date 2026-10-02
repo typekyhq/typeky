@@ -1,5 +1,5 @@
 {% layout 'layouts/base' %}
 <article class="prose">
   <h1>{{ content.title }}</h1>
-  {{ blocks_html }}
+  {{ content.blocks | render_blocks }}
 </article>

@@ -25,6 +25,14 @@ export interface RawFilter {
 export interface PlatformFilterOptions {
   /** Asset path prefix. Normalised to start and end with a slash. */
   assetBasePath: string
+  /**
+   * Absolute prefix for site paths, for example `https://example.com`.
+   *
+   * Empty leaves them relative, which is what a preview wants: the preview runs
+   * on the admin's origin and must not hand out links to the attacker's
+   * `https://` if the site has not been configured yet.
+   */
+  baseUrl?: string
   /** ISO 4217 code for `money`. */
   currency: string
   /** Locale used to format `money`. Pinned so output is deterministic. */
@@ -80,5 +88,27 @@ export function createPlatformFilters(
     },
   }
 
-  return { asset_url: assetUrl, money, t: translate, render_blocks: renderBlocks }
+  /**
+   * A site path made absolute.
+   *
+   * The counterpart to `asset_url` for links rather than files, and the reason
+   * it exists is that templates need to know the site's own origin: a canonical
+   * URL or an Open Graph URL that is relative is not one.
+   *
+   * Anything already absolute, or not a path at all, is returned untouched --
+   * including protocol-relative `//host` and `#anchor`. A link a theme wrote in
+   * full is not the platform's to rewrite.
+   */
+  const siteUrl: FilterHandler = (value) => {
+    const path = String(value ?? '')
+    if (path === '') return ''
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(path) || path.startsWith('//') || path.startsWith('#')) {
+      return path
+    }
+
+    const base = (options.baseUrl ?? '').replace(/\/+$/, '')
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`
+  }
+
+  return { asset_url: assetUrl, url: siteUrl, money, t: translate, render_blocks: renderBlocks }
 }

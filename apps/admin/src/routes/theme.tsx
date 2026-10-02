@@ -57,6 +57,9 @@ export function ThemeSection() {
   const [saved, setSaved] = useState<string | null>(null)
   const [problem, setProblem] = useState<{ message: string; line: number | null } | null>(null)
   const [saving, setSaving] = useState(false)
+  const [view, setView] = useState<'source' | 'preview'>('source')
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
+  const [previewing, setPreviewing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -88,6 +91,8 @@ export function ThemeSection() {
     setSource(null)
     setSaved(null)
     setProblem(null)
+    setView('source')
+    setPreviewHtml(null)
 
     try {
       const template = await client.getThemeTemplate(path)
@@ -96,6 +101,35 @@ export function ThemeSection() {
     } catch (thrown) {
       toast.error(describeApiError(thrown))
       setOpenPath(null)
+    }
+  }
+
+  /**
+   * Renders the current source, saved or not.
+   *
+   * The server does the rendering, through the same loader the site uses, so the
+   * frame shows what the page would be -- a client-side approximation would be
+   * prettier and wrong.
+   */
+  async function preview() {
+    if (openPath === null || source === null) return
+
+    setPreviewing(true)
+    setProblem(null)
+
+    try {
+      const result = await client.previewThemeTemplate(openPath, source)
+      setPreviewHtml(result.html)
+      setView('preview')
+    } catch (thrown) {
+      if (thrown instanceof ApiError && thrown.serverMessage !== undefined) {
+        setProblem({ message: thrown.serverMessage, line: thrown.line ?? null })
+        setView('source')
+      } else {
+        toast.error(describeApiError(thrown))
+      }
+    } finally {
+      setPreviewing(false)
     }
   }
 
@@ -215,13 +249,59 @@ export function ThemeSection() {
                   </p>
                 )}
 
-                <TemplateEditorSurface
-                  key={openPath ?? 'none'}
-                  initialSource={source}
-                  onChange={setSource}
-                  errorLine={problem?.line ?? null}
-                  autoFocus
-                />
+                <div className="flex gap-2" role="group" aria-label="Editor view">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={view === 'source' ? 'default' : 'outline'}
+                    aria-pressed={view === 'source'}
+                    onClick={() => setView('source')}
+                  >
+                    Source
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={view === 'preview' ? 'default' : 'outline'}
+                    aria-pressed={view === 'preview'}
+                    disabled={previewing}
+                    onClick={() => void preview()}
+                  >
+                    {previewing ? 'Rendering…' : 'Preview'}
+                  </Button>
+                </div>
+
+                {view === 'preview' ? (
+                  previewHtml === null ? (
+                    <LoadingState label="Rendering the preview" />
+                  ) : (
+                    /*
+                     * Fully sandboxed: no scripts, and no same-origin either.
+                     *
+                     * The frame renders a page the operator wrote, and an empty
+                     * sandbox means even a mistake in it cannot reach the admin's
+                     * session, its storage or its DOM. The cost is that relative
+                     * assets do not resolve, so the preview is unstyled until the
+                     * theme ships stylesheets -- which is a fair trade for a
+                     * preview that cannot affect anything.
+                     */
+                    <iframe
+                      title="Template preview"
+                      sandbox=""
+                      srcDoc={previewHtml}
+                      className="h-[60vh] w-full rounded-md border bg-white"
+                      data-testid="template-preview"
+                    />
+                  )
+                ) : (
+                  <TemplateEditorSurface
+                    key={openPath ?? 'none'}
+                    initialSource={source}
+                    onChange={setSource}
+                    errorLine={problem?.line ?? null}
+                    autoFocus
+                  />
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">

@@ -19,6 +19,15 @@ export interface TemplateLoaderOptions {
   theme: string
   /** Bundled templates: normalised name to source. */
   baseline: Record<string, string>
+  /**
+   * One unsaved template that takes precedence over both the stored override and
+   * the baseline.
+   *
+   * The preview's mechanism, and the reason it belongs here rather than in a
+   * separate loader: a preview that resolved names by a different path would be
+   * answering a different question than the one the site will answer.
+   */
+  draft?: { path: string; source: string }
   /** Section 3.7 caps overrides at 200 templates and 1 MB of source. */
   maxOverrides?: number
   maxOverrideBytes?: number
@@ -61,6 +70,7 @@ export function createTemplateLoader(options: TemplateLoaderOptions): TemplateLo
   const maxOverrides = options.maxOverrides ?? DEFAULT_MAX_OVERRIDES
   const maxOverrideBytes = options.maxOverrideBytes ?? DEFAULT_MAX_OVERRIDE_BYTES
   const baseline = options.baseline
+  const draft = options.draft
 
   let revision = 1
   let loadedRevision = -1
@@ -113,6 +123,11 @@ export function createTemplateLoader(options: TemplateLoaderOptions): TemplateLo
 
   async function read(name: string): Promise<string> {
     const key = toKey(name)
+
+    // The draft wins over both, which is what makes a preview honest: the editor
+    // is showing a version of this file that is not stored yet.
+    if (draft !== undefined && draft.path === key) return draft.source
+
     const source = (await overrides()).get(key) ?? baseline[key]
     if (source === undefined) throw new Error(`template not found: ${name}`)
     return source
@@ -176,6 +191,7 @@ export function createTemplateLoader(options: TemplateLoaderOptions): TemplateLo
     read,
 
     async isOverridden(name) {
+      if (draft !== undefined && draft.path === toKey(name)) return true
       return (await overrides()).has(toKey(name))
     },
   }

@@ -41,6 +41,7 @@ export const DEFAULT_RENDER_LIMITS: RenderLimits = {
  */
 export const LIQUID_TAGS = [
   'assign',
+  'block',
   'break',
   'capture',
   'case',
@@ -109,7 +110,7 @@ export const LIQUID_NATIVE_FILTERS = [
 ] as const
 
 /** Filters this platform adds. */
-export const LIQUID_PLATFORM_FILTERS = ['asset_url', 'money', 't', 'render_blocks'] as const
+export const LIQUID_PLATFORM_FILTERS = ['asset_url', 'url', 'money', 't', 'render_blocks'] as const
 
 /** Everything a template may use. */
 export const LIQUID_FILTERS = [...LIQUID_NATIVE_FILTERS, ...LIQUID_PLATFORM_FILTERS] as const
@@ -129,6 +130,8 @@ export interface LiquidRuntimeOptions {
   limits?: Partial<RenderLimits>
   /** Defaults to `/theme/`, where theme assets are served from. */
   assetBasePath?: string
+  /** Absolute prefix for site paths. Empty leaves links relative. */
+  baseUrl?: string
   /** Defaults to `USD`. */
   currency?: string
   /** Defaults to `en-US`. */
@@ -159,7 +162,15 @@ export interface LiquidRuntime {
   /** The locked-down engine, for callers that resolve templates by name. */
   readonly engine: Liquid
   readonly limits: RenderLimits
-  render(source: string, data?: Record<string, unknown>): Promise<string>
+  render(source: string, data?: object): Promise<string>
+  /**
+   * Renders a template by name, honouring the `{% layout %}` it declares.
+   *
+   * The counterpart to `render` for callers that have a filesystem: a template
+   * that names its layout has to be rendered *as the layout's target*, which
+   * `render` cannot do because it is for source strings.
+   */
+  renderFile(name: string, data?: object): Promise<string>
   /**
    * Parses without rendering.
    *
@@ -223,6 +234,7 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
 
   const platformFilters = createPlatformFilters({
     assetBasePath: options.assetBasePath ?? '/theme/',
+    baseUrl: options.baseUrl,
     currency: options.currency ?? 'USD',
     locale: options.locale ?? 'en-US',
     translations: options.translations ?? {},
@@ -235,23 +247,33 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
 
   const encoder = new TextEncoder()
 
+  /**
+   * The output-size check, applied to every way out of the engine.
+   *
+   * Checked after the fact. liquidjs exposes no incremental render hook through
+   * its public API, so this aborts the response rather than stopping the
+   * allocation; `memoryLimit` and the Workers limit are what bound the allocation
+   * itself (section 3.6).
+   */
+  function guard(html: string): string {
+    const bytes = encoder.encode(html).length
+    if (bytes > limits.maxOutputBytes) {
+      throw new TemplateOutputLimitError(bytes, limits.maxOutputBytes)
+    }
+
+    return html
+  }
+
   return {
     engine,
     limits,
 
     async render(source, data = {}) {
-      const html = await engine.parseAndRender(source, data)
-      const bytes = encoder.encode(html).length
+      return guard(await engine.parseAndRender(source, data))
+    },
 
-      // Checked after the fact. liquidjs exposes no incremental render hook
-      // through its public API, so this aborts the response rather than stopping
-      // the allocation; `memoryLimit` and the Workers limit are what bound the
-      // allocation itself (section 3.6).
-      if (bytes > limits.maxOutputBytes) {
-        throw new TemplateOutputLimitError(bytes, limits.maxOutputBytes)
-      }
-
-      return html
+    async renderFile(name, data = {}) {
+      return guard(await engine.renderFile(name, data))
     },
 
     validate(source) {

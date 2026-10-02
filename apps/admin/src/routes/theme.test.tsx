@@ -181,6 +181,36 @@ describe('the theme screen', () => {
     expect(screen.getByText('Unsaved changes.')).toBeTruthy()
   })
 
+  it('previews the unsaved source in a sandboxed frame', async () => {
+    const previewThemeTemplate = vi.fn(async (_path: string, source: string) => ({
+      html: `<html><body>rendered from ${source.length} bytes</body></html>`,
+      bytes: 60,
+    }))
+    renderSection(withTheme({ previewThemeTemplate }))
+
+    const row = (await screen.findByText('templates/post')).closest('li')!
+    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await screen.findByTestId('surface')
+
+    // Edited but not saved, and the preview must use the edit rather than what
+    // the server has.
+    await userEvent.type(screen.getByTestId('surface'), '!')
+    await userEvent.click(screen.getByRole('button', { name: 'Preview' }))
+
+    await waitFor(() => {
+      expect(previewThemeTemplate).toHaveBeenCalledWith(
+        'templates/post',
+        'SOURCE OF templates/post!',
+      )
+    })
+
+    const frame = await screen.findByTestId('template-preview')
+    // Fully sandboxed: no scripts and no same-origin, so a mistake in a template
+    // cannot reach the admin's session or its DOM.
+    expect(frame.getAttribute('sandbox')).toBe('')
+    expect(frame.getAttribute('srcdoc')).toContain('rendered from')
+  })
+
   it('says so when the theme cannot be loaded', async () => {
     renderSection(
       withTheme({

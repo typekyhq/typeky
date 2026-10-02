@@ -24,7 +24,7 @@ import {
   updatePage,
 } from './pages'
 import { verifyPassword } from './password'
-import { readThemeTemplate, readThemeTemplates, writeThemeTemplate } from './theme'
+import { readThemeTemplate, readThemeTemplates, previewThemeTemplate, writeThemeTemplate } from './theme'
 import {
   bulkPosts,
   createPost,
@@ -183,6 +183,8 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.get('/theme/templates', (c) => readThemeTemplates(c, repositories))
   api.get('/theme/template', (c) => readThemeTemplate(c, repositories))
   api.put('/theme/template', (c) => writeThemeTemplate(c, repositories))
+  // The same checks as a save, then a render with sample data. Nothing stored.
+  api.post('/theme/preview', (c) => previewThemeTemplate(c, repositories))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 

@@ -1,14 +1,24 @@
 import {
   themeTemplateWriteSchema,
+  type ThemePreviewResponse,
   type ThemeTemplateGroup,
   type ThemeTemplateListResponse,
   type ThemeTemplateResponse,
 } from '@typeky/api'
 import { defaultContext, type ThemeTemplate } from '@typeky/db'
+import { createD1DbPort, type DbPort } from '@typeky/platform'
 import { createLiquidRuntime } from '@typeky/theme-kit'
 import { BASELINE, BASELINE_NAMES } from '@typeky/theme-default'
 import type { Context } from 'hono'
 import { apiError, describeIssues, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
+import { renderPreview } from '../render/preview'
+
+/** The D1 port, when there is one. The preview reads other overrides through it. */
+function dbFor(env: AdminEnv['Bindings']): DbPort | undefined {
+  if (env.DB === undefined) return undefined
+
+  return createD1DbPort(env.DB)
+}
 
 /**
  * The theme's templates.
@@ -142,6 +152,55 @@ async function currentTheme(store: Awaited<ReturnType<RepositoryResolver>>): Pro
 
   const site = await store.sites.get(defaultContext())
   return site?.theme ?? BUNDLED_THEME
+}
+
+/**
+ * Renders an unsaved template with sample data.
+ *
+ * The same three checks as a save, in the same order, because a preview that
+ * accepted something a save would refuse is a preview that lies. It then renders
+ * through the theme's own loader with the draft layered in, so what comes back is
+ * what the site would produce -- not a fragment rendered beside it.
+ *
+ * Nothing is written and nothing is cached. A render failure is the author's
+ * typing rather than the server's problem, so it answers 400 with the message,
+ * the same way a parse failure does: from the outside those are one event.
+ */
+export async function previewThemeTemplate(
+  c: Context<AdminEnv>,
+  repositories: RepositoryResolver,
+): Promise<Response> {
+  const store = repositories(c.env)
+  if (store === null) return apiError(c, 'database_not_configured')
+
+  const parsed = themeTemplateWriteSchema.safeParse(await readJsonBody(c.req.raw))
+  if (!parsed.success) return apiError(c, 'invalid_request', describeIssues(parsed.error.issues))
+
+  const { path, source } = parsed.data
+
+  if (!Object.hasOwn(BASELINE, path)) {
+    return apiError(c, 'not_found', 'the theme does not ship a template by that name')
+  }
+
+  const problem = validator.validate(source)
+  if (problem !== null) {
+    return apiError(c, 'invalid_request', problem.message, problem.line ?? undefined)
+  }
+
+  try {
+    // The stored overrides are read, so the preview shows the site as it is with
+    // just this one file replaced -- which is what the editor is showing.
+    const html = await renderPreview({ path, source, db: dbFor(c.env) })
+
+    const body: ThemePreviewResponse = { html, bytes: new TextEncoder().encode(html).length }
+    return c.json(body)
+  } catch (error) {
+    return apiError(
+      c,
+      'invalid_request',
+      `the template failed to render: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
 }
 
 function groupOf(path: string): ThemeTemplateGroup {

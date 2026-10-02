@@ -55,3 +55,18 @@ export const themeTemplateWriteSchema = z.object({
 })
 
 export type ThemeTemplateWrite = z.infer<typeof themeTemplateWriteSchema>
+
+/**
+ * A template being previewed.
+ *
+ * Same shape as a write, and deliberately so: a preview is what a save would
+ * look like, and anything that could be saved should be previewable.
+ */
+export const themePreviewResponseSchema = z.object({
+  /** The rendered page, as a string for an `srcdoc` frame. */
+  html: z.string(),
+  /** Rendered bytes, so the admin can say when a page is enormous. */
+  bytes: z.number(),
+})
+
+export type ThemePreviewResponse = z.infer<typeof themePreviewResponseSchema>

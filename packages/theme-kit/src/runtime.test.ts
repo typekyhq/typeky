@@ -43,7 +43,17 @@ describe('liquid runtime', () => {
       const { render } = createLiquidRuntime()
 
       await expect(render('{% echo "x" %}')).rejects.toThrow(/echo/)
-      await expect(render('{% block %}x{% endblock %}')).rejects.toThrow(/block/)
+      await expect(render('{% tablerow i in (1..2) %}{% endtablerow %}')).rejects.toThrow(/tablerow/)
+    })
+
+    it('allows block, because a layout cannot output anything without it', async () => {
+      const { render } = createLiquidRuntime()
+
+      // liquidjs's `layout` is Jekyll-style: the child's content becomes an
+      // anonymous block and the layout prints it with `{% block %}`. Without
+      // this tag the layout mechanism is unusable, which is how it was found:
+      // the baseline's <main> rendered empty.
+      expect(await render('{% block %}child{% endblock %}')).toBe('child')
     })
 
     it('refuses a filter outside the whitelist instead of silently doing nothing', async () => {
@@ -84,7 +94,7 @@ describe('liquid runtime', () => {
     it('drops the liquidjs tags the theme contract does not use', () => {
       const { engine } = createLiquidRuntime()
 
-      for (const tag of ['block', 'echo', 'tablerow', 'paginate']) {
+      for (const tag of ['echo', 'tablerow', 'paginate', 'inline_comment']) {
         expect(engine.tags).not.toHaveProperty(tag)
       }
     })

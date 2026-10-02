@@ -5,7 +5,7 @@
     {% if content.published_at %}<time datetime="{{ content.published_at }}">{{ content.published_at | date: '%Y-%m-%d' }}</time>{% endif %}
     {% if content.category %}<span>{{ content.category }}</span>{% endif %}
   </p>
-  {{ blocks_html }}
+  {{ content.blocks | render_blocks }}
   {% if content.tags.size > 0 %}
     <ul class="tags">
       {% for tag in content.tags %}<li>{{ tag }}</li>{% endfor %}

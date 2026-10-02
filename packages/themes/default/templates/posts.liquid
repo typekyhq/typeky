@@ -2,9 +2,9 @@
 <h1>{{ page.title | default: 'Posts' }}</h1>
 <ul class="post-list">
   {% for post in content %}
-    <li>{% render 'post-card', post: post %}</li>
+    <li>{% render 'snippets/post-card', post: post %}</li>
   {% else %}
     <li class="empty">Nothing published yet.</li>
   {% endfor %}
 </ul>
-{% render 'pagination' %}
+{% render 'snippets/pagination', page: page %}

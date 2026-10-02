@@ -80,6 +80,7 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     listThemeTemplates: async () => ({ theme: 'default', items: [] }),
     getThemeTemplate: unexpected('getThemeTemplate'),
     saveThemeTemplate: unexpected('saveThemeTemplate'),
+    previewThemeTemplate: unexpected('previewThemeTemplate'),
 
     ...overrides,
   }

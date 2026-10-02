@@ -101,10 +101,12 @@ export {
 
 export {
   THEME_TEMPLATE_GROUPS,
+  themePreviewResponseSchema,
   themeTemplateListResponseSchema,
   themeTemplateResponseSchema,
   themeTemplateSummarySchema,
   themeTemplateWriteSchema,
+  type ThemePreviewResponse,
   type ThemeTemplateGroup,
   type ThemeTemplateListResponse,
   type ThemeTemplateResponse,

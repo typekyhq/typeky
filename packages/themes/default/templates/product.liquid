@@ -7,7 +7,7 @@
       {% for image in content.gallery %}<li><img src="{{ image }}" alt="{{ content.title }}"></li>{% endfor %}
     </ul>
   {% endif %}
-  {{ blocks_html }}
+  {{ content.blocks | render_blocks }}
   {% if content.specs.size > 0 %}
     <dl class="specs">
       {% for spec in content.specs %}<dt>{{ spec.label }}</dt><dd>{{ spec.value }}</dd>{% endfor %}

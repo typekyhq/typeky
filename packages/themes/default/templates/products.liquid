@@ -2,9 +2,9 @@
 <h1>{{ page.title | default: 'Products' }}</h1>
 <ul class="product-list">
   {% for product in content %}
-    <li>{% render 'product-card', product: product %}</li>
+    <li>{% render 'snippets/product-card', product: product %}</li>
   {% else %}
     <li class="empty">No products yet.</li>
   {% endfor %}
 </ul>
-{% render 'pagination' %}
+{% render 'snippets/pagination', page: page %}

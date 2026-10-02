@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {% render 'seo-meta' %}
+    {% render 'snippets/seo-meta', seo: seo %}
     <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
   </head>
   <body>
-    {% render 'header' %}
+    {% render 'snippets/header', site: site %}
     <main id="main">
-      {{ content_for_layout }}
+      {% block %}{% endblock %}
     </main>
-    {% render 'footer' %}
-    {% render 'cookie-consent' %}
+    {% render 'snippets/footer', site: site %}
+    {% render 'snippets/cookie-consent', site: site %}
   </body>
 </html>

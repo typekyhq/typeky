@@ -13,6 +13,7 @@ import {
   bulkResultSchema,
   themeTemplateListResponseSchema,
   themeTemplateResponseSchema,
+  themePreviewResponseSchema,
   sessionSchema,
   siteResponseSchema,
   type ApiErrorCode,
@@ -37,6 +38,7 @@ import {
   type SiteResponse,
   type SiteWrite,
   type SortDirection,
+  type ThemePreviewResponse,
   type ThemeTemplateListResponse,
   type ThemeTemplateResponse,
 } from '@typeky/api'
@@ -126,6 +128,7 @@ export interface ApiClient {
   listThemeTemplates(): Promise<ThemeTemplateListResponse>
   getThemeTemplate(path: string): Promise<ThemeTemplateResponse>
   saveThemeTemplate(path: string, source: string): Promise<ThemeTemplateResponse>
+  previewThemeTemplate(path: string, source: string): Promise<ThemePreviewResponse>
 }
 
 /** The filters the media grid can ask for. */
@@ -530,6 +533,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         themeTemplateResponseSchema,
         await send('PUT', '/theme/template', { path, source }),
         'the save response did not match the contract',
+      )
+    },
+
+    async previewThemeTemplate(path, source) {
+      return readContract(
+        themePreviewResponseSchema,
+        await send('POST', '/theme/preview', { path, source }),
+        'the preview response did not match the contract',
       )
     },
   }
