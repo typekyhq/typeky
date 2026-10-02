@@ -121,6 +121,9 @@ const THEME_SIGNATURES = [
 /** Section 3.3 caps the admin first screen at 350 KB gzipped. */
 const ADMIN_FIRST_SCREEN_BUDGET_BYTES = 350 * 1024
 
+/** Section 3.11 caps the editor chunk at 200 KB gzipped. */
+const EDITOR_CHUNK_BUDGET_BYTES = 200 * 1024
+
 const adminDir = join(root, 'public/admin')
 const adminIndex = join(adminDir, 'index.html')
 let adminNote = ''
@@ -152,9 +155,61 @@ if (!existsSync(adminIndex)) {
     )
   }
 
+  // ---- The editor loads only on the edit screen ----
+  /**
+   * Checked as an invariant rather than trusted, because breaking it does not
+   * look like breaking it. A `manualChunks` entry once merged the editor's
+   * modules into a chunk the entry imported statically: every size number stayed
+   * plausible, the first screen still "excluded" the editor, and index.html had
+   * quietly gained a `<script>` tag for it -- so the editor downloaded on first
+   * paint anyway. Both directions are asserted here.
+   */
+  const editorChunks = []
+  for (const file of walk(join(adminDir, 'assets'))) {
+    if (/\/editor-[^/]*\.js$/.test(file)) editorChunks.push(file)
+  }
+
+  let editorNote = ''
+  if (editorChunks.length === 0) {
+    failures.push(
+      'no editor chunk in the admin build: the editor is missing, or it has been bundled into the first screen',
+    )
+  } else {
+    let editorGzip = 0
+    for (const file of editorChunks) editorGzip += gzipSync(readFileSync(file)).length
+
+    if (editorGzip > EDITOR_CHUNK_BUDGET_BYTES) {
+      const kb = (n) => `${Math.round(n / 1024)} KB`
+      failures.push(
+        `editor chunk is ${kb(editorGzip)} gzipped, over the ${kb(EDITOR_CHUNK_BUDGET_BYTES)} budget`,
+      )
+    }
+
+    editorNote = `, editor chunk ${Math.round(editorGzip / 1024)} KB gzipped of ${Math.round(
+      EDITOR_CHUNK_BUDGET_BYTES / 1024,
+    )} KB`
+  }
+
+  for (const url of referenced) {
+    if (/\/editor-/.test(url)) {
+      failures.push(`admin index.html loads the editor chunk on first paint (${url})`)
+    }
+
+    const file = join(adminDir, url.replace(/^\/admin\//, ''))
+    if (!existsSync(file)) continue
+    const src = readFileSync(file, 'utf8')
+    for (const sig of ['@tiptap', 'ProseMirror']) {
+      if (src.includes(sig)) {
+        failures.push(
+          `the editor is inside the first screen (${sig} in ${url}); it must load only on the edit screen`,
+        )
+      }
+    }
+  }
+
   adminNote = `(admin first screen ${Math.round(firstScreenGzip / 1024)} KB gzipped of ${Math.round(
     ADMIN_FIRST_SCREEN_BUDGET_BYTES / 1024,
-  )} KB)`
+  )} KB${editorNote})`
 
   for (const file of walk(adminDir)) {
     if (!/\.(js|css|html)$/.test(file)) continue

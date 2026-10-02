@@ -26,6 +26,23 @@ export default defineConfig({
     // Content-hashed names are what make the year-long cache in public/_headers
     // safe to serve.
     assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        // Named, but deliberately *not* pulled together with `manualChunks`.
+        // Forcing the editor's modules into a manual chunk made it a static
+        // dependency of the entry, and the build started emitting
+        // `<script src=".../editor-....js">` into index.html -- the editor
+        // downloaded on first paint, which is exactly what the lazy boundary
+        // exists to prevent. Naming a chunk does not change the module graph;
+        // merging one does.
+        chunkFileNames(chunk) {
+          const isEditor = chunk.moduleIds.some(
+            (id) => id.includes('/packages/editor/') || id.includes('@tiptap') || id.includes('prosemirror'),
+          )
+          return isEditor ? 'assets/editor-[hash].js' : 'assets/[name]-[hash].js'
+        },
+      },
+    },
   },
   server: {
     // `pnpm dev:admin` runs only Vite. The API lives in the Worker, so it is
