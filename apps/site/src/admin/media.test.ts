@@ -6,6 +6,7 @@ import { fakeKv, makeTestEnv } from '../testing/env'
 import { createAdminApi } from './api'
 import type { AdminEnv } from './errors'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
+import { stubRepositories } from '../testing/repositories'
 
 /**
  * The media endpoints.
@@ -87,7 +88,7 @@ function setup() {
   const cache = fakeKv()
 
   const api = createAdminApi({
-    repositories: (() => ({ media: repository }) as unknown as Repositories),
+    repositories: () => stubRepositories({ media: repository }),
     blobs: () => bucket,
   })
 
@@ -218,7 +219,7 @@ describe('uploading', () => {
   it('says so when no bucket is bound', async () => {
     const { repository } = fakeMediaRepository()
     const api = createAdminApi({
-      repositories: (() => ({ media: repository }) as unknown as Repositories),
+      repositories: () => stubRepositories({ media: repository }),
       blobs: () => null,
     })
     const cache = fakeKv()

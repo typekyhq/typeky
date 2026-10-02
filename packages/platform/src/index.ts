@@ -10,5 +10,11 @@
  */
 
 export { createD1DbPort, type D1LikeDatabase, type D1LikePreparedStatement } from './cloudflare/d1'
+export {
+  createEdgeCache,
+  edgeCacheFrom,
+  type CacheKey,
+  type CacheLikeStorages,
+} from './cloudflare/cache'
 export { createR2Blob, type R2LikeBucket, type R2LikeObjectBody, type R2LikeObjectInfo } from './cloudflare/r2'
-export type { BlobContents, BlobPort, DbPort, DbStatement, SqlParam } from './ports'
+export type { BlobContents, BlobPort, CachePort, DbPort, DbStatement, SqlParam } from './ports'

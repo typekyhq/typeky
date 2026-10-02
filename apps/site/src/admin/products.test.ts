@@ -5,6 +5,7 @@ import { fakeKv, makeTestEnv } from '../testing/env'
 import { createAdminApi } from './api'
 import type { AdminEnv, RepositoryResolver } from './errors'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
+import { stubRepositories } from '../testing/repositories'
 
 /**
  * The product endpoints.
@@ -109,7 +110,7 @@ function setup() {
   const cache = fakeKv()
 
   const api = createAdminApi({
-    repositories: (() => ({ products: repository }) as unknown as Repositories) as RepositoryResolver,
+    repositories: (() => stubRepositories({ products: repository })) as RepositoryResolver,
   })
 
   const env: AdminEnv['Bindings'] = makeTestEnv({

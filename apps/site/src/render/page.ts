@@ -62,8 +62,8 @@ export function resolveRoute(pathname: string): Route {
   return { kind: 'notFound' }
 }
 
-/** How many items a list page shows. */
-const PAGE_SIZE = 10
+/** How many items a list page shows. Shared with the sitemap, which lists them. */
+export const PAGE_SIZE = 10
 
 export interface RenderDependencies {
   repositories: Repositories | null

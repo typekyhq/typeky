@@ -6,6 +6,7 @@ import { createAdminApi } from './api'
 import type { AdminEnv, RepositoryResolver } from './errors'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
 import { BASELINE_NAMES } from '@typeky/theme-default'
+import { stubRepositories } from '../testing/repositories'
 
 /**
  * The theme endpoints.
@@ -65,7 +66,7 @@ function fakeRepositories(overrides: ThemeTemplate[] = []) {
   const list: PageResult<ThemeTemplate> = { items: [], total: 0, limit: 20, offset: 0 }
   void list
 
-  return { repository: { sites, themeTemplates: themes } as unknown as Repositories, rows }
+  return { repository: stubRepositories({ sites, themeTemplates: themes }), rows }
 }
 
 function setup(repositories?: RepositoryResolver) {

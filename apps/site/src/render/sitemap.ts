@@ -1,4 +1,5 @@
 import { defaultContext, MAX_PAGE_LIMIT, type Repositories } from '@typeky/db'
+import { PAGE_SIZE } from './page'
 
 /**
  * `sitemap.xml` and `robots.txt`.
@@ -9,6 +10,11 @@ import { defaultContext, MAX_PAGE_LIMIT, type Repositories } from '@typeky/db'
  *
  * Only published content appears. A draft is not a page a crawler should be told
  * about, and listing one would be asking to have it indexed.
+ *
+ * The same list is what a publish invalidates: the set of URLs a site serves and
+ * the set of URLs a cache may hold are the same set. That is why `publishedPaths`
+ * is exported rather than kept private -- the sitemap and the revalidation answer
+ * one question, and two answers to it would eventually disagree.
  */
 
 /** Escaped for XML. The same five characters as HTML, which is not an accident. */
@@ -31,7 +37,7 @@ interface Entry {
 }
 
 /**
- * Every published page, post and product, plus the lists.
+ * Every published page, post and product, plus the lists and their pagination.
  *
  * Paged through rather than asked for in one go: the repository caps a window,
  * and a sitemap that silently stopped at the cap would be worse than one that
@@ -63,11 +69,9 @@ async function collectEntries(store: Repositories): Promise<Entry[]> {
   ]
 
   for (const list of lists) {
-    entries.push({ path: list.path, lastModified: new Date() })
-
-    const prefix = list.path
     let offset = 0
     let total = Number.POSITIVE_INFINITY
+    let newest = new Date(0)
 
     while (offset < total) {
       const page = await list.load(offset)
@@ -78,10 +82,19 @@ async function collectEntries(store: Repositories): Promise<Entry[]> {
         // The repository was asked for published rows and this checks again: a
         // sitemap that listed a draft would be asking to have it indexed.
         if (!isPublished(item)) continue
-        entries.push({ path: `${prefix}/${item.slug}`, lastModified: item.updatedAt })
+        entries.push({ path: `${list.path}/${item.slug}`, lastModified: item.updatedAt })
+        if (item.updatedAt > newest) newest = item.updatedAt
       }
 
       offset += page.items.length
+    }
+
+    // The list itself, and each page of it. Pagination is a real page a visitor
+    // can land on -- and it moves the moment anything is published, which is why
+    // it has to be in the purge set and not only in the sitemap.
+    entries.push({ path: list.path, lastModified: newest })
+    for (let page = 2; page <= Math.ceil(total / PAGE_SIZE); page += 1) {
+      entries.push({ path: `${list.path}/${page}`, lastModified: newest })
     }
   }
 
@@ -105,6 +118,17 @@ async function collectEntries(store: Repositories): Promise<Entry[]> {
   }
 
   return entries
+}
+
+/**
+ * Every path the site serves.
+ *
+ * Used to revalidate: a publish may change this list itself (a new post adds a
+ * URL, and a draft removes one) as well as the pages on it, so the caller wants
+ * the new set, not the old one.
+ */
+export async function publishedPaths(store: Repositories): Promise<string[]> {
+  return (await collectEntries(store)).map((entry) => entry.path)
 }
 
 export async function renderSitemap(store: Repositories, origin: string): Promise<string> {

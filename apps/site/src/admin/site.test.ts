@@ -5,6 +5,7 @@ import { createAdminApi } from './api'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
 import { fakeKv, makeTestEnv } from '../testing/env'
 import { CSRF_HEADER } from '@typeky/api'
+import { stubRepositories } from '../testing/repositories'
 
 const FAST: ScryptParams = { ...DEFAULT_SCRYPT_PARAMS, N: 1024 }
 const PASSWORD = 'correct horse battery staple'
@@ -48,7 +49,7 @@ function setup(options: { withDatabase?: boolean } = {}) {
   const cache = fakeKv()
 
   const api = createAdminApi({
-    repositories: options.withDatabase === false ? () => null : () => ({ sites: repository }) as never,
+    repositories: options.withDatabase === false ? () => null : () => stubRepositories({ sites: repository }),
   })
 
   const env: AdminEnv['Bindings'] = makeTestEnv({

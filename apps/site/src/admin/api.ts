@@ -4,6 +4,7 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import type { MiddlewareHandler } from 'hono'
 import { repositoriesFor } from '../repositories'
 import { blobsFor } from '../blobs'
+import { edgeCacheFor, revalidateSite } from '../cache'
 import { csrfTokenMatches, isSafeMethod } from './csrf'
 import { apiError, readJsonBody, type AdminEnv, type BlobResolver, type RepositoryResolver } from './errors'
 import {
@@ -82,6 +83,39 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   const repositories = options.repositories ?? repositoriesFor
   const blobs = options.blobs ?? blobsFor
   const api = new Hono<AdminEnv>()
+
+  /**
+   * A successful write forgets the pages it changed.
+   *
+   * Registered first, so it wraps everything below -- including the guard
+   * middleware, whose early return leaves the status at 401 or 403 and is
+   * therefore skipped by the status check. Order matters for the opposite reason
+   * too: a middleware registered *after* a route never runs for it, because the
+   * route has already answered.
+   *
+   * The purge is awaited rather than handed to `waitUntil`. It costs the operator
+   * a handful of milliseconds once per save, and it buys the property that matters
+   * more: by the time the save has been acknowledged, the next request for the
+   * page cannot be served the old one. A background purge would make "publish,
+   * then look" a race, and losing that race looks exactly like the bug this
+   * exists to prevent.
+   */
+  api.use('*', async (c, next) => {
+    await next()
+
+    if (isSafeMethod(c.req.method)) return
+    if (c.res.status >= 400) return
+
+    // Two exceptions, and neither stores anything a visitor can be served: a
+    // session is a cookie, and a preview is rendered and thrown away.
+    const path = new URL(c.req.url).pathname
+    if (path.endsWith('/session') || path.endsWith('/theme/preview')) return
+
+    const store = repositories(c.env)
+    if (store === null) return
+
+    await revalidateSite(store, edgeCacheFor(), new URL(c.req.url).origin)
+  })
 
   // Login carries no CSRF token because there is no session yet to bind one to.
   // A forged login would sign the victim into the only account that exists, and

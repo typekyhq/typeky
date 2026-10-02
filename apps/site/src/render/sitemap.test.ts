@@ -1,6 +1,6 @@
 import type { Page, Post, Product, Repositories } from '@typeky/db'
 import { describe, expect, it } from 'vitest'
-import { renderRobots, renderSitemap } from './sitemap'
+import { publishedPaths, renderRobots, renderSitemap } from './sitemap'
 
 /**
  * `sitemap.xml` and `robots.txt`.
@@ -15,15 +15,24 @@ function store(options: { pages?: Page[]; posts?: Post[]; products?: Product[] }
   const posts = options.posts ?? []
   const products = options.products ?? []
 
-  const result = (items: unknown[]) => ({ items, total: items.length, limit: 100, offset: 0 })
+  // A window over the whole set, so the paging loop in the sitemap is exercised
+  // rather than bypassed by an answer that happens to fit.
+  const paged =
+    <T>(items: T[]) =>
+    async (_ctx: unknown, query: { limit?: number; offset?: number } = {}) => {
+      const limit = query.limit ?? 20
+      const offset = query.offset ?? 0
+
+      return { items: items.slice(offset, offset + limit), total: items.length, limit, offset }
+    }
 
   return {
     pages: {
       async home() { return pages.find((entry) => entry.isHome) ?? null },
-      async list() { return result(pages) },
+      list: paged(pages),
     },
-    posts: { async list() { return result(posts) } },
-    products: { async list() { return result(products) } },
+    posts: { list: paged(posts) },
+    products: { list: paged(products) },
   } as unknown as Repositories
 }
 
@@ -82,6 +91,38 @@ describe('the sitemap', () => {
 
     expect(xml).toContain('a&amp;b')
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true)
+  })
+
+  it('lists the pages of a list, because each one is a page a visitor can land on', async () => {
+    // 25 posts at ten to a page is three list pages. They are also the URLs that
+    // move the moment anything is published, which is why the purge set needs
+    // them as much as the sitemap does.
+    const posts = Array.from({ length: 25 }, (_, index) => post({ slug: `p${String(index)}` }))
+    const xml = await renderSitemap(store({ posts }), 'https://example.com')
+
+    expect(xml).toContain('<loc>https://example.com/posts</loc>')
+    expect(xml).toContain('<loc>https://example.com/posts/2</loc>')
+    expect(xml).toContain('<loc>https://example.com/posts/3</loc>')
+    expect(xml).not.toContain('<loc>https://example.com/posts/4</loc>')
+  })
+})
+
+describe('the paths a publish invalidates', () => {
+  it('are the same set the sitemap lists', async () => {
+    const store_ = store({
+      pages: [page({ slug: 'home', isHome: true }), page({ slug: 'about' })],
+      posts: Array.from({ length: 25 }, (_, index) => post({ slug: `p${String(index)}` })),
+    })
+
+    const paths = await publishedPaths(store_)
+    const xml = await renderSitemap(store_, 'https://example.com')
+
+    // One question, one implementation: a sitemap and a purge set that disagreed
+    // would either leave a stale page or crawl one that is not there.
+    for (const path of paths) {
+      expect(xml).toContain(`<loc>https://example.com${path === '/' ? '/' : path}</loc>`)
+    }
+    expect(paths).toContain('/posts/3')
   })
 })
 

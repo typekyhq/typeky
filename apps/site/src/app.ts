@@ -1,9 +1,9 @@
 import { createD1DbPort } from '@typeky/platform'
 import type { ApiErrorBody } from '@typeky/api'
 import { Hono } from 'hono'
-import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { createAdminApi } from './admin/api'
 import { blobsFor } from './blobs'
+import { edgeCacheFor, servePage } from './cache'
 import type { Env } from './env'
 import { serveMedia } from './media'
 import { errorPage, notFoundPage } from './pages'
@@ -80,27 +80,36 @@ export function createApp(): Hono<{ Bindings: Env }> {
   })
 
   app.get('*', async (c) => {
-    const path = new URL(c.req.url).pathname
+    const url = new URL(c.req.url)
+
     // A path that looks like a file is not a page, so it gets a plain 404 rather
     // than HTML. `no-store`, because a browser that caches this answer keeps
     // asking for a file that a later deploy may well have added.
-    if (looksLikeAsset(path)) {
+    if (looksLikeAsset(url.pathname)) {
       return c.body('Not Found', 404, {
         'content-type': 'text/plain; charset=utf-8',
         'cache-control': 'no-store',
       })
     }
 
-    const result = await renderPage(path, {
-      repositories: repositoriesFor(c.env),
-      db: c.env.DB === undefined ? null : createD1DbPort(c.env.DB),
-      blob: blobsFor(c.env),
-      // The origin the request arrived on, so a canonical URL points at the site
-      // that was actually asked for rather than at a configured one.
-      baseUrl: new URL(c.req.url).origin,
+    // The cache answers first, so a hit costs no database query at all. That is
+    // the whole reason it exists; a cache that still had to look something up to
+    // decide what to serve would not be worth the complexity.
+    return servePage({
+      url,
+      cache: edgeCacheFor(),
+      render: (pathname) =>
+        renderPage(pathname, {
+          repositories: repositoriesFor(c.env),
+          db: c.env.DB === undefined ? null : createD1DbPort(c.env.DB),
+          blob: blobsFor(c.env),
+          // The origin the request arrived on, so a canonical URL points at the
+          // site that was actually asked for rather than at a configured one.
+          baseUrl: url.origin,
+        }),
+      // In the background: the response should not wait for a cache write.
+      background: (task) => c.executionCtx.waitUntil(task),
     })
-
-    return c.html(result.html, result.status as ContentfulStatusCode)
   })
 
   app.notFound((c) => c.html(notFoundPage(new URL(c.req.url).pathname), 404))
@@ -125,6 +134,7 @@ const ASSET_EXTENSION = /\.[a-z0-9]+$/i
 function looksLikeAsset(path: string): boolean {
   return ASSET_EXTENSION.test(path)
 }
+
 
 /**
  * A single light query, and no caching layer in front of it: the 60 second KV

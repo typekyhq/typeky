@@ -73,3 +73,30 @@ export interface BlobPort {
   get(key: string): Promise<BlobContents | null>
   delete(key: string): Promise<void>
 }
+
+/**
+ * A whole-response cache in front of the renderer.
+ *
+ * It exists to answer one question without a database query, so the contract is
+ * deliberately narrow: the caller decides what the key is, and the port does not
+ * try to be clever about `Vary`, method normalisation or anything else. A page is
+ * a function of its URL, and that is the whole model.
+ *
+ * `purgeByUrl` is per-URL rather than a prefix or a wildcard because the storage
+ * underneath is a URL-keyed cache: it can forget `https://site/posts/hello` and
+ * it cannot forget "everything under /posts". Callers enumerate what changed.
+ *
+ * What this does *not* promise is immediacy everywhere. A URL-keyed edge cache
+ * held by many data centres is only guaranteed to forget in the one that received
+ * the purge; the rest serve the old copy until it expires. That is why the
+ * renderer also sends a short expiry, and why the honest description of the pair
+ * is "purge where we can, expire everywhere else".
+ */
+export interface CachePort {
+  /** The stored response for a key, or null. */
+  match(key: string): Promise<Response | null>
+  /** Stores a response under a key. The caller clones; a body streams once. */
+  put(key: string, response: Response): Promise<void>
+  /** Forgets a set of keys. */
+  purgeByUrl(keys: string[]): Promise<void>
+}
