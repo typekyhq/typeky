@@ -208,16 +208,27 @@ describe('bulk actions', () => {
     expect((await posts.byId(ctx, untouched.id))?.status).toBe('draft')
   })
 
-  it('keeps the original publish date across an unpublish and republish', async () => {
+  it('does not move the publish date when publishing something already published', async () => {
     const { posts } = setup()
     const post = await posts.upsert(ctx, { title: 'Hello', slug: 'hello', status: 'published' })
     const publishedAt = post.publishedAt
 
-    await posts.updateMany(ctx, [post.id], { status: 'draft' })
-    expect((await posts.byId(ctx, post.id))?.publishedAt).toBeNull()
-
+    // A bulk publish over a selection that happens to include rows that are
+    // already published must not make them look newly published. This is what
+    // `coalesce` in the statement is for, and it is asserted on a fixed value
+    // rather than on two calls landing in the same millisecond.
     await posts.updateMany(ctx, [post.id], { status: 'published' })
+
     expect((await posts.byId(ctx, post.id))?.publishedAt).toEqual(publishedAt)
+  })
+
+  it('clears the publish date on the way back to draft', async () => {
+    const { posts } = setup()
+    const post = await posts.upsert(ctx, { title: 'Hello', slug: 'hello', status: 'published' })
+
+    await posts.updateMany(ctx, [post.id], { status: 'draft' })
+
+    expect((await posts.byId(ctx, post.id))?.publishedAt).toBeNull()
   })
 
   it('deletes a selection and answers how many were there', async () => {
