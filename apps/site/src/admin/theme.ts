@@ -1,5 +1,7 @@
 import {
+  themeContextResponseSchema,
   themeTemplateWriteSchema,
+  type ThemeContextResponse,
   type ThemePreviewResponse,
   type ThemeTemplateGroup,
   type ThemeTemplateListResponse,
@@ -7,8 +9,9 @@ import {
 } from '@typeky/api'
 import { defaultContext, type ThemeTemplate } from '@typeky/db'
 import { createD1DbPort, type DbPort } from '@typeky/platform'
-import { createLiquidRuntime } from '@typeky/theme-kit'
+import { LIQUID_NATIVE_FILTERS, LIQUID_PLATFORM_FILTERS, LIQUID_TAGS, createLiquidRuntime } from '@typeky/theme-kit'
 import { BASELINE, BASELINE_NAMES } from '@typeky/theme-default'
+import { contextPaths } from '../render/sample'
 import type { Context } from 'hono'
 import { apiError, describeIssues, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
 import { renderPreview } from '../render/preview'
@@ -73,6 +76,39 @@ export async function readThemeTemplates(
         updatedAt: override?.updatedAt.toISOString() ?? null,
       }
     }),
+  }
+
+  return c.json(body)
+}
+
+/**
+ * The paths a template may read, from the sample context the previews render with.
+ *
+ * Derived, not written down: a hand-kept list of what a template can use stops
+ * being true the first time the context gains a field, and the way it goes wrong is
+ * by telling an author about something that renders nothing. The derivation lives
+ * in `render/sample.ts`, beside the sample itself.
+ */
+export async function readThemeContext(
+  c: Context<AdminEnv>,
+  _repositories: RepositoryResolver,
+): Promise<Response> {
+  // A query parameter, like the template read, and for the same reason: a template
+  // name contains a slash.
+  const template = c.req.query('template')
+  if (template === undefined || !Object.hasOwn(BASELINE, template)) {
+    return apiError(c, 'not_found', 'the theme does not ship a template by that name')
+  }
+
+  const body: ThemeContextResponse = {
+    template,
+    paths: contextPaths(template),
+    // From the sandbox's own whitelists rather than a list kept beside them: what a
+    // template may use is exactly what the engine was built with, and the reason to
+    // show it at all is that anything else fails loudly.
+    tags: [...LIQUID_TAGS],
+    platformFilters: [...LIQUID_PLATFORM_FILTERS],
+    nativeFilters: [...LIQUID_NATIVE_FILTERS],
   }
 
   return c.json(body)

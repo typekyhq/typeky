@@ -418,3 +418,59 @@ describe('reading one template', () => {
     await expect(store.repository.themeTemplates.list({} as never, 'default')).resolves.toEqual([])
   })
 })
+
+describe('the template reference', () => {
+  it('needs a session', async () => {
+    const { send } = setup()
+
+    expect((await send('/theme/context?template=templates/page')).status).toBe(401)
+  })
+
+  it('answers with the paths a page template may read', async () => {
+    const { send, signIn } = setup()
+    const { cookie } = await signIn()
+
+    const response = await send('/theme/context?template=templates/page', undefined, cookie)
+    const body = (await response.json()) as { template: string; paths: string[] }
+
+    expect(response.status).toBe(200)
+    expect(body.template).toBe('templates/page')
+    expect(body.paths).toContain('content.title')
+    expect(body.paths).toContain('site.name')
+    // The reference in a page's editor is the page's own context, so a post-only
+    // field would be a lie told in the place an author is looking for the truth.
+    expect(body.paths).not.toContain('content.terms')
+  })
+
+  it('answers with the tags and filters the sandbox allows', async () => {
+    const { send, signIn } = setup()
+    const { cookie } = await signIn()
+
+    const response = await send('/theme/context?template=templates/page', undefined, cookie)
+    const body = (await response.json()) as {
+      tags: string[]
+      platformFilters: string[]
+      nativeFilters: string[]
+    }
+
+    // The engine's whitelists, not a summary of them: `{% include %}` is allowed and
+    // `{% section %}` is not, and the only way to say that accurately is to read the
+    // list the engine was built with.
+    expect(body.tags).toContain('render')
+    expect(body.tags).toContain('if')
+    expect(body.platformFilters).toContain('render_blocks')
+    expect(body.platformFilters).toContain('asset_url')
+    expect(body.nativeFilters).toContain('date')
+  })
+
+  it('refuses a template the theme does not ship', async () => {
+    const { send, signIn } = setup()
+    const { cookie } = await signIn()
+
+    // A name the theme does not ship is not something with a context to describe,
+    // and the walker would otherwise answer for a template nobody can write.
+    expect((await send('/theme/context?template=templates/mine', undefined, cookie)).status).toBe(404)
+    expect((await send('/theme/context', undefined, cookie)).status).toBe(404)
+  })
+})
+

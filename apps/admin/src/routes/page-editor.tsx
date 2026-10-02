@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { Field } from '@/components/field'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
 import { TemplateEditorSurface } from '@/components/template-editor-surface'
+import { TemplateReference } from '@/components/template-reference'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SeoPanel } from '@/components/seo-panel'
 import { ErrorState, LoadingState } from '@/components/states'
@@ -406,6 +407,7 @@ export function PageEditorPage() {
                 errorLine={sourceProblem?.line ?? null}
                 autoFocus
               />
+              <TemplateReference template="templates/page" />
             </CardContent>
           </Card>
         )}

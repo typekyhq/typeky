@@ -18,7 +18,10 @@ import { buildRenderContext, type SiteInput } from './context'
 const SAMPLE_SITE: SiteInput = {
   name: 'Sample Site',
   tagline: 'A site for previewing templates',
-  logoMediaId: null,
+  // A real media id, so `site.logo_url` is a field of the context -- see
+  // `contextPaths`. A preview still renders no logo, because the preview's media
+  // resolver has no bucket to resolve against.
+  logoMediaId: 'sample-logo',
   settings: {
     language: 'en',
     footer: 'Built with Typeky.',
@@ -62,12 +65,78 @@ const SAMPLE_BLOCKS: Block[] = [
  * previewing `templates/post` shows one item -- which is the difference a theme
  * author is usually trying to see.
  */
-export function sampleContext(templateName: string): ReturnType<typeof buildRenderContext> {
+/**
+ * How deep the walk goes.
+ *
+ * `site.settings.footer` is three, and `content.blocks` is where it should stop:
+ * Block JSON is data a template hands to `render_blocks`, not a shape it reads
+ * field by field.
+ */
+const MAX_DEPTH = 3
+
+/**
+ * The paths a template may read, taken from a real context.
+ *
+ * Derived rather than written down, and that is the point: a hand-kept list of
+ * what a template can use stops being true the first time the context gains a
+ * field, and the way it goes wrong is by telling an author about something that
+ * renders nothing. This walks the same sample the preview renders with, so it
+ * cannot claim anything the platform does not build.
+ *
+ * Arrays and objects at `MAX_DEPTH` are reported as the path itself: `site.nav` is
+ * something a template iterates, and what is inside `content.blocks` is not part of
+ * the contract.
+ */
+export function contextPaths(templateName: string): string[] {
+  const paths: string[] = []
+
+  const walk = (value: unknown, prefix: string, depth: number): void => {
+    if (prefix === '') {
+      // The top of the context is an object by construction; the cast is what
+      // keeps this from being an `any` that spreads.
+      for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+        walk(child, key, depth + 1)
+      }
+      return
+    }
+
+    if (value === null || value === undefined || Array.isArray(value) || typeof value !== 'object') {
+      paths.push(prefix)
+      return
+    }
+
+    if (depth >= MAX_DEPTH) {
+      paths.push(prefix)
+      return
+    }
+
+    for (const [key, child] of Object.entries(value)) {
+      walk(child, `${prefix}.${key}`, depth + 1)
+    }
+  }
+
+  // A placeholder URL rather than nothing: `logo_url`, `cover_url` and the gallery
+  // are real fields a template may read, and a reference that left them out because
+  // the sample happens to have no bucket would be telling an author less than the
+  // truth.
+  walk(sampleContext(templateName, () => 'https://example.com/media/sample'), '', 0)
+  return paths.sort()
+}
+
+export function sampleContext(
+  templateName: string,
+  /**
+   * How a media id becomes a URL. The preview passes nothing and gets no media --
+   * there is no bucket to resolve against. `contextPaths` passes one, so the fields
+   * that only exist when there *is* media are in the list.
+   */
+  resolveMedia: (id: string) => string | null = () => null,
+): ReturnType<typeof buildRenderContext> {
   const file = templateName.split('/').at(-1) ?? 'page'
 
   const base = {
     site: SAMPLE_SITE,
-    resolveMedia: () => null,
+    resolveMedia,
     preview: true,
   } as const
 
@@ -102,8 +171,9 @@ export function sampleContext(templateName: string): ReturnType<typeof buildRend
         slug: 'sample-product',
         blocks: SAMPLE_BLOCKS,
         seo: {},
+        coverMediaId: 'sample-cover',
         priceLabel: 'From $20',
-        gallery: [],
+        gallery: ['sample-gallery-1', 'sample-gallery-2'],
         specs: [
           { label: 'Material', value: 'Recycled aluminium' },
           { label: 'Warranty', value: '2 years' },
@@ -130,6 +200,9 @@ export function sampleContext(templateName: string): ReturnType<typeof buildRend
         slug: 'sample-1',
         blocks: SAMPLE_BLOCKS,
         seo: {},
+        // Declared, so `content.cover_url` is a field of the context -- see the note
+        // on the sample site's logo. The preview still renders no image.
+        coverMediaId: 'sample-cover',
         excerpt: 'A short summary, as it would appear in a list.',
         terms: [{ name: 'News', slug: 'news', vocabulary: 'Categories' }],
         tags: ['sample', 'theme'],

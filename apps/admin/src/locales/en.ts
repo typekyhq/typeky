@@ -350,6 +350,18 @@ export const en: Locale = {
   'pageEditor.customSource.hint':
     'Rendered with the site’s own context. Saved only if it parses, and the page stops going through the theme’s layout.',
   'pageEditor.sourceProblem': '{message} (line {line})',
+  'templateReference.title': 'Available template tags',
+  'templateReference.intro':
+    'This page is rendered with the site’s own context. Everything you may use is below — anything else fails loudly rather than rendering nothing. The same reference covers the fields a post or a product page gets.',
+  'templateReference.loading': 'Loading the reference…',
+  'templateReference.group.site': 'Site',
+  'templateReference.group.page': 'This page',
+  'templateReference.group.content': 'The content',
+  'templateReference.group.seo': 'Search and sharing',
+  'templateReference.group.preview': 'Previewing',
+  'templateReference.tags': 'Tags',
+  'templateReference.platformFilters': 'Platform filters',
+  'templateReference.nativeFilters': 'Liquid’s own filters',
   'pages.customMarker': 'Own template',
 
   'taxonomy.pick': 'Filed under',

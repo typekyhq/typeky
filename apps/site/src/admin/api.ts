@@ -25,7 +25,14 @@ import {
   updatePage,
 } from './pages'
 import { verifyPassword } from './password'
-import { readThemeTemplate, readThemeTemplates, previewThemeTemplate, resetThemeTemplate, writeThemeTemplate } from './theme'
+import {
+  readThemeContext,
+  readThemeTemplate,
+  readThemeTemplates,
+  previewThemeTemplate,
+  resetThemeTemplate,
+  writeThemeTemplate,
+} from './theme'
 import {
   bulkPosts,
   createPost,
@@ -239,6 +246,8 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // create one: a site may edit what its theme ships and nothing more.
   api.get('/theme/templates', (c) => readThemeTemplates(c, repositories))
   api.get('/theme/template', (c) => readThemeTemplate(c, repositories))
+  // What a template may read, derived from a real context rather than written down.
+  api.get('/theme/context', (c) => readThemeContext(c, repositories))
   api.put('/theme/template', (c) => writeThemeTemplate(c, repositories))
   // Restoring the bundled template: the override row goes, the baseline shows.
   api.delete('/theme/template', (c) => resetThemeTemplate(c, repositories))

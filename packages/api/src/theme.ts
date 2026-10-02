@@ -62,6 +62,28 @@ export type ThemeTemplateWrite = z.infer<typeof themeTemplateWriteSchema>
  * Same shape as a write, and deliberately so: a preview is what a save would
  * look like, and anything that could be saved should be previewable.
  */
+/**
+ * The paths a template may read, taken from a real render context.
+ *
+ * Paths rather than a shape: `content.terms` is either there or it is not, and an
+ * object of example values would invite an author to read the example instead of
+ * the contract.
+ */
+export const themeContextResponseSchema = z.object({
+  /** The template the paths were derived from, echoed back. */
+  template: z.string(),
+  /** Sorted, for example `content.title`. */
+  paths: z.array(z.string()),
+  /** The Liquid tags the sandbox allows -- the whitelist itself, not a summary. */
+  tags: z.array(z.string()),
+  /** The filters this platform adds, which are the ones worth naming. */
+  platformFilters: z.array(z.string()),
+  /** Liquid's own filters the sandbox keeps, so the list is complete. */
+  nativeFilters: z.array(z.string()),
+})
+
+export type ThemeContextResponse = z.infer<typeof themeContextResponseSchema>
+
 export const themePreviewResponseSchema = z.object({
   /** The rendered page, as a string for an `srcdoc` frame. */
   html: z.string(),

@@ -11,6 +11,7 @@ import {
   mediaItemSchema,
   mediaUsageSchema,
   bulkResultSchema,
+  themeContextResponseSchema,
   themeTemplateListResponseSchema,
   themeTemplateResponseSchema,
   themePreviewResponseSchema,
@@ -46,6 +47,7 @@ import {
   type TaxonomyResponse,
   type Term,
   type TermWrite,
+  type ThemeContextResponse,
   type ThemePreviewResponse,
   type ThemeTemplateListResponse,
   type ThemeTemplateResponse,
@@ -139,6 +141,8 @@ export interface ApiClient {
   mediaContentUrl(id: string): string
 
   listThemeTemplates(): Promise<ThemeTemplateListResponse>
+  /** What a template may read and use, derived from a real render context. */
+  getThemeContext(template: string): Promise<ThemeContextResponse>
   getThemeTemplate(path: string): Promise<ThemeTemplateResponse>
   saveThemeTemplate(path: string, source: string): Promise<ThemeTemplateResponse>
   previewThemeTemplate(path: string, source: string): Promise<ThemePreviewResponse>
@@ -547,6 +551,15 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         themeTemplateListResponseSchema,
         await send('GET', '/theme/templates'),
         'the template list did not match the contract',
+      )
+    },
+
+    async getThemeContext(template) {
+      return readContract(
+        themeContextResponseSchema,
+        // A query parameter, like the template read: a template name has a slash.
+        await send('GET', `/theme/context?template=${encodeURIComponent(template)}`),
+        'the context reference did not match the contract',
       )
     },
 

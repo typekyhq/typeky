@@ -341,6 +341,18 @@ export const zhCN: Locale = {
   'pageEditor.customSource': '页面模板',
   'pageEditor.customSource.hint': '用站点自己的上下文渲染。只有能通过语法检查才会保存；这一页不再走主题布局。',
   'pageEditor.sourceProblem': '{message}（第 {line} 行）',
+  'templateReference.title': '可用的模板标签',
+  'templateReference.intro':
+    '这一页用站点自己的上下文渲染。下面就是全部可用的东西 —— 不在其中的会明确报错，而不是渲染成空。文章与产品页面的字段用的是同一份参考。',
+  'templateReference.loading': '正在加载参考…',
+  'templateReference.group.site': '站点',
+  'templateReference.group.page': '本页',
+  'templateReference.group.content': '内容',
+  'templateReference.group.seo': '搜索与分享',
+  'templateReference.group.preview': '预览时',
+  'templateReference.tags': '标签',
+  'templateReference.platformFilters': '平台过滤器',
+  'templateReference.nativeFilters': 'Liquid 自带过滤器',
   'pages.customMarker': '自定义模板',
 
   'taxonomy.pick': '归档到',

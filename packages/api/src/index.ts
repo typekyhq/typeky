@@ -106,11 +106,13 @@ export {
 
 export {
   THEME_TEMPLATE_GROUPS,
+  themeContextResponseSchema,
   themePreviewResponseSchema,
   themeTemplateListResponseSchema,
   themeTemplateResponseSchema,
   themeTemplateSummarySchema,
   themeTemplateWriteSchema,
+  type ThemeContextResponse,
   type ThemePreviewResponse,
   type ThemeTemplateGroup,
   type ThemeTemplateListResponse,
