@@ -1,0 +1,93 @@
+/**
+ * Repository contracts.
+ *
+ * This is the only surface application code may use to reach data: routes must
+ * not build SQL, and the port underneath is replaceable (CONTRIBUTING.md section
+ * 3, red line 4).
+ *
+ * Every method takes a `TenantContext` first (architecture section 5.3). Writes
+ * are whole documents, not patches -- see the note in `types.ts`.
+ */
+
+import type { TenantContext } from './context'
+import type {
+  ListMediaQuery,
+  ListPostsQuery,
+  ListQuery,
+  MediaItem,
+  MediaWrite,
+  Page,
+  PageResult,
+  PageWrite,
+  Post,
+  PostWrite,
+  Product,
+  ProductWrite,
+  Site,
+  SiteWrite,
+  ThemeTemplate,
+  ThemeTemplateWrite,
+} from './types'
+
+export interface SiteRepository {
+  /** The single CE site row, or null before it has been created. */
+  get(ctx: TenantContext): Promise<Site | null>
+  /** Creates or replaces that row. */
+  save(ctx: TenantContext, input: SiteWrite): Promise<Site>
+}
+
+export interface PageRepository {
+  list(ctx: TenantContext, query?: ListQuery): Promise<PageResult<Page>>
+  byId(ctx: TenantContext, id: string): Promise<Page | null>
+  bySlug(ctx: TenantContext, slug: string): Promise<Page | null>
+  /** The page flagged as home, of which the database allows at most one. */
+  home(ctx: TenantContext): Promise<Page | null>
+  /** Creates when `input.id` is absent, otherwise replaces that page. */
+  upsert(ctx: TenantContext, input: PageWrite): Promise<Page>
+  /** Makes this page the home page, clearing the previous one atomically. */
+  setHome(ctx: TenantContext, id: string): Promise<Page>
+  remove(ctx: TenantContext, id: string): Promise<boolean>
+}
+
+export interface PostRepository {
+  list(ctx: TenantContext, query?: ListPostsQuery): Promise<PageResult<Post>>
+  byId(ctx: TenantContext, id: string): Promise<Post | null>
+  bySlug(ctx: TenantContext, slug: string): Promise<Post | null>
+  upsert(ctx: TenantContext, input: PostWrite): Promise<Post>
+  remove(ctx: TenantContext, id: string): Promise<boolean>
+}
+
+export interface ProductRepository {
+  list(ctx: TenantContext, query?: ListQuery): Promise<PageResult<Product>>
+  byId(ctx: TenantContext, id: string): Promise<Product | null>
+  bySlug(ctx: TenantContext, slug: string): Promise<Product | null>
+  upsert(ctx: TenantContext, input: ProductWrite): Promise<Product>
+  remove(ctx: TenantContext, id: string): Promise<boolean>
+}
+
+export interface MediaRepository {
+  list(ctx: TenantContext, query?: ListMediaQuery): Promise<PageResult<MediaItem>>
+  byId(ctx: TenantContext, id: string): Promise<MediaItem | null>
+  insert(ctx: TenantContext, input: MediaWrite): Promise<MediaItem>
+  /** Deleting media clears references to it rather than blocking the delete. */
+  remove(ctx: TenantContext, id: string): Promise<boolean>
+}
+
+export interface ThemeTemplateRepository {
+  /** Overrides for a theme, ordered by path. */
+  list(ctx: TenantContext, theme: string): Promise<ThemeTemplate[]>
+  byPath(ctx: TenantContext, theme: string, path: string): Promise<ThemeTemplate | null>
+  /** Creates or replaces the override for this path, bumping its revision. */
+  save(ctx: TenantContext, input: ThemeTemplateWrite): Promise<ThemeTemplate>
+  /** Drops the override, which restores the bundled baseline template. */
+  reset(ctx: TenantContext, theme: string, path: string): Promise<boolean>
+}
+
+export interface Repositories {
+  sites: SiteRepository
+  pages: PageRepository
+  posts: PostRepository
+  products: ProductRepository
+  media: MediaRepository
+  themeTemplates: ThemeTemplateRepository
+}

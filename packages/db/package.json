@@ -5,6 +5,10 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/d1/schema.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
