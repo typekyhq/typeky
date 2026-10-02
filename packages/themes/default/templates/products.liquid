@@ -1,10 +1,14 @@
 {% layout 'layouts/base' %}
-<h1>{{ page.title | default: 'Products' }}</h1>
+<header class="list-header">
+  <h1>{{ page.title | default: 'Products' }}</h1>
+</header>
+
 <ul class="product-list">
   {% for product in content %}
     <li>{% render 'snippets/product-card', product: product %}</li>
   {% else %}
-    <li class="empty">No products yet.</li>
+    <li class="empty">No products have been published yet.</li>
   {% endfor %}
 </ul>
+
 {% render 'snippets/pagination', page: page %}

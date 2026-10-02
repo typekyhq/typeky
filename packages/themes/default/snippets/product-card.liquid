@@ -1,5 +1,16 @@
-<article class="card">
-  {% if product.cover_url %}<img src="{{ product.cover_url }}" alt="{{ product.title }}">{% endif %}
+{% comment %}
+  One row of the product list. `product` is what the caller passes: a summary,
+  so the card renders what a summary carries -- no body, no specs.
+{% endcomment %}
+<article class="card product-card">
+  {% if product.cover_url %}
+    <a class="card-cover" href="{{ product.url | url }}">
+      <img src="{{ product.cover_url }}" alt="{{ product.title }}">
+    </a>
+  {% endif %}
+
   <h2><a href="{{ product.url | url }}">{{ product.title }}</a></h2>
+
   {% if product.price_label %}<p class="price">{{ product.price_label }}</p>{% endif %}
+  {% if product.excerpt %}<p class="excerpt">{{ product.excerpt }}</p>{% endif %}
 </article>

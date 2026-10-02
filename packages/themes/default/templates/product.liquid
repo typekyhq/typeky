@@ -1,19 +1,45 @@
 {% layout 'layouts/base' %}
 <article class="product">
-  <h1>{{ content.title }}</h1>
-  {% if content.price_label %}<p class="price">{{ content.price_label }}</p>{% endif %}
+  <header class="product-header">
+    <h1>{{ content.title }}</h1>
+    {% if content.price_label %}<p class="price">{{ content.price_label }}</p>{% endif %}
+  </header>
+
+  {% if content.cover_url %}
+    <img class="cover" src="{{ content.cover_url }}" alt="{{ content.title }}">
+  {% endif %}
+
+  {% comment %}
+    The gallery holds media ids the platform has already resolved to URLs. A
+    theme never sees an id it would have to look up, and never a storage key.
+  {% endcomment %}
   {% if content.gallery.size > 0 %}
     <ul class="gallery">
-      {% for image in content.gallery %}<li><img src="{{ image }}" alt="{{ content.title }}"></li>{% endfor %}
+      {% for image in content.gallery %}
+        <li><img src="{{ image }}" alt="{{ content.title }}"></li>
+      {% endfor %}
     </ul>
   {% endif %}
+
   {{ content.blocks | render_blocks }}
+
   {% if content.specs.size > 0 %}
     <dl class="specs">
-      {% for spec in content.specs %}<dt>{{ spec.label }}</dt><dd>{{ spec.value }}</dd>{% endfor %}
+      {% for spec in content.specs %}
+        <dt>{{ spec.label }}</dt><dd>{{ spec.value }}</dd>
+      {% endfor %}
     </dl>
   {% endif %}
+
   {% if content.cta_url %}
-    <a class="cta" href="{{ content.cta_url }}">{{ content.cta_label | default: 'Learn more' }}</a>
+    {% comment %}
+      The button leaves the site -- there is no checkout here, on purpose. `rel`
+      keeps the destination from reaching back through the window it opened.
+      An "opens in a new tab" hint belongs with the stylesheet that can hide it;
+      written here it would be visible to everyone until then.
+    {% endcomment %}
+    <p class="cta">
+      <a href="{{ content.cta_url }}" rel="noopener noreferrer" target="_blank">{{ content.cta_label | default: 'Learn more' }}</a>
+    </p>
   {% endif %}
 </article>
