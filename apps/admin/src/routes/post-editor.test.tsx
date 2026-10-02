@@ -283,3 +283,25 @@ describe('the cover image', () => {
     })
   })
 })
+
+/**
+ * Where the panels sit.
+ *
+ * Under the heading, the way back and the status line -- what the page is,
+ * before how it is filled in. The tab bar is the first thing after the title
+ * otherwise, which reads as a page whose title is "Details".
+ */
+describe('where the panels sit', () => {
+  it('after the heading and the status line', async () => {
+    renderEditor(fakeApiClient({ async getPost() { return POST } }))
+
+    const heading = await screen.findByRole('heading', { level: 1 })
+    const status = screen.getByTestId('post-meta')
+    const tablist = screen.getByRole('tablist', { name: 'Editor sections' })
+
+    // `DOCUMENT_POSITION_FOLLOWING` is what "tablist comes after this" means in
+    // DOM terms; there is no query that asks the question directly.
+    expect(heading.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(status.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})

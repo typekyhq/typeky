@@ -225,14 +225,6 @@ export function ProductEditorPage() {
       className="space-y-6"
     >
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList aria-label={t('editor.sections')}>
-          {TABS.map((entry) => (
-            <TabsTrigger key={entry.id} value={entry.id}>
-              {t(entry.labelKey)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">{isNewProduct ? t('productEditor.new') : t('productEditor.edit')}</h1>
@@ -271,6 +263,15 @@ export function ProductEditorPage() {
           })}
         </p>
       )}
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList aria-label={t('editor.sections')}>
+          {TABS.map((entry) => (
+            <TabsTrigger key={entry.id} value={entry.id}>
+              {t(entry.labelKey)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
       <TabsContent value="details" forceMount hidden={tab !== 'details'}>
         <Card>
