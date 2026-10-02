@@ -130,21 +130,23 @@ describe('site worker', () => {
   })
 
   describe('site pages', () => {
-    it('serves the placeholder until the render pipeline lands', async () => {
+    it('answers with a setup message when there is no database', async () => {
       const response = await send('/')
 
-      expect(response.status).toBe(200)
+      // Not a theme page: with no site row there is no theme to render one from,
+      // and a page that cannot load its own assets is worse than saying so.
+      expect(response.status).toBe(503)
       expect(response.headers.get('content-type')).toContain('text/html')
-      expect(await response.text()).toContain('Typeky is running')
+      expect(await response.text()).toContain('Almost there')
     })
 
-    it('answers an unpublished path with the placeholder, not a 404', async () => {
-      // The route table for real pages is built from content, so a miss here is
-      // not yet "not found" -- M6 decides that.
+    it('says the same thing for a content path as for the front page', async () => {
       const response = await send('/about')
 
-      expect(response.status).toBe(200)
-      expect(await response.text()).toContain('/about')
+      // Whether /about exists is a question the database answers, and there is
+      // not one, so this is not a 404 either.
+      expect(response.status).toBe(503)
+      expect(await response.text()).toContain('no database configured')
     })
 
     it('does not answer a missing asset with an HTML page', async () => {
@@ -166,12 +168,16 @@ describe('site worker', () => {
       expect(escapeHtml(`&<>"'`)).toBe('&amp;&lt;&gt;&quot;&#39;')
     })
 
-    it('escapes the requested path before echoing it back', async () => {
-      // An apostrophe survives URL normalisation, unlike `<` and `"`, so it is
-      // the character that actually reaches the page unencoded.
+    it('does not echo the requested path back', async () => {
+      // It used to: the placeholder named the path it could not find. The
+      // pipeline answers from content, and neither the bundled 404 nor the setup
+      // page says anything about what was asked for -- which is also the safest
+      // thing to say.
       const response = await send("/o'brien")
 
-      expect(await response.text()).toContain('&#39;')
+      const html = await response.text()
+      expect(html).not.toContain("o'brien")
+      expect(html).not.toContain('&#39;')
     })
   })
 })

@@ -1,5 +1,5 @@
 <title>{{ seo.title }}</title>
 {% if seo.description %}<meta name="description" content="{{ seo.description }}">{% endif %}
-{% if seo.canonical %}<link rel="canonical" href="{{ seo.canonical }}">{% endif %}
+{% if page.canonical %}<link rel="canonical" href="{{ page.canonical }}">{% endif %}
 {% if seo.og_image %}<meta property="og:image" content="{{ seo.og_image }}">{% endif %}
 {% if seo.json_ld %}<script type="application/ld+json">{{ seo.json_ld | json }}</script>{% endif %}

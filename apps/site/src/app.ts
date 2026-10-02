@@ -1,9 +1,14 @@
 import { createD1DbPort } from '@typeky/platform'
 import type { ApiErrorBody } from '@typeky/api'
 import { Hono } from 'hono'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { createAdminApi } from './admin/api'
+import { blobsFor } from './blobs'
 import type { Env } from './env'
-import { errorPage, notFoundPage, placeholderPage } from './pages'
+import { serveMedia } from './media'
+import { errorPage, notFoundPage } from './pages'
+import { renderPage } from './render/page'
+import { repositoriesFor } from './repositories'
 
 /**
  * The site Worker.
@@ -42,12 +47,24 @@ export function createApp(): Hono<{ Bindings: Env }> {
   app.get('/admin/*', (c) => serveAdminShell(c.env, c.req.raw))
   app.get('/admin', (c) => serveAdminShell(c.env, c.req.raw))
 
-  app.get('*', (c) => {
+  // Media, served to visitors. Registered before the catch-all because a media
+  // URL has no file extension and would otherwise be treated as a page.
+  app.get('/media/:id', (c) => serveMedia(c.env, c.req.param('id'), c.req.raw))
+
+  app.get('*', async (c) => {
     const path = new URL(c.req.url).pathname
     if (looksLikeAsset(path)) return c.text('Not Found', 404)
 
-    // M6 replaces this with the Liquid render pipeline.
-    return c.html(placeholderPage(path))
+    const result = await renderPage(path, {
+      repositories: repositoriesFor(c.env),
+      db: c.env.DB === undefined ? null : createD1DbPort(c.env.DB),
+      blob: blobsFor(c.env),
+      // The origin the request arrived on, so a canonical URL points at the site
+      // that was actually asked for rather than at a configured one.
+      baseUrl: new URL(c.req.url).origin,
+    })
+
+    return c.html(result.html, result.status as ContentfulStatusCode)
   })
 
   app.notFound((c) => c.html(notFoundPage(new URL(c.req.url).pathname), 404))
