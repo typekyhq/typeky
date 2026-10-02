@@ -1,4 +1,6 @@
 {% layout 'layouts/base' %}
-<h1>Page not found</h1>
-<p>That address does not exist on this site.</p>
-<p><a href="{{ '/' | url }}">Go home</a></p>
+<article class="not-found">
+  <h1>Page not found</h1>
+  <p>That address does not exist on this site. It may have been moved, or the link that brought you here may be wrong.</p>
+  <p><a href="{{ '/' | url }}">Back to {{ site.name }}</a></p>
+</article>

@@ -1,4 +1,23 @@
+{% comment %}
+  One row of the post list. `post` is what the caller passes: a summary, not the
+  whole document -- a list renders titles and summaries, and the bodies of ten
+  posts would be a page's context with ten posts' worth of JSON nothing reads.
+{% endcomment %}
 <article class="card">
+  {% if post.cover_url %}
+    <a class="card-cover" href="{{ post.url | url }}">
+      <img src="{{ post.cover_url }}" alt="{{ post.title }}">
+    </a>
+  {% endif %}
+
   <h2><a href="{{ post.url | url }}">{{ post.title }}</a></h2>
-  {% if post.excerpt %}<p>{{ post.excerpt }}</p>{% endif %}
+
+  <p class="meta">
+    {% if post.published_at %}
+      <time datetime="{{ post.published_at }}">{{ post.published_at | date: '%B %-d, %Y' }}</time>
+    {% endif %}
+    {% if post.category %}<span class="category">{{ post.category }}</span>{% endif %}
+  </p>
+
+  {% if post.excerpt %}<p class="excerpt">{{ post.excerpt }}</p>{% endif %}
 </article>

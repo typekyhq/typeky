@@ -1,10 +1,18 @@
 {% layout 'layouts/base' %}
-<h1>{{ page.title | default: 'Posts' }}</h1>
+<header class="list-header">
+  <h1>{{ page.title | default: 'Posts' }}</h1>
+</header>
+
 <ul class="post-list">
   {% for post in content %}
     <li>{% render 'snippets/post-card', post: post %}</li>
   {% else %}
-    <li class="empty">Nothing published yet.</li>
+    {% comment %}
+      `for ... else` rather than a length check: with an empty list there is
+      nothing to count, and this reads as what it is.
+    {% endcomment %}
+    <li class="empty">Nothing has been published yet.</li>
   {% endfor %}
 </ul>
+
 {% render 'snippets/pagination', page: page %}

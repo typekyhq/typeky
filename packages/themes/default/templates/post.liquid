@@ -1,13 +1,23 @@
 {% layout 'layouts/base' %}
 <article class="prose">
-  <h1>{{ content.title }}</h1>
-  <p class="meta">
-    {% if content.published_at %}<time datetime="{{ content.published_at }}">{{ content.published_at | date: '%Y-%m-%d' }}</time>{% endif %}
-    {% if content.category %}<span>{{ content.category }}</span>{% endif %}
-  </p>
+  <header class="post-header">
+    <h1>{{ content.title }}</h1>
+    <p class="meta">
+      {% if content.published_at %}
+        <time datetime="{{ content.published_at }}">{{ content.published_at | date: '%B %-d, %Y' }}</time>
+      {% endif %}
+      {% if content.category %}<span class="category">{{ content.category }}</span>{% endif %}
+    </p>
+  </header>
+
+  {% if content.cover_url %}
+    <img class="cover" src="{{ content.cover_url }}" alt="{{ content.title }}">
+  {% endif %}
+
   {{ content.blocks | render_blocks }}
+
   {% if content.tags.size > 0 %}
-    <ul class="tags">
+    <ul class="tags" aria-label="Tags">
       {% for tag in content.tags %}<li>{{ tag }}</li>{% endfor %}
     </ul>
   {% endif %}

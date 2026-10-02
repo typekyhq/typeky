@@ -293,6 +293,7 @@ function summaryOf(
     slug: item.slug,
     url: contentUrlFor(item),
     ...(item.excerpt === null || item.excerpt === undefined ? {} : { excerpt: item.excerpt }),
+    ...(item.category === null || item.category === undefined ? {} : { category: item.category }),
     ...(item.priceLabel === null || item.priceLabel === undefined ? {} : { price_label: item.priceLabel }),
     ...(item.publishedAt === null || item.publishedAt === undefined
       ? {}
