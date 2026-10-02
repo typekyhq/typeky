@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BlockEditor } from './block-editor'
 import { createEditorExtensions, HEADING_LEVELS } from './schema'
-import { BLOCK_ACTIONS } from './toolbar'
+import { BLOCK_ACTIONS } from './block-actions'
 
 const open: Editor[] = []
 

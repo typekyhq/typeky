@@ -2,9 +2,11 @@ import { HEADING_LEVELS } from '@typeky/core'
 import type { AnyExtension } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import { BlockMovement } from './commands'
 import { Cta } from './extensions/cta'
 import { Image, Video } from './extensions/media'
 import { CtaNodeView, ImageNodeView, VideoNodeView } from './node-views'
+import { SlashMenu } from './slash-menu'
 
 /**
  * The nine MVP block types (architecture section 3.11).
@@ -46,5 +48,8 @@ export function createEditorExtensions(): AnyExtension[] {
     Image.extend({ addNodeView: () => ReactNodeViewRenderer(ImageNodeView) }),
     Video.extend({ addNodeView: () => ReactNodeViewRenderer(VideoNodeView) }),
     Cta.extend({ addNodeView: () => ReactNodeViewRenderer(CtaNodeView) }),
+    // Block-level behaviour: moving a block, and the `/` menu.
+    BlockMovement,
+    SlashMenu,
   ]
 }
