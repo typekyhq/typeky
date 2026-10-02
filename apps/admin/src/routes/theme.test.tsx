@@ -117,12 +117,17 @@ describe('the theme screen', () => {
     expect(await screen.findByText('Every template is the one the default theme ships.')).toBeTruthy()
   })
 
-  it('says that templates cannot be added, rather than leaving it to be discovered', async () => {
-    renderSection(withTheme())
+  it('offers no way to add a template', async () => {
+    // The theme ships a fixed set, and the tree is the only place a template can
+    // be chosen from: every button in it is a folder or a file the theme put
+    // there. The sentence that used to say so was removed to match the other
+    // screens, so this asserts the absence itself rather than the notice.
+    const { container } = renderSection(withTheme())
+    await screen.findByTestId('theme-tree')
 
-    expect(await screen.findByText(/There is no way to add a new one/)).toBeTruthy()
-    // And no control offers one.
-    expect(screen.queryByRole('button', { name: /new template/i })).toBeNull()
+    const buttons = [...container.querySelectorAll('[data-testid=theme-tree] button')]
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons.some((button) => /new|add/i.test(button.textContent ?? ''))).toBe(false)
   })
 
   it('opens a template in the editor', async () => {

@@ -108,8 +108,6 @@ export const en: Locale = {
   'productEditor.specs.entryName': 'spec {number}',
   'theme.subtitle.all': 'Every template is the one the {theme} theme ships.',
   'theme.subtitle.customised': '{customised} of {total} templates have been customised.',
-  'theme.note':
-    'You can edit the templates your theme ships, and only those. There is no way to add a new one: a theme upgrade that found files it did not put there is the conflict this avoids.',
   'settings.language.dates.hint':
     'The site and this panel are written in their own language, and write dates their own way.',
 

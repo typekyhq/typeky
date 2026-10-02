@@ -2,6 +2,7 @@ import type { BulkResult, ContentSort, ContentStatus, SortDirection } from '@typ
 import { type FormEvent, type ReactNode, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { useT, type Translate } from '@/lib/i18n'
 
@@ -193,9 +194,8 @@ export function SortSelect({
   return (
     <div className="space-y-2">
       <Label htmlFor="list-sort">{t('list.sort')}</Label>
-      <select
+      <Select
         id="list-sort"
-        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
         value={value}
         onChange={(event) => {
           const next = choices.find((choice) => choice.value === event.target.value)
@@ -207,7 +207,7 @@ export function SortSelect({
             {t(choice.labelKey)}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   )
 }

@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   DEFAULT_ADMIN_DATE_FORMAT,
@@ -610,9 +611,8 @@ export function SettingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="adminLanguage">{t('settings.adminLanguage')}</Label>
-              <select
+              <Select
                 id="adminLanguage"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={settings.admin?.language ?? DEFAULT_LANGUAGE}
                 onChange={(event) =>
                   update((current) => ({
@@ -626,7 +626,7 @@ export function SettingsPage() {
                     {locale.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="text-sm text-muted-foreground">
                 {t('settings.adminLanguage.hint')}
               </p>

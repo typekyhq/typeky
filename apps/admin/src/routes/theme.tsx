@@ -225,10 +225,6 @@ export function ThemeSection() {
         </p>
       </div>
 
-      <p className="max-w-prose rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-        {t('theme.note')}
-      </p>
-
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         {/*
           A navigation landmark of two nested lists, and not `role="tree"`.

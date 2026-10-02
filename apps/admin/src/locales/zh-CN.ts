@@ -105,8 +105,6 @@ export const zhCN: Locale = {
   'productEditor.specs.entryName': '第 {number} 项规格',
   'theme.subtitle.all': '所有模板都是 {theme} 主题自带的版本。',
   'theme.subtitle.customised': '{total} 个模板中有 {customised} 个已被自定义。',
-  'theme.note':
-    '你只能编辑主题自带的模板，也只有这些。没有办法新增：主题升级时发现不是自己放进去的文件，正是这个设计要避开的冲突。',
   'settings.language.dates.hint': '站点和本面板各用各的语言，也各用各的日期写法。',
 
   // Lists: the toolbar above every collection.
