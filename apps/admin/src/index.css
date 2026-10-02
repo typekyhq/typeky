@@ -3,6 +3,14 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+/*
+ * Tailwind scans the project it is configured in, which does not include the
+ * workspace packages. The block editor's UI lives in @typeky/editor, so without
+ * this its classes are absent from the stylesheet and the blocks render
+ * unstyled.
+ */
+@source '../../../packages/editor/src';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

@@ -39,7 +39,14 @@ jobs:
       - name: Schema drift
         run: pnpm check:schema-drift
 
-      # Asserts the site side stays free of frontend framework code and that the
-      # site Worker never imports the editor package (CONTRIBUTING section 3).
+      # The boundary check reads build output, so the build has to happen first.
+      # Without this step it used to pass on nothing at all.
+      - name: Build
+        run: pnpm build
+
+      # Asserts the site side stays free of frontend framework code, that the
+      # site Worker never imports the editor package, that the admin bundle does
+      # not carry the theme runtime, and that the admin first screen stays inside
+      # its size budget (CONTRIBUTING section 3, architecture section 9.3).
       - name: Asset boundaries
         run: pnpm check:boundaries

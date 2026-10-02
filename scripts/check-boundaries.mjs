@@ -123,9 +123,14 @@ const ADMIN_FIRST_SCREEN_BUDGET_BYTES = 350 * 1024
 
 const adminDir = join(root, 'public/admin')
 const adminIndex = join(adminDir, 'index.html')
-let adminNote = '(no admin build yet)'
+let adminNote = ''
 
-if (existsSync(adminIndex)) {
+if (!existsSync(adminIndex)) {
+  // Not a skip. Silently passing here is how the budget and the bundle scan went
+  // unenforced: the check reads build output, so it has to be told to fail when
+  // there is none.
+  failures.push('no admin build output: run `pnpm build` before the boundary check')
+} else {
   const html = readFileSync(adminIndex, 'utf8')
   const referenced = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
     .map((match) => match[1])
