@@ -12,13 +12,23 @@ describe('session ids', () => {
 })
 
 describe('session store', () => {
-  it('round-trips a session', async () => {
+  it('round-trips a session, csrf token included', async () => {
     const { kv } = fakeKv()
 
     const { id, session } = await createSession(kv, 'admin')
 
     expect(session.actorId).toBe('admin')
+    expect(session.csrfToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(await readSession(kv, id)).toEqual(session)
+  })
+
+  it('gives every session its own csrf token', async () => {
+    const { kv } = fakeKv()
+
+    const first = await createSession(kv, 'admin')
+    const second = await createSession(kv, 'admin')
+
+    expect(first.session.csrfToken).not.toBe(second.session.csrfToken)
   })
 
   it('sets an expiry, so sessions do not accumulate forever', async () => {
@@ -41,9 +51,13 @@ describe('session store', () => {
     const { kv, entries } = fakeKv()
     entries.set('session:broken', { value: '{not json' })
     entries.set('session:wrong-shape', { value: '{"actorId":42}' })
+    // A record with no csrf token is refused rather than trusted: an
+    // authenticated request without a token to check against must not succeed.
+    entries.set('session:no-token', { value: '{"actorId":"admin","createdAt":"2026-01-01T00:00:00.000Z"}' })
 
     expect(await readSession(kv, 'broken')).toBeNull()
     expect(await readSession(kv, 'wrong-shape')).toBeNull()
+    expect(await readSession(kv, 'no-token')).toBeNull()
   })
 
   it('destroys a session', async () => {

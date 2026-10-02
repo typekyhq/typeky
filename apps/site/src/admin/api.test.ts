@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../app'
 import type { Env } from '../env'
 import { fakeAssets, fakeKv, makeTestEnv, type FakeKv } from '../testing/env'
+import { CSRF_HEADER } from './csrf'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
 import { SESSION_COOKIE } from './session'
 
@@ -41,10 +42,17 @@ function cookieOf(response: Response): string {
   return (response.headers.get('set-cookie') ?? '').split(';')[0] ?? ''
 }
 
-/** Logs in and returns the Cookie header a browser would send back. */
-async function signIn(env: Env): Promise<string> {
+interface SignedIn {
+  cookie: string
+  csrfToken: string
+  actorId: string
+}
+
+/** Logs in and returns everything a browser client would hold afterwards. */
+async function signIn(env: Env): Promise<SignedIn> {
   const response = await login(env)
-  return cookieOf(response)
+  const session = (await response.json()) as { actorId: string; csrfToken: string }
+  return { cookie: cookieOf(response), csrfToken: session.csrfToken, actorId: session.actorId }
 }
 
 describe('login', () => {
@@ -151,22 +159,24 @@ describe('session-protected endpoints', () => {
     expect(response.status).toBe(401)
   })
 
-  it('lets an authenticated request through to the not-yet-implemented handler', async () => {
+  it('lets an authenticated read through to the not-yet-implemented handler', async () => {
     const { env } = environment()
+    const { cookie } = await signIn(env)
 
-    const response = await send('/api/admin/pages', env, { headers: { cookie: await signIn(env) } })
+    const response = await send('/api/admin/pages', env, { headers: { cookie } })
 
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: 'not_found' })
   })
 
-  it('reports the current session', async () => {
+  it('reports the current session, including its csrf token', async () => {
     const { env } = environment()
+    const { cookie, csrfToken } = await signIn(env)
 
-    const response = await send('/api/admin/session', env, { headers: { cookie: await signIn(env) } })
+    const response = await send('/api/admin/session', env, { headers: { cookie } })
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toMatchObject({ actorId: 'admin' })
+    await expect(response.json()).resolves.toMatchObject({ actorId: 'admin', csrfToken })
   })
 
   it('answers 401 for the current-session endpoint without a session', async () => {
@@ -174,12 +184,101 @@ describe('session-protected endpoints', () => {
 
     expect((await send('/api/admin/session', env)).status).toBe(401)
   })
+
+  it('checks the session before the token, so an anonymous write is 401 rather than 403', async () => {
+    const { env } = environment()
+
+    const response = await send('/api/admin/pages', env, { method: 'POST' })
+
+    expect(response.status).toBe(401)
+  })
+})
+
+describe('csrf', () => {
+  it('hands the client a token when it logs in', async () => {
+    const { env } = environment()
+
+    const response = await login(env)
+
+    await expect(response.json()).resolves.toMatchObject({ csrfToken: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) })
+  })
+
+  it('gives each session its own token', async () => {
+    const { env } = environment()
+
+    const first = await signIn(env)
+    const second = await signIn(env)
+
+    expect(first.csrfToken).not.toBe(second.csrfToken)
+  })
+
+  it('rejects a write with no token', async () => {
+    const { env } = environment()
+    const { cookie } = await signIn(env)
+
+    const response = await send('/api/admin/pages', env, { method: 'POST', headers: { cookie } })
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({ error: 'csrf_failed' })
+  })
+
+  it('rejects a write with the wrong token', async () => {
+    const { env } = environment()
+    const { cookie } = await signIn(env)
+
+    const response = await send('/api/admin/pages', env, {
+      method: 'POST',
+      headers: { cookie, [CSRF_HEADER]: 'not-the-token' },
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  it('rejects a token that belongs to a different session', async () => {
+    const { env } = environment()
+    const mine = await signIn(env)
+    const other = await signIn(env)
+
+    const response = await send('/api/admin/pages', env, {
+      method: 'POST',
+      headers: { cookie: mine.cookie, [CSRF_HEADER]: other.csrfToken },
+    })
+
+    expect(response.status).toBe(403)
+  })
+
+  it('accepts a write carrying the right token', async () => {
+    const { env } = environment()
+    const { cookie, csrfToken } = await signIn(env)
+
+    const response = await send('/api/admin/pages', env, {
+      method: 'POST',
+      headers: { cookie, [CSRF_HEADER]: csrfToken },
+    })
+
+    // Past the guard, into the catch-all: no write endpoints exist yet.
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({ error: 'not_found' })
+  })
+
+  it('does not demand a token for a read', async () => {
+    const { env } = environment()
+    const { cookie } = await signIn(env)
+
+    expect((await send('/api/admin/pages', env, { headers: { cookie } })).status).toBe(404)
+  })
+
+  it('does not demand a token to log in', async () => {
+    const { env } = environment()
+
+    expect((await login(env)).status).toBe(201)
+  })
 })
 
 describe('logout', () => {
   it('destroys the session and clears the cookie', async () => {
     const { env, cache } = environment()
-    const cookie = await signIn(env)
+    const { cookie } = await signIn(env)
 
     const response = await send('/api/admin/session', env, { method: 'DELETE', headers: { cookie } })
 
@@ -191,10 +290,30 @@ describe('logout', () => {
     expect((await send('/api/admin/pages', env, { headers: { cookie } })).status).toBe(401)
   })
 
-  it('is harmless without a session', async () => {
+  it('is idempotent, so a client that lost its cookie can still clear it', async () => {
     const { env } = environment()
 
     expect((await send('/api/admin/session', env, { method: 'DELETE' })).status).toBe(204)
+  })
+
+  it('skips the token check by design, since the worst case is a nuisance sign-out', async () => {
+    const { env } = environment()
+    const { cookie } = await signIn(env)
+
+    expect((await send('/api/admin/session', env, { method: 'DELETE', headers: { cookie } })).status).toBe(204)
+  })
+
+  it('invalidates the token along with the session', async () => {
+    const { env } = environment()
+    const { cookie, csrfToken } = await signIn(env)
+    await send('/api/admin/session', env, { method: 'DELETE', headers: { cookie } })
+
+    const response = await send('/api/admin/pages', env, {
+      method: 'POST',
+      headers: { cookie, [CSRF_HEADER]: csrfToken },
+    })
+
+    expect(response.status).toBe(401)
   })
 })
 
@@ -206,14 +325,6 @@ describe('api separation', () => {
 
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: 'not_found' })
-  })
-
-  it('does not require a session to reach the admin login', async () => {
-    // Covered by the login tests, asserted here as the reason the middleware is
-    // registered after the session routes rather than before them.
-    const { env } = environment()
-
-    expect((await login(env)).status).toBe(201)
   })
 })
 

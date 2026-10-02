@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { newCsrfToken } from './csrf'
 import { toBase64Url } from './encoding'
 
 /**
@@ -37,6 +38,8 @@ export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 export interface Session {
   actorId: string
+  /** Bound to this session, so a token from another session is not accepted. */
+  csrfToken: string
   createdAt: string
 }
 
@@ -52,7 +55,11 @@ export async function createSession(
   actorId: string,
 ): Promise<{ id: string; session: Session }> {
   const id = newSessionId()
-  const session: Session = { actorId, createdAt: new Date().toISOString() }
+  const session: Session = {
+    actorId,
+    csrfToken: newCsrfToken(),
+    createdAt: new Date().toISOString(),
+  }
 
   await cache.put(KEY_PREFIX + id, JSON.stringify(session), { expirationTtl: SESSION_TTL_SECONDS })
   return { id, session }
@@ -68,9 +75,11 @@ export async function readSession(cache: KVNamespace, id: string | undefined): P
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed !== 'object' || parsed === null) return null
 
-    const { actorId, createdAt } = parsed as Record<string, unknown>
-    if (typeof actorId !== 'string' || typeof createdAt !== 'string') return null
-    return { actorId, createdAt }
+    const { actorId, csrfToken, createdAt } = parsed as Record<string, unknown>
+    if (typeof actorId !== 'string' || typeof csrfToken !== 'string' || typeof createdAt !== 'string') {
+      return null
+    }
+    return { actorId, csrfToken, createdAt }
   } catch {
     // A value that cannot be parsed is treated as no session rather than an
     // error: the correct response is to ask the operator to sign in again.

@@ -5,4 +5,9 @@
  * Architecture red lines: CONTRIBUTING.md section 3
  */
 
-export {}
+export {
+  API_ERROR_CODES,
+  API_ERROR_STATUS,
+  type ApiErrorBody,
+  type ApiErrorCode,
+} from './errors'

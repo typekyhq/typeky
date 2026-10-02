@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@typeky/api": "workspace:*",
     "@typeky/platform": "workspace:*",
     "hono": "^4.13.11"
   },

@@ -236,6 +236,9 @@ importers:
 
   apps/site:
     dependencies:
+      '@typeky/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@typeky/platform':
         specifier: workspace:*
         version: link:../../packages/platform

@@ -33,3 +33,8 @@ export function constantTimeEquals(a: Uint8Array, b: Uint8Array): boolean {
   for (let index = 0; index < a.length; index += 1) difference |= a[index] ^ b[index]
   return difference === 0
 }
+
+/** The same comparison for text, without decoding it first. */
+export function constantTimeStringEquals(a: string, b: string): boolean {
+  return constantTimeEquals(new TextEncoder().encode(a), new TextEncoder().encode(b))
+}
