@@ -21,6 +21,7 @@
     "check:schema-drift": "tsx packages/db/scripts/schema.ts check",
     "db:migrate": "wrangler d1 migrations apply DB --local --config apps/site/wrangler.jsonc",
     "seed": "tsx packages/db/scripts/seed.ts",
+    "admin:password": "tsx apps/site/scripts/hash-password.ts",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm check:boundaries"
   },

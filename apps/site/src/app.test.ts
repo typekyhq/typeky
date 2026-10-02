@@ -2,46 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { createApp } from './app'
 import type { Env } from './env'
 import { escapeHtml } from './pages'
-
-/** Stands in for the Workers Static Assets binding. */
-function assets(files: Record<string, string> = {}, failing = false): Fetcher {
-  return {
-    async fetch(input: Request | string): Promise<Response> {
-      if (failing) throw new Error('assets binding unavailable')
-
-      const url = new URL(typeof input === 'string' ? input : input.url)
-      const body = files[url.pathname]
-      return body === undefined
-        ? new Response('Not Found', { status: 404 })
-        : new Response(body, { status: 200, headers: { 'content-type': 'text/html' } })
-    },
-  } as Fetcher
-}
-
-interface FakeStatement {
-  bind(): FakeStatement
-  all(): Promise<{ results: unknown[] }>
-  first(): Promise<unknown>
-  run(): Promise<{ meta: { changes: number } }>
-}
-
-function fakeDatabase(query: () => Promise<unknown>): D1Database {
-  const statement: FakeStatement = {
-    bind: () => statement,
-    all: async () => ({ results: [] }),
-    first: query,
-    run: async () => ({ meta: { changes: 0 } }),
-  }
-
-  return { prepare: () => statement, batch: async () => [] } as unknown as D1Database
-}
-
-function makeEnv(overrides: Partial<Env> = {}): Env {
-  return { APP_ENV: 'test', ASSETS: assets(), ...overrides }
-}
+import { fakeAssets, fakeDatabase, makeTestEnv } from './testing/env'
 
 /** Hono puts the bindings in the third argument, after RequestInit. */
-async function send(path: string, env: Env = makeEnv(), init?: RequestInit): Promise<Response> {
+async function send(path: string, env: Env = makeTestEnv(), init?: RequestInit): Promise<Response> {
   // `request` is typed as returning a Response or a promise of one.
   return createApp().request(new Request(`https://example.com${path}`, init), undefined, env)
 }
@@ -65,7 +29,7 @@ describe('site worker', () => {
     })
 
     it('probes the database when one is bound', async () => {
-      const response = await send('/healthz', makeEnv({ DB: fakeDatabase(async () => ({ ok: 1 })) }))
+      const response = await send('/healthz', makeTestEnv({ DB: fakeDatabase(async () => ({ ok: 1 })) }))
 
       expect(response.status).toBe(200)
       await expect(response.json()).resolves.toMatchObject({ status: 'ok', database: 'ok' })
@@ -77,7 +41,7 @@ describe('site worker', () => {
         throw new Error('no such table: pages')
       })
 
-      const response = await send('/healthz', makeEnv({ DB: database }))
+      const response = await send('/healthz', makeTestEnv({ DB: database }))
 
       expect(response.status).toBe(503)
       await expect(response.json()).resolves.toMatchObject({ status: 'degraded', database: 'error' })
@@ -86,7 +50,9 @@ describe('site worker', () => {
 
   describe('api', () => {
     it('answers an unknown api path as JSON, not as a page', async () => {
-      const response = await send('/api/admin/pages')
+      // The admin prefix has its own guard (see admin/api.test.ts); this covers
+      // the public side, which stays JSON rather than falling through to a page.
+      const response = await send('/api/v1/pages')
 
       expect(response.status).toBe(404)
       expect(response.headers.get('content-type')).toContain('application/json')
@@ -97,7 +63,7 @@ describe('site worker', () => {
     const built = { '/admin/index.html': '<!doctype html><div id="root"></div>' }
 
     it('serves the shell for a client-side route', async () => {
-      const response = await send('/admin/settings', makeEnv({ ASSETS: assets(built) }))
+      const response = await send('/admin/settings', makeTestEnv({ ASSETS: fakeAssets(built) }))
 
       expect(response.status).toBe(200)
       expect(await response.text()).toContain('id="root"')
@@ -107,7 +73,7 @@ describe('site worker', () => {
     })
 
     it('serves the shell for bare /admin too', async () => {
-      const response = await send('/admin', makeEnv({ ASSETS: assets(built) }))
+      const response = await send('/admin', makeTestEnv({ ASSETS: fakeAssets(built) }))
 
       expect(response.status).toBe(200)
       expect(await response.text()).toContain('id="root"')
@@ -123,7 +89,7 @@ describe('site worker', () => {
     it('returns the error page when the assets binding itself fails', async () => {
       silenceErrors()
 
-      const response = await send('/admin/settings', makeEnv({ ASSETS: assets({}, true) }))
+      const response = await send('/admin/settings', makeTestEnv({ ASSETS: fakeAssets({}, true) }))
 
       expect(response.status).toBe(500)
       expect(await response.text()).toContain('Something went wrong')

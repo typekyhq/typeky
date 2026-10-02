@@ -1,0 +1,12 @@
+# Copy to `.dev.vars` for local development; wrangler loads it during
+# `wrangler dev` and it is gitignored. A real deploy uses `wrangler secret put`.
+#
+#   cp apps/site/.dev.vars.example apps/site/.dev.vars
+#   printf '%s' 'your password' | pnpm admin:password
+#
+# ADMIN_PASSWORD_HASH is intentionally left unset. A deployment without it
+# refuses every login with 503 `admin_password_not_configured` rather than
+# failing in a way that looks like a wrong password.
+
+ADMIN_USERNAME=admin
+# ADMIN_PASSWORD_HASH=scrypt$16384$8$1$<salt>$<hash>

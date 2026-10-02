@@ -5,7 +5,11 @@
   //   pnpm --filter @typeky/site exec wrangler kv namespace create CACHE
   //
   // "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "typeky-media" }],
-  // "kv_namespaces": [{ "binding": "CACHE", "id": "<KV_ID>" }],
+
+  // Same placeholder story as D1 below: local development never reads the id,
+  // and it is replaced with the value printed by
+  // `wrangler kv namespace create CACHE` before the first deploy.
+  "kv_namespaces": [{ "binding": "CACHE", "id": "00000000-0000-0000-0000-000000000000" }],
 
   // The binding, database name and migrations directory are final. Only the
   // placeholder id has to be replaced, with the value printed by
@@ -38,5 +42,5 @@
     "run_worker_first": ["/api/*", "/healthz"]
   },
 
-  "vars": { "APP_ENV": "development" }
+  "vars": { "APP_ENV": "development", "ADMIN_USERNAME": "admin" }
 }

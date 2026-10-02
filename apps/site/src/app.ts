@@ -1,5 +1,6 @@
 import { createD1DbPort } from '@typeky/platform'
 import { Hono } from 'hono'
+import { createAdminApi } from './admin/api'
 import type { Env } from './env'
 import { errorPage, notFoundPage, placeholderPage } from './pages'
 
@@ -27,7 +28,11 @@ export function createApp(): Hono<{ Bindings: Env }> {
     )
   })
 
-  // The admin JSON API. No endpoints exist yet; they arrive with the admin panel.
+  // The admin JSON API. Registered before the public catch-all so the more
+  // specific prefix wins.
+  app.route('/api/admin', createAdminApi())
+
+  // Public read-only API. Lands with the site rendering work.
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404))
 
   // Admin SPA: static assets win first, so anything reaching here is a

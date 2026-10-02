@@ -5,14 +5,28 @@
  * typecheck` and CI need no Cloudflare build step. Bindings change rarely, and a
  * mismatch surfaces on the first request rather than silently.
  *
- * The global types (`Fetcher`, `D1Database`) come from `@cloudflare/workers-types`;
- * this is the composition root, which is the one place allowed to know about
- * bindings (architecture section 4).
+ * The global types (`Fetcher`, `KVNamespace`, `D1Database`) come from
+ * `@cloudflare/workers-types`; this is the composition root, which is the one
+ * place allowed to know about bindings (architecture section 4).
  */
 export interface Env {
   APP_ENV: string
+
   /** Workers Static Assets: serves every path that is not a Worker route. */
   ASSETS: Fetcher
+
+  /** KV. Holds admin sessions (architecture section 8). */
+  CACHE: KVNamespace
+
   /** D1. Absent until the resource is created and the binding uncommented. */
   DB?: D1Database
+
+  /** Admin account name. Defaults to `admin`. */
+  ADMIN_USERNAME?: string
+
+  /**
+   * The admin password hash, from `pnpm admin:password` and stored with
+   * `wrangler secret put`. Never in the repository.
+   */
+  ADMIN_PASSWORD_HASH?: string
 }
