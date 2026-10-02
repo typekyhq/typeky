@@ -234,6 +234,7 @@ export const zhCN: Locale = {
 
   // Settings, which is one long document.
   'settings.title': '设置',
+  'settings.sections': '设置板块',
   'settings.description': '站点如何介绍自己 —— 在每一处。',
   'settings.save': '保存',
   'settings.loadFailed': '无法加载站点设置',

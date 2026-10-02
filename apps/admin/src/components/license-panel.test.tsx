@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ApiClientProvider } from '@/lib/client-context'
 import { fakeApiClient } from '@/lib/testing'
-import { LicenseCard } from './license-card'
+import { LicensePanel } from './license-panel'
 
 /**
  * The licence panel.
@@ -15,7 +15,7 @@ import { LicenseCard } from './license-card'
  * call for opposite actions.
  */
 
-function renderCard(
+function renderPanel(
   getLicense: () => Promise<{
     whiteLabel: boolean
     domain: string
@@ -26,14 +26,14 @@ function renderCard(
 ) {
   render(
     <ApiClientProvider value={fakeApiClient({ getLicense })}>
-      <LicenseCard />
+      <LicensePanel />
     </ApiClientProvider>,
   )
 }
 
 describe('a free deployment', () => {
   it('says there is no licence, in the language of information', async () => {
-    renderCard(async () => ({ whiteLabel: false, domain: 'example.com' }))
+    renderPanel(async () => ({ whiteLabel: false, domain: 'example.com' }))
 
     expect(await screen.findByText(/None. The site’s footer says/)).toBeTruthy()
   })
@@ -41,7 +41,7 @@ describe('a free deployment', () => {
 
 describe('an active licence', () => {
   it('names the domain it covers', async () => {
-    renderCard(async () => ({
+    renderPanel(async () => ({
       whiteLabel: true,
       domain: 'example.com',
       license: { id: 'TY-0001', domain: 'example.com', issuedAt: '2026-01-01T00:00:00.000Z', tier: 'single' },
@@ -56,7 +56,7 @@ describe('an active licence', () => {
 
 describe('a licence that does not apply here', () => {
   it('names both domains, and says the site is fine', async () => {
-    renderCard(async () => ({
+    renderPanel(async () => ({
       whiteLabel: false,
       domain: 'www.example.com',
       problem: 'wrong_domain',
@@ -71,7 +71,7 @@ describe('a licence that does not apply here', () => {
   })
 
   it('explains a signature failure without blaming the operator', async () => {
-    renderCard(async () => ({ whiteLabel: false, domain: 'example.com', problem: 'bad_signature' }))
+    renderPanel(async () => ({ whiteLabel: false, domain: 'example.com', problem: 'bad_signature' }))
 
     expect(await screen.findByText(/edited, truncated, or not issued by us/)).toBeTruthy()
   })
@@ -79,7 +79,7 @@ describe('a licence that does not apply here', () => {
   it('falls back to the code for a reason it does not know', async () => {
     // A reason added on the server should read as an unfamiliar word rather than
     // as the wrong explanation.
-    renderCard(async () => ({ whiteLabel: false, domain: 'example.com', problem: 'a-new-reason' }))
+    renderPanel(async () => ({ whiteLabel: false, domain: 'example.com', problem: 'a-new-reason' }))
 
     expect(await screen.findByText(/refused because a-new-reason/)).toBeTruthy()
   })

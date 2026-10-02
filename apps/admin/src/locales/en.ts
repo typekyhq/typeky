@@ -241,6 +241,7 @@ export const en: Locale = {
 
   // Settings, which is one long document.
   'settings.title': 'Settings',
+  'settings.sections': 'Settings sections',
   'settings.description': 'How the site introduces itself, everywhere.',
   'settings.save': 'Save changes',
   'settings.loadFailed': 'Cannot load the site settings',

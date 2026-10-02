@@ -1,6 +1,5 @@
 import type { LicenseResponse } from '@typeky/api'
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useApiClient } from '@/lib/client-context'
 import { useT, type Translate } from '@/lib/i18n'
@@ -17,8 +16,12 @@ import { describeApiError } from '@/lib/session'
  * state of a free deployment and should read as information; "a licence that does
  * not apply here" is a mistake somebody can fix, and it has to name both domains
  * or it is a puzzle.
+ *
+ * The content only, with no card and no heading of its own: it is one panel of
+ * the settings screen, and that screen's tab already says what it is. A card
+ * inside a tab that repeats the tab's own label is a heading nobody reads.
  */
-export function LicenseCard() {
+export function LicensePanel() {
   const t = useT()
   const client = useApiClient()
   const [license, setLicense] = useState<LicenseResponse | null>(null)
@@ -42,12 +45,7 @@ export function LicenseCard() {
   }, [client])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('licence.title')}</CardTitle>
-        <CardDescription>{t('licence.description')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+    <div className="space-y-3 text-sm">
         {error !== '' && <p className="text-destructive">{error}</p>}
 
         {error === '' && license === null && <p className="text-muted-foreground">{t('licence.reading')}</p>}
@@ -84,8 +82,7 @@ export function LicenseCard() {
             </AlertDescription>
           </Alert>
         )}
-      </CardContent>
-    </Card>
+    </div>
   )
 }
 

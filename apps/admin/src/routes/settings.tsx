@@ -7,12 +7,13 @@ import {
 } from '@typeky/api'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { LicenseCard } from '@/components/license-card'
+import { LicensePanel } from '@/components/license-panel'
 import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -42,6 +43,47 @@ import { useT } from '@/lib/i18n'
  */
 
 type Status = 'loading' | 'ready' | 'error'
+
+interface SettingsTab {
+  id: string
+  labelKey: string
+  /**
+   * The issue keys this panel owns, by prefix.
+   *
+   * This screen is one document with one Save button, and the panels are only a
+   * way of splitting it up -- so a save that fails on a field in a panel the
+   * operator is not looking at has to go and show them, or the message they get
+   * is "some fields need attention" and no way to find them.
+   */
+  owns: string[]
+}
+
+const TABS: SettingsTab[] = [
+  {
+    id: 'identity',
+    labelKey: 'settings.identity',
+    owns: ['name', 'tagline', 'theme', 'logoMediaId', 'settings.accentColor'],
+  },
+  { id: 'navigation', labelKey: 'settings.nav', owns: ['nav'] },
+  { id: 'social', labelKey: 'settings.social', owns: ['settings.socialLinks'] },
+  { id: 'seo', labelKey: 'settings.seo', owns: ['settings.seo'] },
+  { id: 'footer', labelKey: 'settings.footer', owns: ['settings.footer', 'settings.filingNumber'] },
+  {
+    id: 'language',
+    labelKey: 'settings.language.dates',
+    owns: ['settings.language', 'settings.dateFormat', 'settings.admin'],
+  },
+  { id: 'licence', labelKey: 'licence.title', owns: [] },
+]
+
+const FIRST_TAB = 'identity'
+
+/** The panel a failed field lives in. */
+function tabOwning(key: string): string {
+  const owner = TABS.find((entry) => entry.owns.some((prefix) => key === prefix || key.startsWith(`${prefix}.`)))
+
+  return owner?.id ?? FIRST_TAB
+}
 
 /**
  * The instant the format previews are rendered at.
@@ -74,6 +116,7 @@ export function SettingsPage() {
    * forward at all and a site that answers 503 forever.
    */
   const [creating, setCreating] = useState(false)
+  const [tab, setTab] = useState(FIRST_TAB)
 
   useEffect(() => {
     let cancelled = false
@@ -120,7 +163,15 @@ export function SettingsPage() {
 
     const parsed = siteWriteSchema.safeParse(draft)
     if (!parsed.success) {
-      setIssues(collectIssues(parsed.error.issues))
+      const collected = collectIssues(parsed.error.issues)
+      setIssues(collected)
+
+      // Take the operator to the panel the first problem is in. Without this the
+      // message is "some fields need attention" and the field is behind a tab
+      // they have no reason to open.
+      const first = Object.keys(collected)[0]
+      if (first !== undefined) setTab(tabOwning(first))
+
       toast.error(t('editor.fieldsNeedAttention'))
       return
     }
@@ -186,422 +237,456 @@ export function SettingsPage() {
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.identity')}</CardTitle>
-          <CardDescription>{t('settings.identity.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="name"
-            label={t('settings.name')}
-            value={draft.name}
-            error={issues.name}
-            onChange={(value) => update((current) => ({ ...current, name: value }))}
-          />
-          <Field
-            id="tagline"
-            label={t('settings.tagline')}
-            value={draft.tagline ?? ''}
-            error={issues.tagline}
-            onChange={(value) => update((current) => ({ ...current, tagline: value }))}
-          />
-          <Field
-            id="theme"
-            label={t('settings.theme')}
-            value={draft.theme}
-            error={issues.theme}
-            hint={t('settings.theme.hint')}
-            onChange={(value) => update((current) => ({ ...current, theme: value }))}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="accentColor">{t('settings.accentColour')}</Label>
-            <Input
-              id="accentColor"
-              type="color"
-              className="h-9 w-20 p-1"
-              value={settings.accentColor ?? DEFAULT_ACCENT}
-              onChange={(event) =>
+      {/*
+        `forceMount` keeps every panel in the document: this screen is one form
+        with one Save button, and a panel that unmounted would take its fields out
+        of the form the moment somebody looked at another one. Radix leaves the
+        hiding of the panels it keeps mounted to the caller -- its own `hidden` is
+        always false when the content is forced -- so each one says whether it is
+        the visible one.
+      */}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList aria-label={t('settings.sections')}>
+          {TABS.map((entry) => (
+            <TabsTrigger key={entry.id} value={entry.id}>
+              {t(entry.labelKey)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+      <TabsContent value="identity" forceMount hidden={tab !== 'identity'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('settings.identity.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="name"
+              label={t('settings.name')}
+              value={draft.name}
+              error={issues.name}
+              onChange={(value) => update((current) => ({ ...current, name: value }))}
+            />
+            <Field
+              id="tagline"
+              label={t('settings.tagline')}
+              value={draft.tagline ?? ''}
+              error={issues.tagline}
+              onChange={(value) => update((current) => ({ ...current, tagline: value }))}
+            />
+            <Field
+              id="theme"
+              label={t('settings.theme')}
+              value={draft.theme}
+              error={issues.theme}
+              hint={t('settings.theme.hint')}
+              onChange={(value) => update((current) => ({ ...current, theme: value }))}
+            />
+            <div className="space-y-2">
+              <Label htmlFor="accentColor">{t('settings.accentColour')}</Label>
+              <Input
+                id="accentColor"
+                type="color"
+                className="h-9 w-20 p-1"
+                value={settings.accentColor ?? DEFAULT_ACCENT}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, accentColor: event.target.value },
+                  }))
+                }
+              />
+              {issues['settings.accentColor'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.accentColor']}</p>
+              )}
+            </div>
+            <div className="sm:col-span-2">
+              <MediaField
+                id="logoMediaId"
+                label={t('settings.logo')}
+                value={draft.logoMediaId ?? ''}
+                error={issues.logoMediaId}
+                hint={t('settings.logo.hint')}
+                onChange={(value) =>
+                  update((current) => ({ ...current, logoMediaId: value === '' ? null : value }))
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+
+      <TabsContent value="navigation" forceMount hidden={tab !== 'navigation'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('settings.nav.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {nav.length === 0 && <p className="text-sm text-muted-foreground">{t('settings.nav.empty')}</p>}
+
+            <ol className="space-y-3">
+              {nav.map((item, index) => (
+                <li key={index} className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-40 flex-1">
+                    <Field
+                      id={`nav-${index}-label`}
+                      label={t('settings.nav.itemLabel', { number: index + 1 })}
+                      value={item.label}
+                      error={issues[`nav.${index}.label`]}
+                      onChange={(value) => update((current) => ({ ...current, nav: replaceNav(current.nav, index, { label: value }) }))}
+                    />
+                  </div>
+                  <div className="min-w-40 flex-1">
+                    <Field
+                      id={`nav-${index}-href`}
+                      label={t('settings.nav.itemHref', { number: index + 1 })}
+                      value={item.href}
+                      error={issues[`nav.${index}.href`]}
+                      onChange={(value) => update((current) => ({ ...current, nav: replaceNav(current.nav, index, { href: value }) }))}
+                    />
+                  </div>
+                  <div className="flex gap-1 pb-0.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={index === 0}
+                      aria-label={t('settings.nav.moveUp', { label: item.label || t('settings.nav.unnamed') })}
+                      onClick={() => update((current) => ({ ...current, nav: moveNav(current.nav, index, -1) }))}
+                    >
+                      ↑
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={index === nav.length - 1}
+                      aria-label={t('settings.nav.moveDown', { label: item.label || t('settings.nav.unnamed') })}
+                      onClick={() => update((current) => ({ ...current, nav: moveNav(current.nav, index, 1) }))}
+                    >
+                      ↓
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={t('settings.nav.remove', { label: item.label || t('settings.nav.unnamed') })}
+                      onClick={() =>
+                        update((current) => ({
+                          ...current,
+                          nav: current.nav.filter((entry) => entry !== item).map((entry, position) => ({ ...entry, order: position })),
+                        }))
+                      }
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {issues.nav !== undefined && <p className="text-sm text-destructive">{issues.nav}</p>}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
                 update((current) => ({
                   ...current,
-                  settings: { ...current.settings, accentColor: event.target.value },
+                  nav: [...current.nav, { label: '', href: '/', order: current.nav.length }],
                 }))
               }
-            />
-            {issues['settings.accentColor'] !== undefined && (
-              <p className="text-sm text-destructive">{issues['settings.accentColor']}</p>
-            )}
-          </div>
-          <div className="sm:col-span-2">
-            <MediaField
-              id="logoMediaId"
-              label={t('settings.logo')}
-              value={draft.logoMediaId ?? ''}
-              error={issues.logoMediaId}
-              hint={t('settings.logo.hint')}
-              onChange={(value) =>
-                update((current) => ({ ...current, logoMediaId: value === '' ? null : value }))
-              }
-            />
-          </div>
-        </CardContent>
-      </Card>
+            >
+              {t('settings.nav.add')}
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.nav')}</CardTitle>
-          <CardDescription>{t('settings.nav.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {nav.length === 0 && <p className="text-sm text-muted-foreground">{t('settings.nav.empty')}</p>}
 
-          <ol className="space-y-3">
-            {nav.map((item, index) => (
-              <li key={index} className="flex flex-wrap items-end gap-2">
-                <div className="min-w-40 flex-1">
-                  <Field
-                    id={`nav-${index}-label`}
-                    label={t('settings.nav.itemLabel', { number: index + 1 })}
-                    value={item.label}
-                    error={issues[`nav.${index}.label`]}
-                    onChange={(value) => update((current) => ({ ...current, nav: replaceNav(current.nav, index, { label: value }) }))}
-                  />
-                </div>
-                <div className="min-w-40 flex-1">
-                  <Field
-                    id={`nav-${index}-href`}
-                    label={t('settings.nav.itemHref', { number: index + 1 })}
-                    value={item.href}
-                    error={issues[`nav.${index}.href`]}
-                    onChange={(value) => update((current) => ({ ...current, nav: replaceNav(current.nav, index, { href: value }) }))}
-                  />
-                </div>
-                <div className="flex gap-1 pb-0.5">
+      <TabsContent value="social" forceMount hidden={tab !== 'social'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('settings.social.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {socialLinks.length === 0 && <p className="text-sm text-muted-foreground">{t('settings.social.empty')}</p>}
+
+            <ol className="space-y-3">
+              {socialLinks.map((link, index) => (
+                <li key={index} className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-40 flex-1">
+                    <Field
+                      id={`social-${index}-label`}
+                      label={t('settings.social.linkLabel', { number: index + 1 })}
+                      value={link.label}
+                      error={issues[`settings.socialLinks.${index}.label`]}
+                      onChange={(value) =>
+                        update((current) => ({
+                          ...current,
+                          settings: { ...current.settings, socialLinks: replaceSocial(socialLinks, index, { label: value }) },
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="min-w-40 flex-1">
+                    <Field
+                      id={`social-${index}-href`}
+                      label={t('settings.social.linkHref', { number: index + 1 })}
+                      value={link.href}
+                      error={issues[`settings.socialLinks.${index}.href`]}
+                      onChange={(value) =>
+                        update((current) => ({
+                          ...current,
+                          settings: { ...current.settings, socialLinks: replaceSocial(socialLinks, index, { href: value }) },
+                        }))
+                      }
+                    />
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={index === 0}
-                    aria-label={t('settings.nav.moveUp', { label: item.label || t('settings.nav.unnamed') })}
-                    onClick={() => update((current) => ({ ...current, nav: moveNav(current.nav, index, -1) }))}
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={index === nav.length - 1}
-                    aria-label={t('settings.nav.moveDown', { label: item.label || t('settings.nav.unnamed') })}
-                    onClick={() => update((current) => ({ ...current, nav: moveNav(current.nav, index, 1) }))}
-                  >
-                    ↓
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    aria-label={t('settings.nav.remove', { label: item.label || t('settings.nav.unnamed') })}
+                    className="mb-0.5"
+                    aria-label={t('settings.social.remove', { label: link.label || t('settings.social.unnamed') })}
                     onClick={() =>
                       update((current) => ({
                         ...current,
-                        nav: current.nav.filter((entry) => entry !== item).map((entry, position) => ({ ...entry, order: position })),
+                        settings: {
+                          ...current.settings,
+                          socialLinks: socialLinks.filter((entry) => entry !== link),
+                        },
                       }))
                     }
                   >
                     ✕
                   </Button>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-          {issues.nav !== undefined && <p className="text-sm text-destructive">{issues.nav}</p>}
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              update((current) => ({
-                ...current,
-                nav: [...current.nav, { label: '', href: '/', order: current.nav.length }],
-              }))
-            }
-          >
-            {t('settings.nav.add')}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.social')}</CardTitle>
-          <CardDescription>{t('settings.social.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {socialLinks.length === 0 && <p className="text-sm text-muted-foreground">{t('settings.social.empty')}</p>}
-
-          <ol className="space-y-3">
-            {socialLinks.map((link, index) => (
-              <li key={index} className="flex flex-wrap items-end gap-2">
-                <div className="min-w-40 flex-1">
-                  <Field
-                    id={`social-${index}-label`}
-                    label={t('settings.social.linkLabel', { number: index + 1 })}
-                    value={link.label}
-                    error={issues[`settings.socialLinks.${index}.label`]}
-                    onChange={(value) =>
-                      update((current) => ({
-                        ...current,
-                        settings: { ...current.settings, socialLinks: replaceSocial(socialLinks, index, { label: value }) },
-                      }))
-                    }
-                  />
-                </div>
-                <div className="min-w-40 flex-1">
-                  <Field
-                    id={`social-${index}-href`}
-                    label={t('settings.social.linkHref', { number: index + 1 })}
-                    value={link.href}
-                    error={issues[`settings.socialLinks.${index}.href`]}
-                    onChange={(value) =>
-                      update((current) => ({
-                        ...current,
-                        settings: { ...current.settings, socialLinks: replaceSocial(socialLinks, index, { href: value }) },
-                      }))
-                    }
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mb-0.5"
-                  aria-label={t('settings.social.remove', { label: link.label || t('settings.social.unnamed') })}
-                  onClick={() =>
-                    update((current) => ({
-                      ...current,
-                      settings: {
-                        ...current.settings,
-                        socialLinks: socialLinks.filter((entry) => entry !== link),
-                      },
-                    }))
-                  }
-                >
-                  ✕
-                </Button>
-              </li>
-            ))}
-          </ol>
-
-          {issues['settings.socialLinks'] !== undefined && (
-            <p className="text-sm text-destructive">{issues['settings.socialLinks']}</p>
-          )}
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              update((current) => ({
-                ...current,
-                settings: { ...current.settings, socialLinks: [...socialLinks, { label: '', href: 'https://' }] },
-              }))
-            }
-          >
-            {t('settings.social.add')}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.seo')}</CardTitle>
-          <CardDescription>{t('settings.seo.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Field
-            id="seo-title"
-            label={t('settings.seo.title')}
-            value={settings.seo?.defaultTitle ?? ''}
-            error={issues['settings.seo.defaultTitle']}
-            onChange={(value) =>
-              update((current) => ({
-                ...current,
-                settings: { ...current.settings, seo: { ...current.settings.seo, defaultTitle: value } },
-              }))
-            }
-          />
-          <div className="space-y-2">
-            <Label htmlFor="seo-description">{t('settings.seo.description')}</Label>
-            <Textarea
-              id="seo-description"
-              value={settings.seo?.defaultDescription ?? ''}
-              onChange={(event) =>
-                update((current) => ({
-                  ...current,
-                  settings: { ...current.settings, seo: { ...current.settings.seo, defaultDescription: event.target.value } },
-                }))
-              }
-            />
-            {issues['settings.seo.defaultDescription'] !== undefined && (
-              <p className="text-sm text-destructive">{issues['settings.seo.defaultDescription']}</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.footer')}</CardTitle>
-          <CardDescription>{t('settings.footer.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="footer">{t('settings.footer.text')}</Label>
-            <Textarea
-              id="footer"
-              value={settings.footer ?? ''}
-              onChange={(event) =>
-                update((current) => ({
-                  ...current,
-                  settings: { ...current.settings, footer: event.target.value },
-                }))
-              }
-            />
-            {issues['settings.footer'] !== undefined && (
-              <p className="text-sm text-destructive">{issues['settings.footer']}</p>
-            )}
-          </div>
-          <Field
-            id="filingNumber"
-            label={t('settings.filing')}
-            value={settings.filingNumber ?? ''}
-            error={issues['settings.filingNumber']}
-            hint={t('settings.filing.hint')}
-            onChange={(value) =>
-              update((current) => ({
-                ...current,
-                settings: { ...current.settings, filingNumber: value },
-              }))
-            }
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.language.dates')}</CardTitle>
-          <CardDescription>
-            The site and this panel are written in their own language, and write dates their own way.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="language">{t('settings.language')}</Label>
-            <Input
-              id="language"
-              list="language-tags"
-              value={settings.language ?? ''}
-              placeholder={DEFAULT_LANGUAGE}
-              aria-invalid={issues['settings.language'] !== undefined}
-              onChange={(event) =>
-                update((current) => ({
-                  ...current,
-                  settings: { ...current.settings, language: event.target.value },
-                }))
-              }
-            />
-            <datalist id="language-tags">
-              {LANGUAGE_TAGS.map((tag) => (
-                <option key={tag} value={tag} />
+                </li>
               ))}
-            </datalist>
-            {issues['settings.language'] !== undefined && (
-              <p className="text-sm text-destructive">{issues['settings.language']}</p>
-            )}
-            <p className="text-sm text-muted-foreground">{t('settings.language.hint')}</p>
-          </div>
+            </ol>
 
-          <div className="space-y-2">
-            <Label htmlFor="dateFormat">{t('settings.dateFormat')}</Label>
-            <Input
-              id="dateFormat"
-              value={settings.dateFormat ?? ''}
-              placeholder={DEFAULT_DATE_FORMAT}
-              aria-invalid={issues['settings.dateFormat'] !== undefined}
-              onChange={(event) =>
+            {issues['settings.socialLinks'] !== undefined && (
+              <p className="text-sm text-destructive">{issues['settings.socialLinks']}</p>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
                 update((current) => ({
                   ...current,
-                  settings: { ...current.settings, dateFormat: event.target.value },
-                }))
-              }
-            />
-            {issues['settings.dateFormat'] !== undefined && (
-              <p className="text-sm text-destructive">{issues['settings.dateFormat']}</p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              {t('settings.dateFormat.preview', { instant: PREVIEW_INSTANT_UTC_LABEL, formatted: sitePreview })}
-            </p>
-            <p className="text-sm text-muted-foreground">{t('settings.dateFormat.directives')}</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="adminLanguage">{t('settings.adminLanguage')}</Label>
-            <select
-              id="adminLanguage"
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={settings.admin?.language ?? DEFAULT_LANGUAGE}
-              onChange={(event) =>
-                update((current) => ({
-                  ...current,
-                  settings: { ...current.settings, admin: { ...current.settings.admin, language: event.target.value } },
+                  settings: { ...current.settings, socialLinks: [...socialLinks, { label: '', href: 'https://' }] },
                 }))
               }
             >
-              {ADMIN_LOCALES.map((locale) => (
-                <option key={locale.value} value={locale.value}>
-                  {locale.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-sm text-muted-foreground">
-              {t('settings.adminLanguage.hint')}
-            </p>
-          </div>
+              {t('settings.social.add')}
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-          <div className="space-y-2">
-            <Label htmlFor="adminDateFormat">{t('settings.adminDateFormat')}</Label>
-            <Input
-              id="adminDateFormat"
-              value={settings.admin?.dateFormat ?? ''}
-              placeholder={DEFAULT_ADMIN_DATE_FORMAT}
-              aria-invalid={issues['settings.admin.dateFormat'] !== undefined}
-              onChange={(event) =>
+
+      <TabsContent value="seo" forceMount hidden={tab !== 'seo'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('settings.seo.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Field
+              id="seo-title"
+              label={t('settings.seo.title')}
+              value={settings.seo?.defaultTitle ?? ''}
+              error={issues['settings.seo.defaultTitle']}
+              onChange={(value) =>
                 update((current) => ({
                   ...current,
-                  settings: {
-                    ...current.settings,
-                    admin: { ...current.settings.admin, dateFormat: event.target.value },
-                  },
+                  settings: { ...current.settings, seo: { ...current.settings.seo, defaultTitle: value } },
                 }))
               }
             />
-            {issues['settings.admin.dateFormat'] !== undefined && (
-              <p className="text-sm text-destructive">{issues['settings.admin.dateFormat']}</p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              {t('settings.adminDateFormat.preview', { formatted: adminPreview })}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="space-y-2">
+              <Label htmlFor="seo-description">{t('settings.seo.description')}</Label>
+              <Textarea
+                id="seo-description"
+                value={settings.seo?.defaultDescription ?? ''}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, seo: { ...current.settings.seo, defaultDescription: event.target.value } },
+                  }))
+                }
+              />
+              {issues['settings.seo.defaultDescription'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.seo.defaultDescription']}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-      {/*
-        Outside the form on purpose: a licence is not part of the site document,
-        and a card that looked like a field would invite somebody to look for the
-        input.
-      */}
-      <LicenseCard />
+
+      <TabsContent value="footer" forceMount hidden={tab !== 'footer'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('settings.footer.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="footer">{t('settings.footer.text')}</Label>
+              <Textarea
+                id="footer"
+                value={settings.footer ?? ''}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, footer: event.target.value },
+                  }))
+                }
+              />
+              {issues['settings.footer'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.footer']}</p>
+              )}
+            </div>
+            <Field
+              id="filingNumber"
+              label={t('settings.filing')}
+              value={settings.filingNumber ?? ''}
+              error={issues['settings.filingNumber']}
+              hint={t('settings.filing.hint')}
+              onChange={(value) =>
+                update((current) => ({
+                  ...current,
+                  settings: { ...current.settings, filingNumber: value },
+                }))
+              }
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+
+      <TabsContent value="language" forceMount hidden={tab !== 'language'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>
+              The site and this panel are written in their own language, and write dates their own way.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="language">{t('settings.language')}</Label>
+              <Input
+                id="language"
+                list="language-tags"
+                value={settings.language ?? ''}
+                placeholder={DEFAULT_LANGUAGE}
+                aria-invalid={issues['settings.language'] !== undefined}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, language: event.target.value },
+                  }))
+                }
+              />
+              <datalist id="language-tags">
+                {LANGUAGE_TAGS.map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
+              {issues['settings.language'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.language']}</p>
+              )}
+              <p className="text-sm text-muted-foreground">{t('settings.language.hint')}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dateFormat">{t('settings.dateFormat')}</Label>
+              <Input
+                id="dateFormat"
+                value={settings.dateFormat ?? ''}
+                placeholder={DEFAULT_DATE_FORMAT}
+                aria-invalid={issues['settings.dateFormat'] !== undefined}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, dateFormat: event.target.value },
+                  }))
+                }
+              />
+              {issues['settings.dateFormat'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.dateFormat']}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {t('settings.dateFormat.preview', { instant: PREVIEW_INSTANT_UTC_LABEL, formatted: sitePreview })}
+              </p>
+              <p className="text-sm text-muted-foreground">{t('settings.dateFormat.directives')}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="adminLanguage">{t('settings.adminLanguage')}</Label>
+              <select
+                id="adminLanguage"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={settings.admin?.language ?? DEFAULT_LANGUAGE}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, admin: { ...current.settings.admin, language: event.target.value } },
+                  }))
+                }
+              >
+                {ADMIN_LOCALES.map((locale) => (
+                  <option key={locale.value} value={locale.value}>
+                    {locale.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-muted-foreground">
+                {t('settings.adminLanguage.hint')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="adminDateFormat">{t('settings.adminDateFormat')}</Label>
+              <Input
+                id="adminDateFormat"
+                value={settings.admin?.dateFormat ?? ''}
+                placeholder={DEFAULT_ADMIN_DATE_FORMAT}
+                aria-invalid={issues['settings.admin.dateFormat'] !== undefined}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: {
+                      ...current.settings,
+                      admin: { ...current.settings.admin, dateFormat: event.target.value },
+                    },
+                  }))
+                }
+              />
+              {issues['settings.admin.dateFormat'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.admin.dateFormat']}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {t('settings.adminDateFormat.preview', { formatted: adminPreview })}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+
+      <TabsContent value="licence" forceMount hidden={tab !== 'licence'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('licence.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LicensePanel />
+          </CardContent>
+        </Card>
+      </TabsContent>
+      </Tabs>
     </form>
   )
 }

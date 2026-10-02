@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { SiteResponse } from '@typeky/api'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError, type ApiClient } from '@/lib/api-client'
@@ -36,6 +36,17 @@ function fakeClient(overrides: Partial<ApiClient> = {}): ApiClient {
     },
     ...overrides,
   })
+}
+
+/**
+ * Opens a panel.
+ *
+ * Needed because a panel that is not on screen is hidden, and that is not a
+ * detail of the implementation: a field in a closed panel cannot be typed into or
+ * clicked any more than a person could, so a test has to go there first.
+ */
+async function openTab(name: string): Promise<void> {
+  await userEvent.click(await screen.findByRole('tab', { name }))
 }
 
 function renderPage(client: ApiClient) {
@@ -117,6 +128,7 @@ describe('saving', () => {
 describe('navigation', () => {
   it('reorders and renumbers', async () => {
     renderPage(fakeClient())
+    await openTab('Navigation')
 
     await userEvent.click(await screen.findByRole('button', { name: 'Move Blog up' }))
 
@@ -126,6 +138,7 @@ describe('navigation', () => {
 
   it('disables the move buttons at the ends, so order cannot be lost', async () => {
     renderPage(fakeClient())
+    await openTab('Navigation')
 
     expect((await screen.findByRole('button', { name: 'Move Home up' })).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Move Blog down' }).hasAttribute('disabled')).toBe(true)
@@ -133,7 +146,7 @@ describe('navigation', () => {
 
   it('adds and removes items', async () => {
     renderPage(fakeClient())
-    await screen.findByLabelText('Item 1 label')
+    await openTab('Navigation')
 
     await userEvent.click(screen.getByRole('button', { name: 'Add item' }))
     expect(screen.getByLabelText('Item 3 label')).toHaveProperty('value', '')
@@ -146,7 +159,7 @@ describe('navigation', () => {
   it('renumbers the saved document after a removal', async () => {
     const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
     renderPage(fakeClient({ saveSite }))
-    await screen.findByLabelText('Item 1 label')
+    await openTab('Navigation')
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove Home' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
@@ -159,6 +172,7 @@ describe('navigation', () => {
 describe('social links', () => {
   it('adds a link with a usable default', async () => {
     renderPage(fakeClient())
+    await openTab('Social links')
 
     await userEvent.click(await screen.findByRole('button', { name: 'Add link' }))
 
@@ -167,7 +181,7 @@ describe('social links', () => {
 
   it('gives every row its own label, so a screen reader can tell them apart', async () => {
     renderPage(fakeClient())
-    await screen.findByLabelText('Link 1 label')
+    await openTab('Social links')
 
     expect(screen.getByLabelText('Link 1 label')).toHaveProperty('value', 'GitHub')
     expect(screen.getByLabelText('Link 1 URL')).toHaveProperty('value', 'https://github.com/typekyhq')
@@ -176,6 +190,7 @@ describe('social links', () => {
 
   it('removes one', async () => {
     renderPage(fakeClient())
+    await openTab('Social links')
 
     await userEvent.click(await screen.findByRole('button', { name: 'Remove GitHub' }))
 
@@ -343,5 +358,85 @@ describe('language and dates', () => {
     // The list is what the panel can actually render, so it grows when a
     // translation is added rather than when somebody wants one.
     expect(options).toEqual(['en', 'zh-CN'])
+  })
+})
+
+/**
+ * The panels as tabs.
+ *
+ * This screen is one document with one Save button, and the tabs are only a way
+ * of laying it out -- so the properties worth pinning are that all of it is still
+ * there, and that a failure nobody can see is one they are taken to.
+ */
+describe('the tabs', () => {
+  it('offers every panel, with the first one open', async () => {
+    renderPage(fakeClient())
+
+    const tablist = await screen.findByRole('tablist', { name: 'Settings sections' })
+    const tabs = within(tablist).getAllByRole('tab')
+
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Identity',
+      'Navigation',
+      'Social links',
+      'SEO defaults',
+      'Footer',
+      'Language and dates',
+      'Licence',
+    ])
+    expect(within(tablist).getByRole('tab', { selected: true }).textContent).toBe('Identity')
+  })
+
+  it('shows the panel that was asked for and hides the rest', async () => {
+    const { container } = renderPage(fakeClient())
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Footer' }))
+
+    expect(screen.getByRole('tab', { name: 'Footer', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tabpanel', { name: 'Footer' }).hasAttribute('hidden')).toBe(false)
+
+    // Six of the seven are hidden rather than removed: the form is the document,
+    // and a panel that unmounted would take its fields out of it.
+    const hidden = [...container.querySelectorAll('[role=tabpanel][hidden]')]
+
+    expect(hidden).toHaveLength(6)
+    expect(screen.getByLabelText('Name')).toBeTruthy()
+  })
+
+  it('moves between them with the arrow keys', async () => {
+    renderPage(fakeClient())
+
+    const identity = await screen.findByRole('tab', { name: 'Identity' })
+    await userEvent.click(identity)
+    await userEvent.keyboard('{ArrowRight}')
+
+    expect(screen.getByRole('tab', { name: 'Navigation', selected: true })).toBeTruthy()
+  })
+
+  it('goes to the panel a failed save was about', async () => {
+    renderPage(fakeClient())
+
+    // The mistake is made on one panel and the save is pressed on another, which
+    // is what splitting a long form up makes ordinary.
+    await openTab('Language and dates')
+    const dateFormat = await screen.findByLabelText('Site date format')
+    await userEvent.clear(dateFormat)
+    await userEvent.type(dateFormat, '%q')
+    await openTab('Identity')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByRole('tab', { name: 'Language and dates', selected: true })).toBeTruthy()
+    expect(screen.getByText(/use only the listed directives/)).toBeTruthy()
+  })
+
+  it('leaves the tab alone when the failing field is the one already open', async () => {
+    renderPage(fakeClient())
+
+    const name = await screen.findByLabelText('Name')
+    await userEvent.clear(name)
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(screen.getByRole('tab', { name: 'Identity', selected: true })).toBeTruthy()
   })
 })
