@@ -169,6 +169,15 @@ importers:
       '@testing-library/dom':
         specifier: ^10.4.2
         version: 10.4.2
+      '@typeky/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@typeky/theme-default':
+        specifier: workspace:*
+        version: link:packages/themes/default
+      '@typeky/theme-kit':
+        specifier: workspace:*
+        version: link:packages/theme-kit
       '@types/node':
         specifier: ^26.6.3
         version: 26.6.3

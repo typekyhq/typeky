@@ -1,4 +1,4 @@
-import type { Block, PageKind, RenderContext } from '@typeky/core'
+import type { Block, PageKind, Pagination, RenderContext } from '@typeky/core'
 
 /**
  * Turning stored rows into what a template is given.
@@ -57,6 +57,14 @@ export interface BuildContextInput {
   item: ItemInput
   /** Absolute origin, when the deployment knows one. */
   baseUrl?: string
+  /**
+   * The list's paging state.
+   *
+   * On `page`, not on `content`: paging is a property of the page that was asked
+   * for, and a template reading it from the content would work for one shape of
+   * list and quietly not for another.
+   */
+  pagination?: Pagination
   /** Whether the theme's own default SEO should stand in for a missing one. */
   defaults?: { title?: string; description?: string }
   /** Resolve a media id to a URL, or return null when there is no such media. */
@@ -149,6 +157,7 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       url,
       canonical,
       ...(item.kind === 'page' || item.kind === 'home' || item.kind === 'notFound' ? {} : { title: item.title }),
+      ...(input.pagination === undefined ? {} : { pagination: input.pagination }),
     },
 
     content: item.listItems ?? contentFor(item, resolve),

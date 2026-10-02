@@ -1,4 +1,4 @@
-import { blockToHtml, type PageKind, type RenderContext } from '@typeky/core'
+import { blockToHtml, type PageKind, type Pagination, type RenderContext } from '@typeky/core'
 import { defaultContext, type Page, type Post, type Product, type Repositories, type Site } from '@typeky/db'
 import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
@@ -177,6 +177,7 @@ async function assemble(
         kind: 'posts',
         input: {
           ...common,
+          pagination: pagination(route.page, listing.total, 'posts'),
           item: {
             kind: 'posts',
             title: 'Posts',
@@ -184,7 +185,6 @@ async function assemble(
             blocks: [],
             seo: {},
             listItems: listing.items.map((post) => summaryOf(postInput(post), common.resolveMedia)),
-            extra: { pagination: pagination(route.page, listing.total, 'posts') },
           },
         },
       }
@@ -201,6 +201,7 @@ async function assemble(
         kind: 'products',
         input: {
           ...common,
+          pagination: pagination(route.page, listing.total, 'products'),
           item: {
             kind: 'products',
             title: 'Products',
@@ -208,7 +209,6 @@ async function assemble(
             blocks: [],
             seo: {},
             listItems: listing.items.map((product) => summaryOf(productInput(product), common.resolveMedia)),
-            extra: { pagination: pagination(route.page, listing.total, 'products') },
           },
         },
       }
@@ -219,7 +219,7 @@ async function assemble(
   }
 }
 
-function pagination(page: number, total: number, base: 'posts' | 'products'): Record<string, unknown> {
+function pagination(page: number, total: number, base: 'posts' | 'products'): Pagination {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const href = (n: number): string => (n === 1 ? `/${base}` : `/${base}/${String(n)}`)
 

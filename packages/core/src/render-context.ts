@@ -44,7 +44,6 @@ export interface Pagination {
   previous_url?: string
   next_url?: string
 }
-
 export interface PageForTemplates {
   kind: PageKind
   url: string
@@ -79,3 +78,27 @@ export interface RenderContext {
   /** The preview says so, so a template can avoid emitting a canonical URL. */
   preview?: boolean
 }
+
+/**
+ * The top-level keys, for the check that keeps templates honest.
+ *
+ * A type cannot be read at runtime, and the CI check in `scripts/check-context.ts`
+ * needs the list: it collects the free variables the theme's templates use and
+ * asserts they match these exactly, in both directions. The two declarations are
+ * held together by the assertion below -- a key added to one and not the other
+ * does not compile.
+ */
+export const RENDER_CONTEXT_KEYS = ['site', 'page', 'content', 'seo'] as const
+
+// Both directions: every listed key is a key of the interface, and every required
+// key of the interface is listed. An extra name here, or a missing one, is a type
+// error rather than a check that quietly passes.
+const _keysAreExact: ReadonlyArray<keyof RenderContext> = RENDER_CONTEXT_KEYS
+const _keysAreComplete: ReadonlyArray<(typeof RENDER_CONTEXT_KEYS)[number]> = [
+  'site',
+  'page',
+  'content',
+  'seo',
+] satisfies ReadonlyArray<Exclude<keyof RenderContext, 'preview'>>
+void _keysAreExact
+void _keysAreComplete

@@ -182,6 +182,21 @@ describe('rendering content pages', () => {
     expect((await render('/posts/draft')).status).toBe(404)
   })
 
+  it('puts paging on the page, where the pagination snippet reads it', async () => {
+    const many = Array.from({ length: 25 }, (_, index) =>
+      post({ title: 'Post ' + String(index), slug: 'post-' + String(index) }),
+    )
+    const { render } = setUp({ posts: many })
+
+    // 25 posts at ten a page: a second page exists, and so does a next link.
+    const first = await render('/posts')
+    expect(first.html).toContain('/posts/2')
+
+    const second = await render('/posts/2')
+    expect(second.status).toBe(200)
+    expect(second.html).toContain('/posts')
+  })
+
   it('lists only what the repository returns as published', async () => {
     const { render } = setUp({ posts: [post({ title: 'One', slug: 'one' })] })
 

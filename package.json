@@ -23,13 +23,17 @@
     "seed": "tsx packages/db/scripts/seed.ts",
     "admin:password": "tsx apps/site/scripts/hash-password.ts",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm check:theme-drift && pnpm build && pnpm check:boundaries",
+    "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm check:theme-drift && pnpm check:context && pnpm build && pnpm check:boundaries",
     "theme:generate": "tsx packages/themes/default/scripts/baseline.ts generate",
     "check:theme-drift": "tsx packages/themes/default/scripts/baseline.ts check",
-    "test:sandbox": "vitest run packages/theme-kit/src/sandbox.test.ts"
+    "test:sandbox": "vitest run packages/theme-kit/src/sandbox.test.ts",
+    "check:context": "tsx scripts/check-context.ts"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
+    "@typeky/core": "workspace:*",
+    "@typeky/theme-default": "workspace:*",
+    "@typeky/theme-kit": "workspace:*",
     "@types/node": "^26.6.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

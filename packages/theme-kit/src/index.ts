@@ -17,6 +17,8 @@
  * the next render.
  */
 
+export { analyseTemplates, type TemplateAnalysis } from './context-keys'
+
 export { createPlatformFilters, type FilterHandler, type PlatformFilterOptions } from './filters'
 
 export {
