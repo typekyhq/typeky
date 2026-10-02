@@ -35,8 +35,18 @@ function fakeRepositories(overrides: ThemeTemplate[] = []) {
     async byPath(_ctx, _theme, path) {
       return rows.get(path) ?? null
     },
-    async save() {
-      throw new Error('not used')
+    async save(_ctx, input) {
+      const existing = rows.get(input.path)
+      const saved: ThemeTemplate = {
+        id: existing?.id ?? 'row_1',
+        theme: input.theme ?? 'default',
+        path: input.path,
+        source: input.source,
+        revision: (existing?.revision ?? 0) + 1,
+        updatedAt: new Date('2026-03-03T00:00:00.000Z'),
+      }
+      rows.set(saved.path, saved)
+      return saved
     },
     async reset() {
       return false
@@ -153,6 +163,111 @@ describe('listing the theme', () => {
   })
 })
 
+describe('saving one template', () => {
+  it('stores a template that parses, and marks it overridden', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    const source = "{% layout 'layouts/base' %}\n<h1>Custom</h1>\n"
+    const response = await send(
+      '/theme/template',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken },
+        body: JSON.stringify({ path: 'templates/post', source }),
+      },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ path: 'templates/post', overridden: true })
+    expect((await store.repository.themeTemplates.byPath({} as never, 'default', 'templates/post'))?.source).toBe(source)
+  })
+
+  it('refuses a template that will not parse, and points at the line', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    const response = await send(
+      '/theme/template',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken },
+        body: JSON.stringify({ path: 'templates/post', source: 'one\ntwo\n{% if a %}\n' }),
+      },
+      cookie,
+    )
+
+    expect(response.status).toBe(400)
+
+    const body = (await response.json()) as { error: string; message?: string; line?: number }
+    expect(body.error).toBe('invalid_request')
+    expect(body.line).toBe(3)
+
+    // And nothing was written: a template that will not parse is one that 500s
+    // the moment its page is asked for.
+    const stored = await store.repository.themeTemplates.byPath({} as never, 'default', 'templates/post')
+    expect(stored).toBeNull()
+  })
+
+  it('refuses a name the theme does not ship, without storing anything', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    const response = await send(
+      '/theme/template',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken },
+        body: JSON.stringify({ path: '../../etc/passwd', source: 'x' }),
+      },
+      cookie,
+    )
+
+    expect(response.status).toBe(404)
+    await expect(store.repository.themeTemplates.list({} as never, 'default')).resolves.toEqual([])
+  })
+
+  it('refuses a source larger than a template should ever be', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    const response = await send(
+      '/theme/template',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken },
+        body: JSON.stringify({ path: 'templates/post', source: 'x'.repeat(65 * 1024) }),
+      },
+      cookie,
+    )
+
+    expect(response.status).toBe(400)
+  })
+
+  it('needs the CSRF token, like every other write', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie } = await signIn()
+
+    const response = await send(
+      '/theme/template',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: 'templates/post', source: 'x' }),
+      },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+  })
+})
+
 describe('reading one template', () => {
   it('answers with the bundled source when there is no override', async () => {
     const { send, signIn } = setup()
@@ -218,18 +333,25 @@ describe('reading one template', () => {
     expect(asked).toBe(false)
   })
 
-  it('has no endpoint that creates a template', async () => {
-    const { send, signIn } = setup()
+  it('cannot be used to create a template the theme does not ship', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
     const { cookie, csrfToken } = await signIn()
 
-    // Red line 7: a site edits what its theme ships and nothing more. The method
-    // is not registered at all, so this is a 404 rather than a refusal.
+    // Red line 7: a site edits what its theme ships and nothing more. The write
+    // endpoint exists now, and this is the property that has to hold -- a new
+    // file is not a thing that can be stored, whatever method asks.
     const response = await send(
-      '/theme/template?path=templates/mine',
-      { method: 'PUT', headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken } },
+      '/theme/template',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken },
+        body: JSON.stringify({ path: 'templates/mine', source: '<h1>Mine</h1>' }),
+      },
       cookie,
     )
 
     expect(response.status).toBe(404)
+    await expect(store.repository.themeTemplates.list({} as never, 'default')).resolves.toEqual([])
   })
 })

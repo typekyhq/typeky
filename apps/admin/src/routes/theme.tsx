@@ -1,10 +1,12 @@
 import type { ThemeTemplateGroup, ThemeTemplateSummary } from '@typeky/api'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { TemplateEditorSurface } from '@/components/template-editor-surface'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 
@@ -51,6 +53,10 @@ export function ThemeSection() {
 
   const [openPath, setOpenPath] = useState<string | null>(null)
   const [source, setSource] = useState<string | null>(null)
+  /** The last source the server accepted, so "changed" is answerable. */
+  const [saved, setSaved] = useState<string | null>(null)
+  const [problem, setProblem] = useState<{ message: string; line: number | null } | null>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -80,13 +86,41 @@ export function ThemeSection() {
   async function open(path: string) {
     setOpenPath(path)
     setSource(null)
+    setSaved(null)
+    setProblem(null)
 
     try {
       const template = await client.getThemeTemplate(path)
       setSource(template.source)
+      setSaved(template.source)
     } catch (thrown) {
       toast.error(describeApiError(thrown))
       setOpenPath(null)
+    }
+  }
+
+  async function save() {
+    if (openPath === null || source === null) return
+
+    setSaving(true)
+    setProblem(null)
+
+    try {
+      const template = await client.saveThemeTemplate(openPath, source)
+      setSaved(template.source)
+      toast.success('Saved. The site picks this up on the next render.')
+      reload()
+    } catch (thrown) {
+      if (thrown instanceof ApiError && thrown.serverMessage !== undefined) {
+        // The line, when the server could find one. Shown beside the message
+        // rather than instead of it: a line without a reason sends the reader
+        // hunting for what is wrong with a line that looks fine.
+        setProblem({ message: thrown.serverMessage, line: thrown.line ?? null })
+      } else {
+        toast.error(describeApiError(thrown))
+      }
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -148,7 +182,7 @@ export function ThemeSection() {
                         </span>
                       )}
                       <Button type="button" size="sm" variant="outline" onClick={() => void open(item.path)}>
-                        View
+                        Edit
                       </Button>
                     </div>
                   </li>
@@ -160,17 +194,57 @@ export function ThemeSection() {
       })}
 
       <Sheet open={openPath !== null} onOpenChange={(next) => (next ? undefined : setOpenPath(null))}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-3xl">
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-4xl">
           <SheetHeader className="border-b">
             <SheetTitle className="font-mono">{openPath ?? ''}</SheetTitle>
           </SheetHeader>
-          <div className="p-4">
+
+          <div className="space-y-3 p-4">
             {source === null ? (
               <LoadingState label="Loading the template" />
             ) : (
-              <pre className="overflow-x-auto rounded-md border bg-neutral-50 p-3 font-mono text-xs leading-relaxed">
-                {source}
-              </pre>
+              <>
+                {problem !== null && (
+                  <p
+                    role="alert"
+                    data-testid="template-problem"
+                    className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                  >
+                    {problem.line !== null && <strong>Line {String(problem.line)}: </strong>}
+                    {problem.message}
+                  </p>
+                )}
+
+                <TemplateEditorSurface
+                  key={openPath ?? 'none'}
+                  initialSource={source}
+                  onChange={setSource}
+                  errorLine={problem?.line ?? null}
+                  autoFocus
+                />
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    {source === saved ? 'No changes.' : 'Unsaved changes.'}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSource(saved)
+                        setProblem(null)
+                      }}
+                      disabled={source === saved || saving}
+                    >
+                      Discard
+                    </Button>
+                    <Button type="button" onClick={() => void save()} disabled={source === saved || saving}>
+                      {saving ? 'Saving…' : 'Save'}
+                    </Button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </SheetContent>

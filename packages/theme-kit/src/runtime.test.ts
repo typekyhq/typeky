@@ -201,4 +201,63 @@ describe('liquid runtime', () => {
       expect(createLiquidRuntime().limits).toEqual(DEFAULT_RENDER_LIMITS)
     })
   })
+
+  /**
+   * Parsing without rendering.
+   *
+   * This is what a save is checked against: a template that will not parse is
+   * one that 500s the moment its page is asked for, and the useful moment to
+   * find that out is before it is stored -- with a line, so the reader knows
+   * where to look.
+   */
+  describe('validate', () => {
+    it('says nothing about a template that parses', () => {
+      const { validate } = createLiquidRuntime()
+
+      expect(validate("{% layout 'layouts/base' %}\n<h1>{{ content.title }}</h1>")).toBeNull()
+    })
+
+    it('points at the line an unclosed tag opened on', () => {
+      const { validate } = createLiquidRuntime()
+
+      const problem = validate('first\nsecond\n{% if a %}\n  body\n')
+
+      expect(problem).not.toBeNull()
+      expect(problem?.line).toBe(3)
+      expect(problem?.message).toContain('not closed')
+    })
+
+    it('points at an unknown filter, which the whitelist should never have allowed', () => {
+      const { validate } = createLiquidRuntime()
+
+      expect(validate('one\n{{ title | nosuchfilter }}\n')?.line).toBe(2)
+    })
+
+    it('refuses a tag this build does not allow, at save time rather than at render time', () => {
+      const { validate } = createLiquidRuntime()
+
+      // The tag registry is restricted to the documented whitelist, so checking
+      // here means the failure lands on the person who just typed it.
+      expect(validate('one\n{% include_relative %}\n')?.line).toBe(2)
+    })
+
+    it('never renders, so a template that would loop is only parsed', () => {
+      const { validate } = createLiquidRuntime()
+
+      // `for` over a hundred million would be a render; parsing it is instant.
+      expect(validate('{% for i in (1..100000000) %}{{ i }}{% endfor %}')).toBeNull()
+    })
+
+    it('locates the line from the token offset, not from the message text', () => {
+      const { validate } = createLiquidRuntime()
+
+      // liquidjs leaves `token.line` undefined and puts "line:N" in the prose.
+      // Reading the number out of the prose would break the day the wording
+      // changes; `token.begin` is an offset into source we already have.
+      const source = 'a\nb\nc\n{{ {{ }}\n'
+      const problem = validate(source)
+
+      expect(problem?.line).toBe(4)
+    })
+  })
 })

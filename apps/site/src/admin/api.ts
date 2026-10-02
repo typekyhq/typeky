@@ -24,7 +24,7 @@ import {
   updatePage,
 } from './pages'
 import { verifyPassword } from './password'
-import { readThemeTemplate, readThemeTemplates } from './theme'
+import { readThemeTemplate, readThemeTemplates, writeThemeTemplate } from './theme'
 import {
   bulkPosts,
   createPost,
@@ -182,6 +182,7 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // create one: a site may edit what its theme ships and nothing more.
   api.get('/theme/templates', (c) => readThemeTemplates(c, repositories))
   api.get('/theme/template', (c) => readThemeTemplate(c, repositories))
+  api.put('/theme/template', (c) => writeThemeTemplate(c, repositories))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 

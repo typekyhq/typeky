@@ -37,8 +37,18 @@ export type BlobResolver = (env: AdminEnv['Bindings']) => BlobPort | null
  * `message` is for the operator -- it never reaches a visitor, and the code is
  * always present so a client can branch without parsing prose.
  */
-export function apiError(c: Context<AdminEnv>, code: ApiErrorCode, message?: string): Response {
-  const body: ApiErrorBody = message === undefined ? { error: code } : { error: code, message }
+export function apiError(
+  c: Context<AdminEnv>,
+  code: ApiErrorCode,
+  message?: string,
+  /** Where the problem is, when the handler can point at it. */
+  line?: number,
+): Response {
+  const body: ApiErrorBody = {
+    error: code,
+    ...(message === undefined ? {} : { message }),
+    ...(line === undefined ? {} : { line }),
+  }
 
   return c.json(body, API_ERROR_STATUS[code] as ContentfulStatusCode)
 }

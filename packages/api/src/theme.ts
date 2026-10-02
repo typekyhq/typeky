@@ -42,3 +42,16 @@ export const themeTemplateResponseSchema = z.object({
 })
 
 export type ThemeTemplateResponse = z.infer<typeof themeTemplateResponseSchema>
+
+/**
+ * A template being saved.
+ *
+ * The name is not a path the caller invented: the server checks it against what
+ * the theme ships before it does anything else, and refuses anything else.
+ */
+export const themeTemplateWriteSchema = z.object({
+  path: z.string().check(z.minLength(1), z.maxLength(200)),
+  source: z.string().check(z.minLength(1), z.maxLength(64 * 1024)),
+})
+
+export type ThemeTemplateWrite = z.infer<typeof themeTemplateWriteSchema>

@@ -104,10 +104,12 @@ export {
   themeTemplateListResponseSchema,
   themeTemplateResponseSchema,
   themeTemplateSummarySchema,
+  themeTemplateWriteSchema,
   type ThemeTemplateGroup,
   type ThemeTemplateListResponse,
   type ThemeTemplateResponse,
   type ThemeTemplateSummary,
+  type ThemeTemplateWrite,
 } from './theme'
 
 export {

@@ -61,13 +61,16 @@ export class ApiError extends Error {
    * the curated client-side wording is worth showing instead.
    */
   readonly serverMessage: string | undefined
+  /** Where the problem is, when the server could point at it. */
+  readonly line: number | undefined
 
-  constructor(code: ApiErrorCode, status: number, message?: string) {
+  constructor(code: ApiErrorCode, status: number, message?: string, line?: number) {
     super(message ?? code)
     this.name = 'ApiError'
     this.code = code
     this.status = status
     this.serverMessage = message
+    this.line = line
   }
 }
 
@@ -122,6 +125,7 @@ export interface ApiClient {
 
   listThemeTemplates(): Promise<ThemeTemplateListResponse>
   getThemeTemplate(path: string): Promise<ThemeTemplateResponse>
+  saveThemeTemplate(path: string, source: string): Promise<ThemeTemplateResponse>
 }
 
 /** The filters the media grid can ask for. */
@@ -205,7 +209,9 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   async function toApiError(response: Response): Promise<ApiError> {
     try {
       const parsed = apiErrorBodySchema.safeParse(await response.json())
-      if (parsed.success) return new ApiError(parsed.data.error, response.status, parsed.data.message)
+      if (parsed.success) {
+        return new ApiError(parsed.data.error, response.status, parsed.data.message, parsed.data.line)
+      }
     } catch {
       // Not JSON, so something failed before the API layer could answer.
     }
@@ -516,6 +522,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         // into a path is how traversal bugs start.
         await send('GET', `/theme/template?path=${encodeURIComponent(path)}`),
         'the template did not match the contract',
+      )
+    },
+
+    async saveThemeTemplate(path, source) {
+      return readContract(
+        themeTemplateResponseSchema,
+        await send('PUT', '/theme/template', { path, source }),
+        'the save response did not match the contract',
       )
     },
   }

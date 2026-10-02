@@ -142,11 +142,48 @@ export interface LiquidRuntimeOptions {
   cache?: boolean | ParsedTemplateCache
 }
 
+/**
+ * A template that will not parse.
+ *
+ * `line` is 1-based when the parser could say where it gave up, and null when it
+ * could not -- a problem the admin can point at is worth more than one it can
+ * only describe, but claiming a line that is wrong is worse than admitting to
+ * none.
+ */
+export interface TemplateProblem {
+  message: string
+  line: number | null
+}
+
 export interface LiquidRuntime {
   /** The locked-down engine, for callers that resolve templates by name. */
   readonly engine: Liquid
   readonly limits: RenderLimits
   render(source: string, data?: Record<string, unknown>): Promise<string>
+  /**
+   * Parses without rendering.
+   *
+   * The same engine, so the same answer: a tag or filter this build does not
+   * allow fails here exactly as it would at render time, which is the point of
+   * checking before a save rather than after a page breaks. Nothing is
+   * evaluated -- no data is passed in, and no host function runs.
+   */
+  validate(source: string): TemplateProblem | null
+}
+
+/**
+ * The line a parse error points at, from the token's character offset.
+ *
+ * liquidjs puts `line:N, col:M` in the message text and leaves `token.line`
+ * undefined, so reading the number back out of the prose would break the day the
+ * wording changes. `begin` is an offset into the source we already have, which
+ * is ours to count.
+ */
+function locate(source: string, error: unknown): number | null {
+  const begin = (error as { token?: { begin?: unknown } }).token?.begin
+  if (typeof begin !== 'number' || begin < 0 || begin > source.length) return null
+
+  return source.slice(0, begin).split('\n').length
 }
 
 /** Deletes every registry entry the whitelist does not name. */
@@ -215,6 +252,18 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
       }
 
       return html
+    },
+
+    validate(source) {
+      try {
+        engine.parse(source)
+        return null
+      } catch (error) {
+        return {
+          message: error instanceof Error ? error.message : String(error),
+          line: locate(source, error),
+        }
+      }
     },
   }
 }

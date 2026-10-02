@@ -198,7 +198,7 @@ if (!existsSync(adminIndex)) {
     const file = join(adminDir, url.replace(/^\/admin\//, ''))
     if (!existsSync(file)) continue
     const src = readFileSync(file, 'utf8')
-    for (const sig of ['@tiptap', 'ProseMirror']) {
+    for (const sig of ['@tiptap', 'ProseMirror', 'cm-content']) {
       if (src.includes(sig)) {
         failures.push(
           `the editor is inside the first screen (${sig} in ${url}); it must load only on the edit screen`,

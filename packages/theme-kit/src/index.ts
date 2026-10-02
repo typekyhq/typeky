@@ -45,4 +45,5 @@ export {
   type LiquidRuntime,
   type LiquidRuntimeOptions,
   type RenderLimits,
+  type TemplateProblem,
 } from './runtime'

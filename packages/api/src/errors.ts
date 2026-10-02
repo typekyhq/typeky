@@ -52,6 +52,14 @@ export const apiErrorBodySchema = z.object({
   error: z.enum(API_ERROR_CODES),
   /** Optional detail for the operator. Never rendered to a visitor verbatim. */
   message: z.optional(z.string()),
+  /**
+   * Where the server could locate the problem, 1-based.
+   *
+   * Only set when a handler can point at a place in something the operator sent
+   * -- a template that will not parse is the case it exists for. Absent means
+   * "no better answer than the message", which is not the same as line 0.
+   */
+  line: z.optional(z.number()),
 })
 
 export type ApiErrorBody = z.infer<typeof apiErrorBodySchema>

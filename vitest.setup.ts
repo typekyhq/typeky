@@ -15,3 +15,18 @@ import { configure } from '@testing-library/dom'
 if (typeof document !== 'undefined') {
   configure({ asyncUtilTimeout: 5_000 })
 }
+
+/**
+ * CodeMirror measures its own viewport, and jsdom has no layout engine.
+ *
+ * The editor is exercised in a browser for exactly that reason; this only keeps
+ * a component test that happens to mount it from failing on a missing global
+ * rather than on the behaviour it is actually there to check.
+ */
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof ResizeObserver
+}

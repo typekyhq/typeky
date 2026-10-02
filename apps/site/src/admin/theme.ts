@@ -1,28 +1,38 @@
 import {
+  themeTemplateWriteSchema,
   type ThemeTemplateGroup,
   type ThemeTemplateListResponse,
   type ThemeTemplateResponse,
 } from '@typeky/api'
-import { defaultContext } from '@typeky/db'
+import { defaultContext, type ThemeTemplate } from '@typeky/db'
+import { createLiquidRuntime } from '@typeky/theme-kit'
 import { BASELINE, BASELINE_NAMES } from '@typeky/theme-default'
 import type { Context } from 'hono'
-import { apiError, type AdminEnv, type RepositoryResolver } from './errors'
+import { apiError, describeIssues, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
 
 /**
  * The theme's templates.
  *
- * Reads only. Saving is the editor's slice and restoring the baseline is the one
- * after it, but both are built on the same rule: the baseline is the complete
- * set of names, and neither the list nor the read will answer for anything else.
+ * The baseline is the complete set of names, and neither the list, the read nor
+ * the write will answer for anything else. That is what makes the whitelist a
+ * memory lookup rather than a prefix test.
  *
  * There is deliberately no endpoint that creates a template. A site may edit
  * what its theme ships and nothing more -- that is what keeps a theme upgrade
- * from conflicting with files a user added, and it is why the whitelist check
- * needs no database read at all.
+ * from conflicting with files a user added.
  */
 
 /** The theme that ships in this build. */
 const BUNDLED_THEME = 'default'
+
+/**
+ * One engine for validating what is about to be saved.
+ *
+ * Module scope because parsing needs no filesystem and no data, and building a
+ * liquidjs engine per request would be work for nothing. `cache: false` because
+ * a validating engine never renders the same source twice.
+ */
+const validator = createLiquidRuntime({ cache: false })
 
 export async function readThemeTemplates(
   c: Context<AdminEnv>,
@@ -88,6 +98,44 @@ export async function readThemeTemplate(
 
 /* -------------------------------------------------------------- helpers -- */
 
+/**
+ * Saves an override, refusing anything that would break the site.
+ *
+ * Three checks in order of how cheap they are. The name is checked against the
+ * baseline before anything is read or written, because a name the theme does not
+ * ship is not a thing that can be stored. Then the source is parsed -- a
+ * template that will not parse is one that 500s the moment its page is asked
+ * for, and finding that out now, with a line, is the whole point. Only then does
+ * it reach the database.
+ */
+export async function writeThemeTemplate(
+  c: Context<AdminEnv>,
+  repositories: RepositoryResolver,
+): Promise<Response> {
+  const store = repositories(c.env)
+  if (store === null) return apiError(c, 'database_not_configured')
+
+  const theme = await currentTheme(store)
+
+  const parsed = themeTemplateWriteSchema.safeParse(await readJsonBody(c.req.raw))
+  if (!parsed.success) return apiError(c, 'invalid_request', describeIssues(parsed.error.issues))
+
+  const { path, source } = parsed.data
+
+  if (!Object.hasOwn(BASELINE, path)) {
+    return apiError(c, 'not_found', 'the theme does not ship a template by that name')
+  }
+
+  const problem = validator.validate(source)
+  if (problem !== null) {
+    return apiError(c, 'invalid_request', problem.message, problem.line ?? undefined)
+  }
+
+  const saved = await store.themeTemplates.save(defaultContext(), { theme, path, source })
+
+  return c.json(toResponse(saved))
+}
+
 /** The theme the site is set to, defaulting to the bundled one. */
 async function currentTheme(store: Awaited<ReturnType<RepositoryResolver>>): Promise<string> {
   if (store === null) return BUNDLED_THEME
@@ -98,4 +146,13 @@ async function currentTheme(store: Awaited<ReturnType<RepositoryResolver>>): Pro
 
 function groupOf(path: string): ThemeTemplateGroup {
   return path.startsWith('layouts/') ? 'layouts' : path.startsWith('snippets/') ? 'snippets' : 'templates'
+}
+
+function toResponse(template: ThemeTemplate): ThemeTemplateResponse {
+  return {
+    path: template.path,
+    source: template.source,
+    overridden: true,
+    updatedAt: template.updatedAt.toISOString(),
+  }
 }
