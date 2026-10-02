@@ -305,6 +305,7 @@ export const zhCN: Locale = {
   'settings.adminDateFormat.preview': '→ {formatted}（你自己所在的时区）',
 
   // The editors, which share most of their words.
+  'editor.sections': '编辑器板块',
   'editor.fieldsNeedAttention': '有些字段需要处理。',
   'editor.slugTaken': '这个别名已经被占用了。',
   'editor.saving': '正在保存…',

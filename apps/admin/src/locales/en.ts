@@ -313,6 +313,7 @@ export const en: Locale = {
   'settings.adminDateFormat.preview': '→ {formatted} in your own time zone',
 
   // The editors, which share most of their words.
+  'editor.sections': 'Editor sections',
   'editor.fieldsNeedAttention': 'Some fields need attention.',
   'editor.slugTaken': 'That slug is already in use.',
   'editor.saving': 'Saving…',

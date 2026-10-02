@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SeoPanel } from '@/components/seo-panel'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { useT } from '@/lib/i18n'
+import { tabOwning, type FormTab } from '@/lib/tabs'
 
 /**
  * The page editor.
@@ -47,6 +49,15 @@ interface PageForm {
 
 const EMPTY_FORM: PageForm = { title: '', slug: '', sortOrder: '0', seo: {}, blocks: [] }
 
+const TABS: FormTab[] = [
+  { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'sortOrder', 'coverMediaId'] },
+  { id: 'body', labelKey: 'editor.body', owns: ['blocks'] },
+  { id: 'seo', labelKey: 'seo.summary', owns: ['seo'] },
+]
+
+/** What a form opens on: the fields somebody fills in first. */
+const FIRST_TAB = 'details'
+
 export function PageEditorPage() {
   const client = useApiClient()
   const t = useT()
@@ -59,6 +70,7 @@ export function PageEditorPage() {
   const [form, setForm] = useState<PageForm>(EMPTY_FORM)
   const [page, setPage] = useState<PageResponse | null>(null)
   const [issues, setIssues] = useState<Record<string, string>>({})
+  const [tab, setTab] = useState(FIRST_TAB)
   const [slugError, setSlugError] = useState('')
   const [saving, setSaving] = useState<ContentStatus | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -109,7 +121,14 @@ export function PageEditorPage() {
     const candidate = toWrite(form, status)
     const parsed = getPageWriteSchema().safeParse(candidate)
     if (!parsed.success) {
-      setIssues(collectIssues(parsed.error.issues))
+      const collected = collectIssues(parsed.error.issues)
+      setIssues(collected)
+
+      // Take the operator to the panel the first problem is in. The tabs hide
+      // most of the form, and an error behind one is an error they cannot see.
+      const first = Object.keys(collected)[0]
+      if (first !== undefined) setTab(tabOwning(TABS, first))
+
       toast.error(t('editor.fieldsNeedAttention'))
       return
     }
@@ -189,6 +208,15 @@ export function PageEditorPage() {
       }}
       className="space-y-6"
     >
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList aria-label={t('editor.sections')}>
+          {TABS.map((entry) => (
+            <TabsTrigger key={entry.id} value={entry.id}>
+              {t(entry.labelKey)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">{isNewPage ? t('pageEditor.new') : t('pageEditor.edit')}</h1>
@@ -236,69 +264,79 @@ export function PageEditorPage() {
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('editor.details')}</CardTitle>
-          <CardDescription>{t('editor.details.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="title"
-            label={t('editor.title')}
-            value={form.title}
-            error={issues.title}
-            onChange={(value) =>
-              update((current) => ({
-                ...current,
-                title: value,
-                // A new page's slug follows its title until somebody types one.
-                ...(slugTouched.current || !isNewPage ? {} : { slug: slugify(value) }),
-              }))
-            }
-          />
-          <Field
-            id="slug"
-            label={t('editor.slug')}
-            value={form.slug}
-            error={slugError !== '' ? slugError : issues.slug}
-            hint={t('editor.slug.hint')}
-            onChange={(value) => {
-              slugTouched.current = true
-              update((current) => ({ ...current, slug: value }))
-            }}
-          />
-          <Field
-            id="sortOrder"
-            label={t('editor.sortOrder')}
-            value={form.sortOrder}
-            error={issues.sortOrder}
-            hint={t('pageEditor.sortOrder.hint')}
-            onChange={(value) => update((current) => ({ ...current, sortOrder: value }))}
-          />
-        </CardContent>
-      </Card>
+      <TabsContent value="details" forceMount hidden={tab !== 'details'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('editor.details')}</CardTitle>
+            <CardDescription>{t('editor.details.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="title"
+              label={t('editor.title')}
+              value={form.title}
+              error={issues.title}
+              onChange={(value) =>
+                update((current) => ({
+                  ...current,
+                  title: value,
+                  // A new page's slug follows its title until somebody types one.
+                  ...(slugTouched.current || !isNewPage ? {} : { slug: slugify(value) }),
+                }))
+              }
+            />
+            <Field
+              id="slug"
+              label={t('editor.slug')}
+              value={form.slug}
+              error={slugError !== '' ? slugError : issues.slug}
+              hint={t('editor.slug.hint')}
+              onChange={(value) => {
+                slugTouched.current = true
+                update((current) => ({ ...current, slug: value }))
+              }}
+            />
+            <Field
+              id="sortOrder"
+              label={t('editor.sortOrder')}
+              value={form.sortOrder}
+              error={issues.sortOrder}
+              hint={t('pageEditor.sortOrder.hint')}
+              onChange={(value) => update((current) => ({ ...current, sortOrder: value }))}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-      <SeoPanel
-        idPrefix="page-seo"
-        value={form.seo}
-        onChange={(seo) => update((current) => ({ ...current, seo }))}
-        issues={issues}
-        fallback={t('pageEditor.seoFallback')}
-      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('editor.body')}</CardTitle>
-          <CardDescription>{t('editor.body.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LazyBlockEditor
-            key={editorKey}
-            initialBlocks={form.blocks}
-            onChange={(blocks) => update((current) => ({ ...current, blocks }))}
-          />
-        </CardContent>
-      </Card>
+      <TabsContent value="seo" forceMount hidden={tab !== 'seo'}>
+        <SeoPanel
+          idPrefix="page-seo"
+          value={form.seo}
+          onChange={(seo) => update((current) => ({ ...current, seo }))}
+          issues={issues}
+          fallback={t('pageEditor.seoFallback')}
+        />
+
+      </TabsContent>
+
+      <TabsContent value="body" forceMount hidden={tab !== 'body'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('editor.body')}</CardTitle>
+            <CardDescription>{t('editor.body.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LazyBlockEditor
+              key={editorKey}
+              initialBlocks={form.blocks}
+              onChange={(blocks) => update((current) => ({ ...current, blocks }))}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      </Tabs>
     </form>
   )
 }

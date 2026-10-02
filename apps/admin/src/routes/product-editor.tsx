@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MediaField, MediaPicker } from '@/components/media-picker'
 import { SeoPanel } from '@/components/seo-panel'
 import { ErrorState, LoadingState } from '@/components/states'
@@ -23,6 +24,7 @@ import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { useT } from '@/lib/i18n'
+import { tabOwning, type FormTab } from '@/lib/tabs'
 
 /**
  * The product editor.
@@ -73,6 +75,18 @@ const EMPTY_FORM: ProductForm = {
   blocks: [],
 }
 
+const TABS: FormTab[] = [
+  { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'priceLabel', 'summary', 'coverMediaId', 'sortOrder'] },
+  { id: 'body', labelKey: 'editor.body', owns: ['blocks'] },
+  { id: 'cta', labelKey: 'productEditor.cta', owns: ['ctaLabel', 'ctaUrl'] },
+  { id: 'images', labelKey: 'productEditor.images', owns: ['gallery'] },
+  { id: 'specs', labelKey: 'productEditor.specs', owns: ['specs', 'specs.0.label', 'specs.0.value'] },
+  { id: 'seo', labelKey: 'seo.summary', owns: ['seo'] },
+]
+
+/** What a form opens on: the fields somebody fills in first. */
+const FIRST_TAB = 'details'
+
 export function ProductEditorPage() {
   const client = useApiClient()
   const t = useT()
@@ -85,6 +99,7 @@ export function ProductEditorPage() {
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM)
   const [product, setProduct] = useState<ProductResponse | null>(null)
   const [issues, setIssues] = useState<Record<string, string>>({})
+  const [tab, setTab] = useState(FIRST_TAB)
   const [slugError, setSlugError] = useState('')
   const [saving, setSaving] = useState<ContentStatus | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -134,7 +149,14 @@ export function ProductEditorPage() {
     const candidate = toWrite(form, status)
     const parsed = getProductWriteSchema().safeParse(candidate)
     if (!parsed.success) {
-      setIssues(collectIssues(parsed.error.issues))
+      const collected = collectIssues(parsed.error.issues)
+      setIssues(collected)
+
+      // Take the operator to the panel the first problem is in. The tabs hide
+      // most of the form, and an error behind one is an error they cannot see.
+      const first = Object.keys(collected)[0]
+      if (first !== undefined) setTab(tabOwning(TABS, first))
+
       toast.error(t('editor.fieldsNeedAttention'))
       return
     }
@@ -202,6 +224,15 @@ export function ProductEditorPage() {
       }}
       className="space-y-6"
     >
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList aria-label={t('editor.sections')}>
+          {TABS.map((entry) => (
+            <TabsTrigger key={entry.id} value={entry.id}>
+              {t(entry.labelKey)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">{isNewProduct ? t('productEditor.new') : t('productEditor.edit')}</h1>
@@ -241,261 +272,280 @@ export function ProductEditorPage() {
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('editor.details')}</CardTitle>
-          <CardDescription>{t('productEditor.details.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="title"
-            label={t('editor.title')}
-            value={form.title}
-            error={issues.title}
-            onChange={(value) =>
-              update((current) => ({
-                ...current,
-                title: value,
-                ...(slugTouched.current || !isNewProduct ? {} : { slug: slugify(value) }),
-              }))
-            }
-          />
-          <Field
-            id="slug"
-            label={t('editor.slug')}
-            value={form.slug}
-            error={slugError !== '' ? slugError : issues.slug}
-            hint={t('editor.slug.hint')}
-            onChange={(value) => {
-              slugTouched.current = true
-              update((current) => ({ ...current, slug: value }))
-            }}
-          />
-          <Field
-            id="priceLabel"
-            label={t('productEditor.price')}
-            value={form.priceLabel}
-            error={issues.priceLabel}
-            hint={t('productEditor.price.hint')}
-            onChange={(value) => update((current) => ({ ...current, priceLabel: value }))}
-          />
-          <Field
-            id="sortOrder"
-            label={t('editor.sortOrder')}
-            value={form.sortOrder}
-            error={issues.sortOrder}
-            hint={t('productEditor.sortOrder.hint')}
-            onChange={(value) => update((current) => ({ ...current, sortOrder: value }))}
-          />
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="summary">{t('productEditor.summary')}</Label>
-            <Textarea
-              id="summary"
-              value={form.summary}
-              aria-invalid={issues.summary !== undefined}
-              aria-describedby={issues.summary !== undefined ? 'summary-error' : undefined}
-              onChange={(event) => update((current) => ({ ...current, summary: event.target.value }))}
+      <TabsContent value="details" forceMount hidden={tab !== 'details'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('editor.details')}</CardTitle>
+            <CardDescription>{t('productEditor.details.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="title"
+              label={t('editor.title')}
+              value={form.title}
+              error={issues.title}
+              onChange={(value) =>
+                update((current) => ({
+                  ...current,
+                  title: value,
+                  ...(slugTouched.current || !isNewProduct ? {} : { slug: slugify(value) }),
+                }))
+              }
             />
-            {issues.summary !== undefined && (
-              <p id="summary-error" className="text-sm text-destructive">
-                {issues.summary}
-              </p>
+            <Field
+              id="slug"
+              label={t('editor.slug')}
+              value={form.slug}
+              error={slugError !== '' ? slugError : issues.slug}
+              hint={t('editor.slug.hint')}
+              onChange={(value) => {
+                slugTouched.current = true
+                update((current) => ({ ...current, slug: value }))
+              }}
+            />
+            <Field
+              id="priceLabel"
+              label={t('productEditor.price')}
+              value={form.priceLabel}
+              error={issues.priceLabel}
+              hint={t('productEditor.price.hint')}
+              onChange={(value) => update((current) => ({ ...current, priceLabel: value }))}
+            />
+            <Field
+              id="sortOrder"
+              label={t('editor.sortOrder')}
+              value={form.sortOrder}
+              error={issues.sortOrder}
+              hint={t('productEditor.sortOrder.hint')}
+              onChange={(value) => update((current) => ({ ...current, sortOrder: value }))}
+            />
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="summary">{t('productEditor.summary')}</Label>
+              <Textarea
+                id="summary"
+                value={form.summary}
+                aria-invalid={issues.summary !== undefined}
+                aria-describedby={issues.summary !== undefined ? 'summary-error' : undefined}
+                onChange={(event) => update((current) => ({ ...current, summary: event.target.value }))}
+              />
+              {issues.summary !== undefined && (
+                <p id="summary-error" className="text-sm text-destructive">
+                  {issues.summary}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+
+      <TabsContent value="cta" forceMount hidden={tab !== 'cta'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('productEditor.cta')}</CardTitle>
+            <CardDescription>{t('productEditor.cta.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="ctaLabel"
+              label={t('productEditor.cta.label')}
+              value={form.ctaLabel}
+              error={issues.ctaLabel}
+              onChange={(value) => update((current) => ({ ...current, ctaLabel: value }))}
+            />
+            <Field
+              id="ctaUrl"
+              label={t('productEditor.cta.link')}
+              value={form.ctaUrl}
+              error={issues.ctaUrl}
+              hint={t('productEditor.cta.link.hint')}
+              onChange={(value) => update((current) => ({ ...current, ctaUrl: value }))}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+
+      <TabsContent value="images" forceMount hidden={tab !== 'images'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('productEditor.images')}</CardTitle>
+            <CardDescription>{t('productEditor.images.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <MediaField
+              id="coverMediaId"
+              label={t('editor.coverImage')}
+              value={form.coverMediaId}
+              error={issues.coverMediaId}
+              onChange={(value) => update((current) => ({ ...current, coverMediaId: value }))}
+            />
+
+            {form.gallery.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('productEditor.gallery.empty')}</p>
             )}
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('productEditor.cta')}</CardTitle>
-          <CardDescription>{t('productEditor.cta.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="ctaLabel"
-            label={t('productEditor.cta.label')}
-            value={form.ctaLabel}
-            error={issues.ctaLabel}
-            onChange={(value) => update((current) => ({ ...current, ctaLabel: value }))}
-          />
-          <Field
-            id="ctaUrl"
-            label={t('productEditor.cta.link')}
-            value={form.ctaUrl}
-            error={issues.ctaUrl}
-            hint={t('productEditor.cta.link.hint')}
-            onChange={(value) => update((current) => ({ ...current, ctaUrl: value }))}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('productEditor.images')}</CardTitle>
-          <CardDescription>{t('productEditor.images.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <MediaField
-            id="coverMediaId"
-            label={t('editor.coverImage')}
-            value={form.coverMediaId}
-            error={issues.coverMediaId}
-            onChange={(value) => update((current) => ({ ...current, coverMediaId: value }))}
-          />
-
-          {form.gallery.length === 0 && (
-            <p className="text-sm text-muted-foreground">{t('productEditor.gallery.empty')}</p>
-          )}
-
-          <ol className="space-y-3">
-            {form.gallery.map((mediaId, index) => (
-              <li key={index} className="flex flex-wrap items-end gap-2">
-                <div className="min-w-48 flex-1">
-                  <Field
-                    id={`gallery-${String(index)}`}
-                    label={t('productEditor.gallery.imageLabel', { number: index + 1 })}
-                    value={mediaId}
-                    error={issues[`gallery.${String(index)}`]}
-                    onChange={(value) =>
+            <ol className="space-y-3">
+              {form.gallery.map((mediaId, index) => (
+                <li key={index} className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-48 flex-1">
+                    <Field
+                      id={`gallery-${String(index)}`}
+                      label={t('productEditor.gallery.imageLabel', { number: index + 1 })}
+                      value={mediaId}
+                      error={issues[`gallery.${String(index)}`]}
+                      onChange={(value) =>
+                        update((current) => ({
+                          ...current,
+                          gallery: replaceAt(current.gallery, index, value),
+                        }))
+                      }
+                    />
+                  </div>
+                  <RepeaterButtons
+                    label={t('productEditor.gallery.imageName', { number: index + 1 })}
+                    index={index}
+                    count={form.gallery.length}
+                    onMove={(delta) =>
+                      update((current) => ({ ...current, gallery: moveAt(current.gallery, index, delta) }))
+                    }
+                    onRemove={() =>
                       update((current) => ({
                         ...current,
-                        gallery: replaceAt(current.gallery, index, value),
+                        gallery: current.gallery.filter((_, position) => position !== index),
                       }))
                     }
                   />
-                </div>
-                <RepeaterButtons
-                  label={t('productEditor.gallery.imageName', { number: index + 1 })}
-                  index={index}
-                  count={form.gallery.length}
-                  onMove={(delta) =>
-                    update((current) => ({ ...current, gallery: moveAt(current.gallery, index, delta) }))
-                  }
-                  onRemove={() =>
-                    update((current) => ({
-                      ...current,
-                      gallery: current.gallery.filter((_, position) => position !== index),
-                    }))
-                  }
-                />
-              </li>
-            ))}
-          </ol>
+                </li>
+              ))}
+            </ol>
 
-          {issues.gallery !== undefined && <p className="text-sm text-destructive">{issues.gallery}</p>}
+            {issues.gallery !== undefined && <p className="text-sm text-destructive">{issues.gallery}</p>}
 
-          <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => update((current) => ({ ...current, gallery: [...current.gallery, ''] }))}
+              >
+                {t('productEditor.gallery.addImage')}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setGalleryPickerOpen(true)}>
+                {t('productEditor.gallery.addFromLibrary')}
+              </Button>
+            </div>
+
+            <MediaPicker
+              open={galleryPickerOpen}
+              onOpenChange={setGalleryPickerOpen}
+              title={t('productEditor.gallery.add')}
+              onSelect={(item) =>
+                update((current) => ({ ...current, gallery: [...current.gallery, item.id] }))
+              }
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+
+      <TabsContent value="specs" forceMount hidden={tab !== 'specs'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('productEditor.specs')}</CardTitle>
+            <CardDescription>{t('productEditor.specs.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {form.specs.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('productEditor.specs.empty')}</p>
+            )}
+
+            <ol className="space-y-3">
+              {form.specs.map((spec, index) => (
+                <li key={index} className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-40 flex-1">
+                    <Field
+                      id={`spec-${String(index)}-label`}
+                      label={t('productEditor.specs.nameLabel', { number: index + 1 })}
+                      value={spec.label}
+                      error={issues[`specs.${String(index)}.label`]}
+                      onChange={(value) =>
+                        update((current) => ({ ...current, specs: replaceAt(current.specs, index, { ...spec, label: value }) }))
+                      }
+                    />
+                  </div>
+                  <div className="min-w-40 flex-1">
+                    <Field
+                      id={`spec-${String(index)}-value`}
+                      label={t('productEditor.specs.valueLabel', { number: index + 1 })}
+                      value={spec.value}
+                      error={issues[`specs.${String(index)}.value`]}
+                      onChange={(value) =>
+                        update((current) => ({ ...current, specs: replaceAt(current.specs, index, { ...spec, value }) }))
+                      }
+                    />
+                  </div>
+                  <RepeaterButtons
+                    label={t('productEditor.specs.entryName', { number: index + 1 })}
+                    index={index}
+                    count={form.specs.length}
+                    onMove={(delta) =>
+                      update((current) => ({ ...current, specs: moveAt(current.specs, index, delta) }))
+                    }
+                    onRemove={() =>
+                      update((current) => ({
+                        ...current,
+                        specs: current.specs.filter((_, position) => position !== index),
+                      }))
+                    }
+                  />
+                </li>
+              ))}
+            </ol>
+
+            {issues.specs !== undefined && <p className="text-sm text-destructive">{issues.specs}</p>}
+
             <Button
               type="button"
               variant="outline"
-              onClick={() => update((current) => ({ ...current, gallery: [...current.gallery, ''] }))}
+              onClick={() =>
+                update((current) => ({ ...current, specs: [...current.specs, { label: '', value: '' }] }))
+              }
             >
-              {t('productEditor.gallery.addImage')}
+              {t('productEditor.specs.add')}
             </Button>
-            <Button type="button" variant="outline" onClick={() => setGalleryPickerOpen(true)}>
-              {t('productEditor.gallery.addFromLibrary')}
-            </Button>
-          </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-          <MediaPicker
-            open={galleryPickerOpen}
-            onOpenChange={setGalleryPickerOpen}
-            title={t('productEditor.gallery.add')}
-            onSelect={(item) =>
-              update((current) => ({ ...current, gallery: [...current.gallery, item.id] }))
-            }
-          />
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('productEditor.specs')}</CardTitle>
-          <CardDescription>{t('productEditor.specs.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {form.specs.length === 0 && (
-            <p className="text-sm text-muted-foreground">{t('productEditor.specs.empty')}</p>
-          )}
+      <TabsContent value="seo" forceMount hidden={tab !== 'seo'}>
+        <SeoPanel
+          idPrefix="product-seo"
+          value={form.seo}
+          onChange={(seo) => update((current) => ({ ...current, seo }))}
+          issues={issues}
+          fallback={t('productEditor.seoFallback')}
+        />
 
-          <ol className="space-y-3">
-            {form.specs.map((spec, index) => (
-              <li key={index} className="flex flex-wrap items-end gap-2">
-                <div className="min-w-40 flex-1">
-                  <Field
-                    id={`spec-${String(index)}-label`}
-                    label={t('productEditor.specs.nameLabel', { number: index + 1 })}
-                    value={spec.label}
-                    error={issues[`specs.${String(index)}.label`]}
-                    onChange={(value) =>
-                      update((current) => ({ ...current, specs: replaceAt(current.specs, index, { ...spec, label: value }) }))
-                    }
-                  />
-                </div>
-                <div className="min-w-40 flex-1">
-                  <Field
-                    id={`spec-${String(index)}-value`}
-                    label={t('productEditor.specs.valueLabel', { number: index + 1 })}
-                    value={spec.value}
-                    error={issues[`specs.${String(index)}.value`]}
-                    onChange={(value) =>
-                      update((current) => ({ ...current, specs: replaceAt(current.specs, index, { ...spec, value }) }))
-                    }
-                  />
-                </div>
-                <RepeaterButtons
-                  label={t('productEditor.specs.entryName', { number: index + 1 })}
-                  index={index}
-                  count={form.specs.length}
-                  onMove={(delta) =>
-                    update((current) => ({ ...current, specs: moveAt(current.specs, index, delta) }))
-                  }
-                  onRemove={() =>
-                    update((current) => ({
-                      ...current,
-                      specs: current.specs.filter((_, position) => position !== index),
-                    }))
-                  }
-                />
-              </li>
-            ))}
-          </ol>
+      </TabsContent>
 
-          {issues.specs !== undefined && <p className="text-sm text-destructive">{issues.specs}</p>}
+      <TabsContent value="body" forceMount hidden={tab !== 'body'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('editor.body')}</CardTitle>
+            <CardDescription>{t('editor.body.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LazyBlockEditor
+              key={editorKey}
+              initialBlocks={form.blocks}
+              onChange={(blocks) => update((current) => ({ ...current, blocks }))}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              update((current) => ({ ...current, specs: [...current.specs, { label: '', value: '' }] }))
-            }
-          >
-            {t('productEditor.specs.add')}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <SeoPanel
-        idPrefix="product-seo"
-        value={form.seo}
-        onChange={(seo) => update((current) => ({ ...current, seo }))}
-        issues={issues}
-        fallback={t('productEditor.seoFallback')}
-      />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('editor.body')}</CardTitle>
-          <CardDescription>{t('editor.body.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LazyBlockEditor
-            key={editorKey}
-            initialBlocks={form.blocks}
-            onChange={(blocks) => update((current) => ({ ...current, blocks }))}
-          />
-        </CardContent>
-      </Card>
+      </Tabs>
     </form>
   )
 }

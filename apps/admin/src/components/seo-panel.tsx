@@ -46,20 +46,22 @@ export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: S
 
   return (
     <Card>
-      <details>
-        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-          <CardHeader>
-            <CardTitle>
-              {t('seo.summary')}
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {countSet(value) === 0 ? t('seo.usingDefaults') : t('seo.overridden', { count: countSet(value) })}
-              </span>
-            </CardTitle>
-            <CardDescription>{fallback}</CardDescription>
-          </CardHeader>
-        </summary>
+      <CardHeader>
+        <CardTitle>{t('seo.summary')}</CardTitle>
+        <CardDescription>{fallback}</CardDescription>
+      </CardHeader>
 
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+      <CardContent className="space-y-4">
+        {/*
+          Was a `<details>` that opened on demand, which is what a tab does now.
+          The count stays: it was the one thing the collapsed summary said, and
+          whether anything here has been overridden is still worth a line.
+        */}
+        <p className="text-sm text-muted-foreground">
+          {countSet(value) === 0 ? t('seo.usingDefaults') : t('seo.overridden', { count: countSet(value) })}
+        </p>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor={`${idPrefix}-title`}>{t('seo.title')}</Label>
             <Input
@@ -115,8 +117,8 @@ export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: S
               onChange={(next) => set('ogImageMediaId', next)}
             />
           </div>
-        </CardContent>
-      </details>
+        </div>
+      </CardContent>
     </Card>
   )
 }

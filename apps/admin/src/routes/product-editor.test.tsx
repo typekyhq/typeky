@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ProductResponse } from '@typeky/api'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -59,6 +59,18 @@ function loaded(overrides: Partial<ApiClient> = {}): ApiClient {
   })
 }
 
+/**
+ * Opens one of the form's panels.
+ *
+ * Needed because a panel that is not on screen is hidden, and a hidden button
+ * cannot be clicked -- by a test or by a person. Fields are a different matter:
+ * typing into one works either way in jsdom, so only the tests that press a
+ * button inside a panel have to come here first.
+ */
+async function openTab(name: string): Promise<void> {
+  await userEvent.click(await screen.findByRole('tab', { name }))
+}
+
 describe('opening a product', () => {
   it('fills every field, including both repeaters', async () => {
     renderEditor(loaded())
@@ -95,6 +107,7 @@ describe('the specification table', () => {
     }))
     renderEditor(loaded({ saveProduct }))
 
+    await openTab('Specifications')
     await userEvent.click(await screen.findByRole('button', { name: 'Add specification' }))
     await userEvent.type(screen.getByLabelText('Spec 3 name'), 'Finish')
     await userEvent.type(screen.getByLabelText('Spec 3 value'), 'Brass')
@@ -122,6 +135,7 @@ describe('the specification table', () => {
     renderEditor(loaded({ saveProduct }))
 
     await screen.findByLabelText('Spec 1 name')
+    await openTab('Specifications')
     await userEvent.click(screen.getByRole('button', { name: 'Move spec 2 up' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
 
@@ -145,6 +159,7 @@ describe('the specification table', () => {
     }))
     renderEditor(loaded({ saveProduct }))
 
+    await openTab('Specifications')
     await userEvent.click(await screen.findByRole('button', { name: 'Add specification' }))
     await userEvent.type(screen.getByLabelText('Spec 3 name'), 'Half typed')
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
@@ -163,6 +178,7 @@ describe('the specification table', () => {
     renderEditor(loaded({ saveProduct }))
 
     await screen.findByLabelText('Spec 1 name')
+    await openTab('Specifications')
     await userEvent.click(screen.getByRole('button', { name: 'Remove spec 1' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
 
@@ -182,7 +198,9 @@ describe('the gallery', () => {
     renderEditor(loaded({ saveProduct }))
 
     await screen.findByLabelText('Image 1')
+    await openTab('Images')
     await userEvent.click(screen.getByRole('button', { name: 'Move image 2 up' }))
+    await openTab('Images')
     await userEvent.click(screen.getByRole('button', { name: 'Add image' }))
     await userEvent.type(screen.getByLabelText('Image 3'), 'media_three')
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
@@ -203,6 +221,7 @@ describe('the gallery', () => {
     renderEditor(loaded({ saveProduct }))
 
     await screen.findByLabelText('Image 1')
+    await openTab('Images')
     await userEvent.click(screen.getByRole('button', { name: 'Add image' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
 
@@ -269,6 +288,7 @@ describe('choosing media', () => {
     renderEditor(withMedia())
 
     await screen.findByLabelText('Cover image')
+    await openTab('Images')
     await userEvent.click(screen.getByRole('button', { name: 'Choose cover image' }))
 
     expect(await screen.findByText('Choose for cover image')).toBeTruthy()
@@ -300,6 +320,7 @@ describe('choosing media', () => {
     )
 
     await screen.findByLabelText('Image 1')
+    await openTab('Images')
     await userEvent.click(screen.getByRole('button', { name: 'Add from library' }))
     await userEvent.click(await screen.findByRole('button', { name: /extra\.png/ }))
 
@@ -319,5 +340,36 @@ describe('choosing media', () => {
       expect(written.coverMediaId).toBe('media_cover')
       expect(written.seo).toEqual(PRODUCT.seo)
     })
+  })
+})
+
+/**
+ * The form as panels.
+ *
+ * A form this long is one document with one save button, and the panels only
+ * decide what is on screen. That makes one behaviour essential rather than
+ * nice: a save that fails has to show the panel the failure is in, or the
+ * operator gets "some fields need attention" and no way to find the field.
+ */
+describe('the form panels', () => {
+  it('opens on the fields somebody fills in first', async () => {
+    renderEditor(fakeApiClient({ async getProduct() { return PRODUCT } }))
+
+    const tablist = await screen.findByRole('tablist', { name: 'Editor sections' })
+
+    expect(within(tablist).getByRole('tab', { selected: true }).textContent).toBe('Details')
+    expect(screen.getByRole('tab', { name: 'Body', selected: false })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Specifications', selected: false })).toBeTruthy()
+  })
+
+  it('goes to the panel a failed save was about', async () => {
+    // No title, so the save fails on a field that lives on the Details panel --
+    // and it is pressed from the Images panel, which is the case that matters.
+    renderEditor(fakeApiClient({ async getProduct() { return { ...PRODUCT, title: '' } } }))
+
+    await openTab('Images')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+
+    expect(await screen.findByRole('tab', { name: 'Details', selected: true })).toBeTruthy()
   })
 })

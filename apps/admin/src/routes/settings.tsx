@@ -30,6 +30,7 @@ import { ADMIN_LOCALES, LANGUAGE_TAGS } from '@/lib/locales'
 import { formatLocal, usePanelPreference } from '@/lib/panel-preference'
 import { describeApiError } from '@/lib/session'
 import { useT } from '@/lib/i18n'
+import { tabOwning, type FormTab } from '@/lib/tabs'
 
 /**
  * Site settings.
@@ -45,21 +46,7 @@ import { useT } from '@/lib/i18n'
 
 type Status = 'loading' | 'ready' | 'error'
 
-interface SettingsTab {
-  id: string
-  labelKey: string
-  /**
-   * The issue keys this panel owns, by prefix.
-   *
-   * This screen is one document with one Save button, and the panels are only a
-   * way of splitting it up -- so a save that fails on a field in a panel the
-   * operator is not looking at has to go and show them, or the message they get
-   * is "some fields need attention" and no way to find them.
-   */
-  owns: string[]
-}
-
-const TABS: SettingsTab[] = [
+const TABS: FormTab[] = [
   {
     id: 'identity',
     labelKey: 'settings.identity',
@@ -78,13 +65,6 @@ const TABS: SettingsTab[] = [
 ]
 
 const FIRST_TAB = 'identity'
-
-/** The panel a failed field lives in. */
-function tabOwning(key: string): string {
-  const owner = TABS.find((entry) => entry.owns.some((prefix) => key === prefix || key.startsWith(`${prefix}.`)))
-
-  return owner?.id ?? FIRST_TAB
-}
 
 /**
  * The instant the format previews are rendered at.
@@ -171,7 +151,7 @@ export function SettingsPage() {
       // message is "some fields need attention" and the field is behind a tab
       // they have no reason to open.
       const first = Object.keys(collected)[0]
-      if (first !== undefined) setTab(tabOwning(first))
+      if (first !== undefined) setTab(tabOwning(TABS, first))
 
       toast.error(t('editor.fieldsNeedAttention'))
       return

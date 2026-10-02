@@ -23,24 +23,17 @@ async function open() {
 }
 
 describe('the SEO panel', () => {
-  it('stays closed until it is asked for', async () => {
-    const { container } = render(
+  it('shows its fields and says how many have been set', () => {
+    render(
       <ApiClientProvider value={fakeApiClient()}>
         <SeoPanel idPrefix="t" value={{}} onChange={() => undefined} fallback="x" />
       </ApiClientProvider>,
     )
 
-    // Asserted on the element rather than on visibility: jsdom does not
-    // implement `<details>` hiding its contents, so a real browser collapses
-    // these fields and a test that asked whether they were on screen would be
-    // asking jsdom a question it does not answer.
-    const details = container.querySelector('details')
-    expect(details?.open).toBe(false)
+    // This panel used to be a `<details>` that opened on demand. It is a tab of
+    // the editor now, so being hidden is the tab's job and the fields are simply
+    // here -- with the one line the collapsed summary used to say.
     expect(screen.getByText('using the defaults')).toBeTruthy()
-
-    await open()
-
-    expect(details?.open).toBe(true)
     expect(screen.getByLabelText('Meta title')).toBeTruthy()
     expect(screen.getByLabelText('Meta description')).toBeTruthy()
     expect(screen.getByLabelText('Canonical URL')).toBeTruthy()

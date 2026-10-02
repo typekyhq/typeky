@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SeoPanel } from '@/components/seo-panel'
 import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
@@ -23,6 +24,7 @@ import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { usePanelPreference } from '@/lib/panel-preference'
 import { useT } from '@/lib/i18n'
+import { tabOwning, type FormTab } from '@/lib/tabs'
 
 /**
  * The post editor.
@@ -68,6 +70,15 @@ const EMPTY_FORM: PostForm = {
   blocks: [],
 }
 
+const TABS: FormTab[] = [
+  { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'excerpt', 'category', 'tags', 'coverMediaId'] },
+  { id: 'body', labelKey: 'editor.body', owns: ['blocks'] },
+  { id: 'seo', labelKey: 'seo.summary', owns: ['seo'] },
+]
+
+/** What a form opens on: the fields somebody fills in first. */
+const FIRST_TAB = 'details'
+
 export function PostEditorPage() {
   const t = useT()
   const client = useApiClient()
@@ -81,6 +92,7 @@ export function PostEditorPage() {
   const [form, setForm] = useState<PostForm>(EMPTY_FORM)
   const [post, setPost] = useState<PostResponse | null>(null)
   const [issues, setIssues] = useState<Record<string, string>>({})
+  const [tab, setTab] = useState(FIRST_TAB)
   const [slugError, setSlugError] = useState('')
   const [saving, setSaving] = useState<ContentStatus | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -141,7 +153,14 @@ export function PostEditorPage() {
     const candidate = toWrite(form, status)
     const parsed = getPostWriteSchema().safeParse(candidate)
     if (!parsed.success) {
-      setIssues(collectIssues(parsed.error.issues))
+      const collected = collectIssues(parsed.error.issues)
+      setIssues(collected)
+
+      // Take the operator to the panel the first problem is in. The tabs hide
+      // most of the form, and an error behind one is an error they cannot see.
+      const first = Object.keys(collected)[0]
+      if (first !== undefined) setTab(tabOwning(TABS, first))
+
       toast.error(t('editor.fieldsNeedAttention'))
       return
     }
@@ -218,6 +237,15 @@ export function PostEditorPage() {
       }}
       className="space-y-6"
     >
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList aria-label={t('editor.sections')}>
+          {TABS.map((entry) => (
+            <TabsTrigger key={entry.id} value={entry.id}>
+              {t(entry.labelKey)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">{isNewPost ? t('postEditor.new') : t('postEditor.edit')}</h1>
@@ -253,103 +281,113 @@ export function PostEditorPage() {
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('editor.details')}</CardTitle>
-          <CardDescription>{t('editor.details.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="title"
-            label={t('editor.title')}
-            value={form.title}
-            error={issues.title}
-            onChange={(value) =>
-              update((current) => ({
-                ...current,
-                title: value,
-                // Follows the title only for a new post. An existing post's slug
-                // is its URL, and rewriting it would break every inbound link.
-                ...(slugTouched.current || !isNewPost ? {} : { slug: slugify(value) }),
-              }))
-            }
-          />
-          <Field
-            id="slug"
-            label={t('editor.slug')}
-            value={form.slug}
-            error={slugError !== '' ? slugError : issues.slug}
-            hint={t('editor.slug.hint')}
-            onChange={(value) => {
-              slugTouched.current = true
-              update((current) => ({ ...current, slug: value }))
-            }}
-          />
-          <Field
-            id="category"
-            label={t('postEditor.category')}
-            value={form.category}
-            error={issues.category}
-            onChange={(value) => update((current) => ({ ...current, category: value }))}
-          />
-          <Field
-            id="tags"
-            label={t('postEditor.tags')}
-            value={form.tags}
-            error={issues.tags}
-            hint={t('postEditor.tags.hint')}
-            onChange={(value) => update((current) => ({ ...current, tags: value }))}
-          />
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="excerpt">{t('postEditor.excerpt')}</Label>
-            <Textarea
-              id="excerpt"
-              value={form.excerpt}
-              aria-invalid={issues.excerpt !== undefined}
-              aria-describedby={issues.excerpt !== undefined ? 'excerpt-error' : undefined}
-              onChange={(event) => update((current) => ({ ...current, excerpt: event.target.value }))}
+      <TabsContent value="details" forceMount hidden={tab !== 'details'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('editor.details')}</CardTitle>
+            <CardDescription>{t('editor.details.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="title"
+              label={t('editor.title')}
+              value={form.title}
+              error={issues.title}
+              onChange={(value) =>
+                update((current) => ({
+                  ...current,
+                  title: value,
+                  // Follows the title only for a new post. An existing post's slug
+                  // is its URL, and rewriting it would break every inbound link.
+                  ...(slugTouched.current || !isNewPost ? {} : { slug: slugify(value) }),
+                }))
+              }
             />
-            {issues.excerpt !== undefined && (
-              <p id="excerpt-error" className="text-sm text-destructive">
-                {issues.excerpt}
-              </p>
-            )}
-          </div>
-
-          <div className="sm:col-span-2">
-            <MediaField
-              id="coverMediaId"
-              label={t('editor.coverImage')}
-              value={form.coverMediaId}
-              error={issues.coverMediaId}
-              hint={t('postEditor.cover.hint')}
-              onChange={(value) => update((current) => ({ ...current, coverMediaId: value }))}
+            <Field
+              id="slug"
+              label={t('editor.slug')}
+              value={form.slug}
+              error={slugError !== '' ? slugError : issues.slug}
+              hint={t('editor.slug.hint')}
+              onChange={(value) => {
+                slugTouched.current = true
+                update((current) => ({ ...current, slug: value }))
+              }}
             />
-          </div>
-        </CardContent>
-      </Card>
+            <Field
+              id="category"
+              label={t('postEditor.category')}
+              value={form.category}
+              error={issues.category}
+              onChange={(value) => update((current) => ({ ...current, category: value }))}
+            />
+            <Field
+              id="tags"
+              label={t('postEditor.tags')}
+              value={form.tags}
+              error={issues.tags}
+              hint={t('postEditor.tags.hint')}
+              onChange={(value) => update((current) => ({ ...current, tags: value }))}
+            />
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="excerpt">{t('postEditor.excerpt')}</Label>
+              <Textarea
+                id="excerpt"
+                value={form.excerpt}
+                aria-invalid={issues.excerpt !== undefined}
+                aria-describedby={issues.excerpt !== undefined ? 'excerpt-error' : undefined}
+                onChange={(event) => update((current) => ({ ...current, excerpt: event.target.value }))}
+              />
+              {issues.excerpt !== undefined && (
+                <p id="excerpt-error" className="text-sm text-destructive">
+                  {issues.excerpt}
+                </p>
+              )}
+            </div>
 
-      <SeoPanel
-        idPrefix="post-seo"
-        value={form.seo}
-        onChange={(seo) => update((current) => ({ ...current, seo }))}
-        issues={issues}
-        fallback={t('postEditor.seoFallback')}
-      />
+            <div className="sm:col-span-2">
+              <MediaField
+                id="coverMediaId"
+                label={t('editor.coverImage')}
+                value={form.coverMediaId}
+                error={issues.coverMediaId}
+                hint={t('postEditor.cover.hint')}
+                onChange={(value) => update((current) => ({ ...current, coverMediaId: value }))}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('editor.body')}</CardTitle>
-          <CardDescription>{t('editor.body.hint')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LazyBlockEditor
-            key={editorKey}
-            initialBlocks={form.blocks}
-            onChange={(blocks) => update((current) => ({ ...current, blocks }))}
-          />
-        </CardContent>
-      </Card>
+
+      <TabsContent value="seo" forceMount hidden={tab !== 'seo'}>
+        <SeoPanel
+          idPrefix="post-seo"
+          value={form.seo}
+          onChange={(seo) => update((current) => ({ ...current, seo }))}
+          issues={issues}
+          fallback={t('postEditor.seoFallback')}
+        />
+
+      </TabsContent>
+
+      <TabsContent value="body" forceMount hidden={tab !== 'body'}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('editor.body')}</CardTitle>
+            <CardDescription>{t('editor.body.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LazyBlockEditor
+              key={editorKey}
+              initialBlocks={form.blocks}
+              onChange={(blocks) => update((current) => ({ ...current, blocks }))}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      </Tabs>
     </form>
   )
 }

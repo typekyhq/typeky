@@ -52,6 +52,18 @@ function renderEditor(client: ApiClient, path = '/posts/post_1') {
   )
 }
 
+/**
+ * Opens one of the form's panels.
+ *
+ * Needed because a panel that is not on screen is hidden, and a hidden button
+ * cannot be clicked -- by a test or by a person. Fields are a different matter:
+ * typing into one works either way in jsdom, so only the tests that press a
+ * button inside a panel have to come here first.
+ */
+async function openTab(name: string): Promise<void> {
+  await userEvent.click(await screen.findByRole('tab', { name }))
+}
+
 describe('opening a post', () => {
   it('fills the form from the server', async () => {    renderEditor(
       fakeApiClient({
@@ -259,7 +271,7 @@ describe('the cover image', () => {
       }),
     )
 
-    await userEvent.click(await screen.findByText('Search and sharing'))
+    await openTab('Search and sharing')
     await userEvent.type(await screen.findByLabelText('Meta title'), 'Custom title')
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
 
