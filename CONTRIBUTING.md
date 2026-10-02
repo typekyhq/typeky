@@ -84,6 +84,7 @@ The current scope is in the [README](README.md#roadmap) roadmap. **Anything not 
 
 - Never hardcode environment variables or secrets. Locally use `.dev.vars` (gitignored); in production use `wrangler secret`.
 - Before committing, check: did I bring in a secret, `.dev.vars`, or a build artifact?
+- White-label licences are verified offline against a public key in `packages/core`. The **private** half is `keys/` (gitignored) and so is the script that uses it: a signing key in a git history is a key that has been given away. Never commit either, and never read the public key from the environment — a deployment that could supply its own key would be one that could licence itself.
 
 ## 5. Commit conventions
 

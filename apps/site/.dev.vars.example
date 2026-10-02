@@ -10,3 +10,10 @@
 
 ADMIN_USERNAME=admin
 # ADMIN_PASSWORD_HASH=scrypt$16384$8$1$<salt>$<hash>
+
+# A white-label licence, issued by the script outside this repository (see
+# CONTRIBUTING.md section 4). Absent means the site and the admin show the
+# "Powered by Typeky" attribution, which is what a deployment that has not bought
+# one should do. Bound to a domain: `localhost` for the dev server, which is the
+# hostname `wrangler dev` answers on.
+# LICENSE_KEY=<payload>.<signature>

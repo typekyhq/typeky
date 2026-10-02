@@ -9,6 +9,7 @@
  * ids sort by creation time as plain strings -- which is what lets a primary key
  * double as a stable tie-breaker in ordered queries.
  */
+import { crypto } from './web'
 
 /** Random bits: 12 for rand_a, 62 for rand_b. Held as 9 bytes, or 18 hex chars. */
 const RANDOM_BYTES = 9
@@ -20,7 +21,6 @@ const RANDOM_BYTES = 9
  * package compilable under any consumer's tsconfig -- without it, every package
  * that imports `@typeky/core` would also need Node's types.
  */
-declare const crypto: { getRandomValues<T extends ArrayBufferView>(array: T): T }
 
 /** Marks this as a version 7 UUID. */
 const VERSION_NIBBLE = '7'
