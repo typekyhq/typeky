@@ -5,6 +5,8 @@ import {
   getPageResponseSchema,
   getPostListResponseSchema,
   getPostResponseSchema,
+  getProductListResponseSchema,
+  getProductResponseSchema,
   sessionSchema,
   siteResponseSchema,
   type ApiErrorCode,
@@ -16,6 +18,9 @@ import {
   type PostListResponse,
   type PostResponse,
   type PostWrite,
+  type ProductListResponse,
+  type ProductResponse,
+  type ProductWrite,
   type Session,
   type SiteResponse,
   type SiteWrite,
@@ -82,6 +87,13 @@ export interface ApiClient {
   deletePage(id: string): Promise<void>
   setPageStatus(id: string, status: ContentStatus): Promise<PageResponse>
   setPageHome(id: string): Promise<PageResponse>
+
+  listProducts(query?: ContentQuery): Promise<ProductListResponse>
+  getProduct(id: string): Promise<ProductResponse>
+  createProduct(product: ProductWrite): Promise<ProductResponse>
+  saveProduct(id: string, product: ProductWrite): Promise<ProductResponse>
+  deleteProduct(id: string): Promise<void>
+  setProductStatus(id: string, status: ContentStatus): Promise<ProductResponse>
 }
 
 /** The filters the content lists can ask for. */
@@ -323,6 +335,50 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         getPageResponseSchema(),
         await send('POST', `/pages/${encodeURIComponent(id)}/home`),
         'the home response did not match the contract',
+      )
+    },
+
+    async listProducts(query = {}) {
+      return readContract(
+        getProductListResponseSchema(),
+        await send('GET', `/products${toQueryString(query)}`),
+        'the product list did not match the contract',
+      )
+    },
+
+    async getProduct(id) {
+      return readContract(
+        getProductResponseSchema(),
+        await send('GET', `/products/${encodeURIComponent(id)}`),
+        'the product did not match the contract',
+      )
+    },
+
+    async createProduct(product) {
+      return readContract(
+        getProductResponseSchema(),
+        await send('POST', '/products', product),
+        'the save response did not match the contract',
+      )
+    },
+
+    async saveProduct(id, product) {
+      return readContract(
+        getProductResponseSchema(),
+        await send('PUT', `/products/${encodeURIComponent(id)}`, product),
+        'the save response did not match the contract',
+      )
+    },
+
+    async deleteProduct(id) {
+      await send('DELETE', `/products/${encodeURIComponent(id)}`)
+    },
+
+    async setProductStatus(id, status) {
+      return readContract(
+        getProductResponseSchema(),
+        await send('POST', `/products/${encodeURIComponent(id)}/status`, { status }),
+        'the status response did not match the contract',
       )
     },
   }

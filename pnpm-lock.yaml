@@ -275,6 +275,9 @@ importers:
       '@typeky/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      '@typeky/theme-kit':
+        specifier: workspace:*
+        version: link:../../packages/theme-kit
       hono:
         specifier: ^4.13.11
         version: 4.13.11

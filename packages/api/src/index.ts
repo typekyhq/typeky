@@ -68,6 +68,18 @@ export {
 } from './pages'
 
 export {
+  getProductListResponseSchema,
+  getProductResponseSchema,
+  getProductSummarySchema,
+  getProductWriteSchema,
+  type ProductListResponse,
+  type ProductResponse,
+  type ProductSpec,
+  type ProductSummary,
+  type ProductWrite,
+} from './products'
+
+export {
   navItemSchema,
   siteResponseSchema,
   siteSettingsSchema,

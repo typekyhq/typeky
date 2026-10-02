@@ -56,6 +56,15 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     setPageStatus: unexpected('setPageStatus'),
     setPageHome: unexpected('setPageHome'),
 
+    async listProducts() {
+      return EMPTY_PAGE
+    },
+    getProduct: unexpected('getProduct'),
+    createProduct: unexpected('createProduct'),
+    saveProduct: unexpected('saveProduct'),
+    deleteProduct: unexpected('deleteProduct'),
+    setProductStatus: unexpected('setProductStatus'),
+
     ...overrides,
   }
 }

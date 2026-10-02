@@ -11,6 +11,8 @@ import { PageEditorPage } from '@/routes/page-editor'
 import { PagesSection } from '@/routes/pages'
 import { PostEditorPage } from '@/routes/post-editor'
 import { PostsSection } from '@/routes/posts'
+import { ProductEditorPage } from '@/routes/product-editor'
+import { ProductsSection } from '@/routes/products'
 import { SettingsPage } from '@/routes/settings'
 import { ApiClientProvider } from '@/lib/client-context'
 import { apiClient } from '@/lib/client'
@@ -34,6 +36,7 @@ import { useSession, type SessionController } from '@/lib/session'
 const BUILT_SECTIONS: Record<string, ReactNode> = {
   '/pages': <PagesSection />,
   '/posts': <PostsSection />,
+  '/products': <ProductsSection />,
   '/settings': <SettingsPage />,
 }
 
@@ -118,6 +121,7 @@ function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void 
                 same screen as `/:id` with nothing loaded yet. */}
             <Route path="/posts/:id" element={<PostEditorPage />} />
             <Route path="/pages/:id" element={<PageEditorPage />} />
+            <Route path="/products/:id" element={<ProductEditorPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

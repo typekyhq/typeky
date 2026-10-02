@@ -17,6 +17,14 @@ import {
 import { verifyPassword } from './password'
 import { createPost, deletePost, readPost, readPosts, setPostStatus, updatePost } from './posts'
 import {
+  createProduct,
+  deleteProduct,
+  readProduct,
+  readProducts,
+  setProductStatus,
+  updateProduct,
+} from './products'
+import {
   SESSION_COOKIE,
   SESSION_COOKIE_OPTIONS,
   SESSION_TTL_SECONDS,
@@ -127,6 +135,14 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // and putting it in a whole-document write would make the outcome depend on
   // the order two saves happened to arrive in.
   api.post('/pages/:id/home', (c) => setPageHome(c, repositories))
+
+  // Products, the same shape again.
+  api.get('/products', (c) => readProducts(c, repositories))
+  api.post('/products', (c) => createProduct(c, repositories))
+  api.get('/products/:id', (c) => readProduct(c, repositories))
+  api.put('/products/:id', (c) => updateProduct(c, repositories))
+  api.delete('/products/:id', (c) => deleteProduct(c, repositories))
+  api.post('/products/:id/status', (c) => setProductStatus(c, repositories))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 

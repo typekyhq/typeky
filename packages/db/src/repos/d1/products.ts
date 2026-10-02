@@ -10,7 +10,7 @@ import type {
   SeoMetadata,
   TenantContext,
 } from '../../contracts'
-import { asDate } from './support'
+import { asDate, searchAcross } from './support'
 
 const COLUMNS = [
   'id',
@@ -93,6 +93,14 @@ export function createProductRepository(db: DbPort): ProductRepository {
         conditions.push('status = ?')
         params.push(query.status)
       }
+
+      const search = query.search?.trim()
+      if (search !== undefined && search !== '') {
+        const condition = searchAcross(['title', 'slug', 'summary'], search)
+        conditions.push(condition.sql)
+        params.push(...condition.params)
+      }
+
       const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : ''
 
       const count = await db.first<{ total: number }>(`SELECT count(*) AS total FROM products${where}`, params)

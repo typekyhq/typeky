@@ -104,4 +104,32 @@ describe('product repository', () => {
     expect(await products.remove(ctx, product.id)).toBe(true)
     expect(await products.remove(ctx, product.id)).toBe(false)
   })
+
+  it('searches title, slug and summary, and combines that with a status filter', async () => {
+    const { products } = setup()
+    await products.upsert(ctx, {
+      title: 'Desk lamp',
+      slug: 'desk-lamp',
+      summary: 'A lamp for a small desk',
+      status: 'published',
+    })
+    await products.upsert(ctx, { title: 'Floor lamp', slug: 'floor-lamp' })
+    await products.upsert(ctx, { title: 'Chair', slug: 'chair' })
+
+    const byTitle = await products.list(ctx, { search: 'desk' })
+    const bySummary = await products.list(ctx, { search: 'SMALL desk' })
+    const withStatus = await products.list(ctx, { search: 'lamp', status: 'published' })
+
+    expect(byTitle.items.map((product) => product.slug)).toEqual(['desk-lamp'])
+    expect(bySummary.items.map((product) => product.slug)).toEqual(['desk-lamp'])
+    expect(withStatus.items.map((product) => product.slug)).toEqual(['desk-lamp'])
+  })
+
+  it('treats a percent sign in a search term as a character', async () => {
+    const { products } = setup()
+    await products.upsert(ctx, { title: '50% off bundle', slug: 'bundle' })
+    await products.upsert(ctx, { title: '50 items', slug: 'fifty' })
+
+    expect((await products.list(ctx, { search: '50%' })).items.map((p) => p.slug)).toEqual(['bundle'])
+  })
 })
