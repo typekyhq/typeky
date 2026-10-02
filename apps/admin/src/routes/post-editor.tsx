@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { SeoPanel } from '@/components/seo-panel'
 import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
@@ -320,6 +321,14 @@ export function PostEditorPage() {
           </div>
         </CardContent>
       </Card>
+
+      <SeoPanel
+        idPrefix="post-seo"
+        value={form.seo}
+        onChange={(seo) => update((current) => ({ ...current, seo }))}
+        issues={issues}
+        fallback="Left empty, the post's own title and excerpt are used, then the site defaults."
+      />
 
       <Card>
         <CardHeader>

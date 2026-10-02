@@ -207,7 +207,14 @@ export function MediaField({
           aria-describedby={error !== undefined ? `${id}-error` : undefined}
           onChange={(event) => onChange(event.target.value)}
         />
-        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        <Button
+          type="button"
+          variant="outline"
+          // Names the field it fills. "Choose" alone is ambiguous the moment a
+          // page has two of them, both to a screen reader and to voice control.
+          aria-label={`Choose ${label.toLowerCase()}`}
+          onClick={() => setOpen(true)}
+        >
           Choose
         </Button>
       </div>

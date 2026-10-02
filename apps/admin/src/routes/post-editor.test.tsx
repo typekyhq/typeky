@@ -222,7 +222,7 @@ describe('the cover image', () => {
     )
 
     await screen.findByLabelText('Cover image')
-    await userEvent.click(screen.getByRole('button', { name: 'Choose' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Choose cover image' }))
 
     expect(await screen.findByText('Choose for cover image')).toBeTruthy()
   })
@@ -243,8 +243,31 @@ describe('the cover image', () => {
     await waitFor(() => {
       const written = savePost.mock.calls.at(-1)?.[1] as Record<string, unknown>
       expect(written.coverMediaId).toBe('media_cover')
-      // A field no form edits yet still has to survive, or saving clears it.
+      // A field the form does not touch still has to survive.
       expect(written.seo).toEqual(POST.seo)
+    })
+  })
+
+  it('saves an SEO override that was edited', async () => {
+    const savePost = vi.fn(async (_id: string, write: unknown) => ({ ...POST, ...(write as object) }))
+    renderEditor(
+      fakeApiClient({
+        async getPost() {
+          return POST
+        },
+        savePost,
+      }),
+    )
+
+    await userEvent.click(await screen.findByText('Search and sharing'))
+    await userEvent.type(await screen.findByLabelText('Meta title'), 'Custom title')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+
+    await waitFor(() => {
+      const written = savePost.mock.calls.at(-1)?.[1] as { seo: Record<string, unknown> }
+      expect(written.seo.title).toBe('Custom title')
+      // And the field it did not touch is still there.
+      expect(written.seo.description).toBe('What changed this month')
     })
   })
 })

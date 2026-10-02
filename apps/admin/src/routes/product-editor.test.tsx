@@ -269,7 +269,7 @@ describe('choosing media', () => {
     renderEditor(withMedia())
 
     await screen.findByLabelText('Cover image')
-    await userEvent.click(screen.getByRole('button', { name: 'Choose' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Choose cover image' }))
 
     expect(await screen.findByText('Choose for cover image')).toBeTruthy()
   })

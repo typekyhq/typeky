@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { SeoPanel } from '@/components/seo-panel'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -271,6 +272,14 @@ export function PageEditorPage() {
           />
         </CardContent>
       </Card>
+
+      <SeoPanel
+        idPrefix="page-seo"
+        value={form.seo}
+        onChange={(seo) => update((current) => ({ ...current, seo }))}
+        issues={issues}
+        fallback="Left empty, the page title is used, then the site defaults."
+      />
 
       <Card>
         <CardHeader>

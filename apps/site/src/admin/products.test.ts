@@ -154,6 +154,11 @@ const WIDGET = {
   priceLabel: 'From $20',
   ctaLabel: 'Buy now',
   ctaUrl: 'https://example.com/checkout',
+  seo: {
+    title: 'Desk lamp — a small light for small desks',
+    ogImageMediaId: 'media_one',
+    canonical: 'https://example.com/desk-lamp',
+  },
   sortOrder: 2,
 }
 
@@ -188,6 +193,7 @@ describe('the product endpoints', () => {
       priceLabel: 'From $20',
       ctaLabel: 'Buy now',
       ctaUrl: 'https://example.com/checkout',
+      seo: WIDGET.seo,
       revision: 2,
     })
   })

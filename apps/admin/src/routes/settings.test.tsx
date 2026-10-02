@@ -187,7 +187,7 @@ describe('the logo', () => {
   it('can be chosen from the media library instead of pasting an id', async () => {
     renderPage(fakeClient())
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Choose' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose logo' }))
 
     expect(await screen.findByText('Choose for logo')).toBeTruthy()
   })
