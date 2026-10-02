@@ -20,6 +20,7 @@ export const API_ERROR_CODES = [
   'csrf_failed',
   'invalid_credentials',
   'admin_password_not_configured',
+  'database_not_configured',
   'not_found',
   'internal_error',
 ] as const
@@ -36,6 +37,7 @@ export const API_ERROR_STATUS: Record<ApiErrorCode, number> = {
   csrf_failed: 403,
   invalid_credentials: 401,
   admin_password_not_configured: 503,
+  database_not_configured: 503,
   not_found: 404,
   internal_error: 500,
 }

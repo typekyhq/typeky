@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@typeky/api": "workspace:*",
+    "@typeky/core": "workspace:*",
+    "@typeky/db": "workspace:*",
     "@typeky/platform": "workspace:*",
     "hono": "^4.13.11"
   },

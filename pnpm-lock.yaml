@@ -257,6 +257,12 @@ importers:
       '@typeky/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@typeky/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@typeky/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@typeky/platform':
         specifier: workspace:*
         version: link:../../packages/platform

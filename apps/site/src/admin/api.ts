@@ -1,10 +1,11 @@
-import { API_ERROR_STATUS, CSRF_HEADER, loginRequestSchema, type ApiErrorBody, type ApiErrorCode, type LoginRequest } from '@typeky/api'
+import { CSRF_HEADER, loginRequestSchema } from '@typeky/api'
+import type { Repositories } from '@typeky/db'
 import { Hono } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
-import type { Context, MiddlewareHandler } from 'hono'
-import type { ContentfulStatusCode } from 'hono/utils/http-status'
-import type { Env } from '../env'
+import type { MiddlewareHandler } from 'hono'
+import { repositoriesFor } from '../repositories'
 import { csrfTokenMatches, isSafeMethod } from './csrf'
+import { apiError, readJsonBody, type AdminEnv } from './errors'
 import { verifyPassword } from './password'
 import {
   SESSION_COOKIE,
@@ -13,8 +14,8 @@ import {
   createSession,
   destroySession,
   readSession,
-  type Session,
 } from './session'
+import { readSite, writeSite, type RepositoryResolver } from './site'
 
 /**
  * The admin JSON API.
@@ -29,19 +30,18 @@ import {
  *     registered before the guards on purpose. See the note on each.
  */
 
-export type AdminEnv = { Bindings: Env; Variables: { session: Session } }
+export interface AdminApiOptions {
+  /**
+   * Resolves the data layer for a request. Defaults to the D1 repositories; a
+   * test can supply its own instead of arranging a database binding.
+   */
+  repositories?: RepositoryResolver
+}
 
 const DEFAULT_ACTOR_ID = 'admin'
 
-/**
- * One error shape for every endpoint, with the status derived from the code so
- * the two cannot disagree.
- */
-function apiError(c: Context<AdminEnv>, code: ApiErrorCode): Response {
-  return c.json({ error: code } satisfies ApiErrorBody, API_ERROR_STATUS[code] as ContentfulStatusCode)
-}
-
-export function createAdminApi(): Hono<AdminEnv> {
+export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
+  const repositories = options.repositories ?? repositoriesFor
   const api = new Hono<AdminEnv>()
 
   // Login carries no CSRF token because there is no session yet to bind one to.
@@ -56,14 +56,15 @@ export function createAdminApi(): Hono<AdminEnv> {
       return apiError(c, 'admin_password_not_configured')
     }
 
-    const credentials = await readCredentials(c.req.raw)
-    if (credentials === null) return apiError(c, 'invalid_request')
+    const parsed = loginRequestSchema.safeParse(await readJsonBody(c.req.raw))
+    if (!parsed.success) return apiError(c, 'invalid_request', 'expected a username and a password')
 
     // Verified even when the username is wrong, so response time does not reveal
     // whether the username was right.
-    const passwordMatches = await verifyPassword(credentials.password, hash)
-    const usernameMatches = credentials.username === (c.env.ADMIN_USERNAME ?? DEFAULT_ACTOR_ID)
+    const passwordMatches = await verifyPassword(parsed.data.password, hash)
+    const usernameMatches = parsed.data.username === (c.env.ADMIN_USERNAME ?? DEFAULT_ACTOR_ID)
     if (!usernameMatches || !passwordMatches) return apiError(c, 'invalid_credentials')
+
     const { id, session } = await createSession(c.env.CACHE, DEFAULT_ACTOR_ID)
     setCookie(c, SESSION_COOKIE, id, { ...SESSION_COOKIE_OPTIONS, maxAge: SESSION_TTL_SECONDS })
 
@@ -90,6 +91,9 @@ export function createAdminApi(): Hono<AdminEnv> {
   api.use('*', requireSession)
   // ...and anything that can change state also needs the token.
   api.use('*', requireCsrf)
+
+  api.get('/site', (c) => readSite(c, repositories))
+  api.put('/site', (c) => writeSite(c, repositories))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 
@@ -119,21 +123,4 @@ export const requireCsrf: MiddlewareHandler<AdminEnv> = async (c, next) => {
   if (!csrfTokenMatches(provided, expected)) return apiError(c, 'csrf_failed')
 
   await next()
-}
-
-/**
- * Validated with the same schema the SPA infers its types from, so the contract
- * cannot drift between the two sides.
- */
-async function readCredentials(request: Request): Promise<LoginRequest | null> {
-  let body: unknown
-
-  try {
-    body = await request.json()
-  } catch {
-    return null
-  }
-
-  const parsed = loginRequestSchema.safeParse(body)
-  return parsed.success ? parsed.data : null
 }

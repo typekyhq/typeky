@@ -2,9 +2,12 @@ import {
   CSRF_HEADER,
   apiErrorBodySchema,
   sessionSchema,
+  siteResponseSchema,
   type ApiErrorCode,
   type LoginRequest,
   type Session,
+  type SiteResponse,
+  type SiteWrite,
 } from '@typeky/api'
 
 /**
@@ -35,11 +38,26 @@ export interface ApiClient {
 
   get<T>(path: string): Promise<T>
   post<T>(path: string, body?: unknown): Promise<T>
+  put<T>(path: string, body?: unknown): Promise<T>
   delete(path: string): Promise<void>
 
   signIn(credentials: LoginRequest): Promise<Session>
   signOut(): Promise<void>
   loadSession(): Promise<Session>
+
+  getSite(): Promise<SiteResponse>
+  saveSite(site: SiteWrite): Promise<SiteResponse>
+}
+
+/**
+ * What a contract check needs from a schema.
+ *
+ * Written structurally rather than importing Zod's type: this package is the
+ * only thing the SPA needs from the contract, and zod/mini's types are an
+ * implementation detail of how those schemas were written.
+ */
+interface Shape<T> {
+  safeParse(value: unknown): { success: true; data: T } | { success: false }
 }
 
 export interface ApiClientOptions {
@@ -95,10 +113,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   }
 
   async function readSession(response: Response): Promise<Session> {
-    const parsed = sessionSchema.safeParse(await response.json())
-    if (!parsed.success) {
-      throw new ApiError('internal_error', response.status, 'the session response did not match the contract')
-    }
+    return readContract(sessionSchema, response, 'the session response did not match the contract')
+  }
+
+  /**
+   * Validates a success body against its contract.
+   *
+   * Only the endpoints whose shapes are defined check; a generic `get<T>` is a
+   * typed cast by design, because the caller usually has the schema for later.
+   */
+  async function readContract<T>(shape: Shape<T>, response: Response, message: string): Promise<T> {
+    const parsed = shape.safeParse(await response.json())
+    if (!parsed.success) throw new ApiError('internal_error', response.status, message)
     return parsed.data
   }
 
@@ -117,6 +143,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
     async post<T>(path: string, body?: unknown): Promise<T> {
       return (await (await send('POST', path, body)).json()) as T
+    },
+
+    async put<T>(path: string, body?: unknown): Promise<T> {
+      return (await (await send('PUT', path, body)).json()) as T
     },
 
     async delete(path: string): Promise<void> {
@@ -142,6 +172,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       const session = await readSession(await send('GET', '/session'))
       csrfToken = session.csrfToken
       return session
+    },
+
+    async getSite() {
+      return readContract(siteResponseSchema, await send('GET', '/site'), 'the site response did not match the contract')
+    },
+
+    async saveSite(site) {
+      return readContract(
+        siteResponseSchema,
+        await send('PUT', '/site', site),
+        'the save response did not match the contract',
+      )
     },
   }
 

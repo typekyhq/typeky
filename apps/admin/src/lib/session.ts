@@ -32,6 +32,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   csrf_failed: 'The session token was rejected. Reload the page and try again.',
   invalid_credentials: 'Wrong username or password.',
   admin_password_not_configured: 'No admin password is configured on this deployment.',
+  database_not_configured: 'This deployment has no database configured.',
   not_found: 'That endpoint does not exist yet.',
   internal_error: 'The server could not complete the request.',
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Route, Routes } from 'react-router'
 import { toast } from 'sonner'
 import { AppHeader } from '@/components/app-header'
@@ -7,10 +7,12 @@ import { SectionPage } from '@/components/section-page'
 import { SignInScreen } from '@/components/sign-in-screen'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { SettingsPage } from '@/routes/settings'
+import { ApiClientProvider } from '@/lib/client-context'
 import { apiClient } from '@/lib/client'
 import type { ApiClient } from '@/lib/api-client'
 import { NAVIGATION } from '@/lib/navigation'
-import { useSession } from '@/lib/session'
+import { useSession, type SessionController } from '@/lib/session'
 
 /**
  * The admin shell.
@@ -20,30 +22,52 @@ import { useSession } from '@/lib/session'
  * server" separate from "signed out" matters -- telling somebody their password
  * is wrong when the network is down is worse than saying nothing.
  */
+
+/**
+ * Sections that are built. Everything else renders the placeholder, so the
+ * navigation always leads somewhere and the missing work is visible.
+ */
+const BUILT_SECTIONS: Record<string, ReactNode> = {
+  '/settings': <SettingsPage />,
+}
+
 export function App({ client = apiClient }: { client?: ApiClient }) {
-  const { state, signIn, signOut, reload } = useSession(client)
+  const session = useSession(client)
+
+  return (
+    <ApiClientProvider value={client}>
+      <Routed session={session} />
+    </ApiClientProvider>
+  )
+}
+
+function Routed({ session }: { session: SessionController }) {
+  const { state } = session
 
   if (state.status === 'loading') return <LoadingScreen />
 
   if (state.status === 'unreachable') {
-    return <UnreachableScreen message={state.message} onRetry={reload} />
+    return <UnreachableScreen message={state.message} onRetry={session.reload} />
   }
 
   if (state.status === 'signedOut') {
-    return <SignInScreen onSubmit={signIn} />
+    return <SignInScreen onSubmit={session.signIn} />
   }
 
-  async function handleSignOut() {
-    try {
-      await signOut()
-    } catch {
-      // The local session is already cleared; the server just did not hear about
-      // it, and saying so is better than pretending it worked.
-      toast.error('Signed out here, but the server could not be reached.')
-    }
-  }
-
-  return <Shell actorId={state.session.actorId} onSignOut={handleSignOut} />
+  return (
+    <Shell
+      actorId={state.session.actorId}
+      onSignOut={async () => {
+        try {
+          await session.signOut()
+        } catch {
+          // The local session is already cleared; the server just did not hear
+          // about it, and saying so beats pretending it worked.
+          toast.error('Signed out here, but the server could not be reached.')
+        }
+      }}
+    />
+  )
 }
 
 function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void }) {
@@ -78,7 +102,11 @@ function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void 
         <main id="main" tabIndex={-1} className="flex-1 px-4 py-6 outline-none md:px-6">
           <Routes>
             {NAVIGATION.map((section) => (
-              <Route key={section.to} path={section.to} element={<SectionPage section={section} />} />
+              <Route
+                key={section.to}
+                path={section.to}
+                element={BUILT_SECTIONS[section.to] ?? <SectionPage section={section} />}
+              />
             ))}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
