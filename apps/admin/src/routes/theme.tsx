@@ -76,20 +76,6 @@ function fileDescription(path: string, t: (key: string) => string): string {
   return text === key ? '' : text
 }
 
-/**
- * The name a screen reader reads for a file.
- *
- * Stated rather than left to the markup: the row is several spans, and the name
- * computed from them runs the words together -- "postCustomised" is what it read
- * out before. Every word here is on the screen, in the same order, which is what
- * a label matching its name asks for.
- */
-function spokenName(item: ThemeTemplateSummary, description: string, customised: string): string {
-  return [leafName(item.path), item.overridden ? customised : '', description]
-    .filter((part) => part !== '')
-    .join(', ')
-}
-
 export function ThemeSection() {
   const t = useT()
   const client = useApiClient()
@@ -246,6 +232,7 @@ export function ThemeSection() {
   const customised = items.filter((item) => item.overridden).length
   /** The open template as the list knows it, which is where "overridden" lives. */
   const opened = items.find((item) => item.path === openPath) ?? null
+  const description = openPath === null ? '' : fileDescription(openPath, t)
 
   return (
     <div className="space-y-6">
@@ -304,7 +291,6 @@ export function ThemeSection() {
                       <ul className="space-y-0.5">
                         {grouped.map((item) => {
                           const isOpen = item.path === openPath
-                          const description = fileDescription(item.path, t)
 
                           return (
                             <li key={item.path}>
@@ -318,29 +304,28 @@ export function ThemeSection() {
                                  * The visible text is contained in this, so the
                                  * name still matches what is on screen.
                                  */
-                                aria-label={spokenName(item, description, t('theme.customised'))}
+                                aria-label={
+                                  item.overridden
+                                    ? `${leafName(item.path)}, ${t('theme.customised')}`
+                                    : leafName(item.path)
+                                }
                                 onClick={() => void open(item.path)}
                                 className={cn(
-                                  'flex w-full flex-col gap-0.5 rounded-md py-1.5 pr-2 pl-7 text-left text-sm outline-none',
+                                  'flex w-full items-center gap-2 rounded-md py-1.5 pr-2 pl-7 text-left text-sm outline-none',
                                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                                   isOpen
                                     ? 'bg-accent font-medium text-accent-foreground'
                                     : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
                                 )}
                               >
-                                <span className="flex w-full items-center gap-2">
-                                  <span className="truncate font-mono">{leafName(item.path)}</span>
-                                  {item.overridden && (
-                                    <span
-                                      className="ml-auto shrink-0 rounded-full border px-2 py-0.5 text-xs"
-                                      data-testid="customised-marker"
-                                    >
-                                      {t('theme.customised')}
-                                    </span>
-                                  )}
-                                </span>
-                                {description !== '' && (
-                                  <span className="text-xs font-normal text-muted-foreground">{description}</span>
+                                <span className="truncate font-mono">{leafName(item.path)}</span>
+                                {item.overridden && (
+                                  <span
+                                    className="ml-auto shrink-0 rounded-full border px-2 py-0.5 text-xs"
+                                    data-testid="customised-marker"
+                                  >
+                                    {t('theme.customised')}
+                                  </span>
                                 )}
                               </button>
                             </li>
@@ -365,6 +350,19 @@ export function ThemeSection() {
                   <p className="font-mono text-sm" data-testid="open-path">
                     {openPath}
                   </p>
+                  {/*
+                    What the file is for, here rather than in the tree.
+
+                    In the tree it was one line of explanation under every name,
+                    which turned a list of fifteen files into a wall of text and
+                    made the list itself hard to scan -- which is the one thing a
+                    list of files has to be good at.
+                  */}
+                  {description !== '' && (
+                    <p className="max-w-prose text-xs text-muted-foreground" data-testid="open-description">
+                      {description}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {opened === null ? '' : describeSize(opened.bytes)}
                     {opened !== null && opened.overridden && opened.updatedAt !== null
