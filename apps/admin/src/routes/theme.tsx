@@ -158,6 +158,32 @@ export function ThemeSection() {
     }
   }
 
+  async function reset() {
+    if (openPath === null) return
+    if (!window.confirm(`Restore the bundled version of ${openPath}? Your changes to it are lost.`)) {
+      return
+    }
+
+    setSaving(true)
+    setProblem(null)
+
+    try {
+      await client.resetThemeTemplate(openPath)
+      toast.success('Restored the bundled template.')
+
+      // Re-reading rather than assuming: what comes back is the baseline, and
+      // showing it is how the operator sees that the restore happened.
+      const template = await client.getThemeTemplate(openPath)
+      setSource(template.source)
+      setSaved(template.source)
+      reload()
+    } catch (thrown) {
+      toast.error(describeApiError(thrown))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (state === 'error') {
     return <ErrorState title="Cannot load the theme" description={error} onRetry={reload} />
   }
@@ -165,6 +191,8 @@ export function ThemeSection() {
   if (state === 'loading') return <LoadingState label="Loading the theme" />
 
   const customised = items.filter((item) => item.overridden).length
+  /** The open template as the list knows it, which is where "overridden" lives. */
+  const opened = items.find((item) => item.path === openPath) ?? null
 
   return (
     <div className="space-y-6">
@@ -308,6 +336,16 @@ export function ThemeSection() {
                     {source === saved ? 'No changes.' : 'Unsaved changes.'}
                   </p>
                   <div className="flex gap-2">
+                    {opened?.overridden === true && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => void reset()}
+                        disabled={saving}
+                      >
+                        Restore default
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="outline"

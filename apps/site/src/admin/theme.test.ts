@@ -48,8 +48,8 @@ function fakeRepositories(overrides: ThemeTemplate[] = []) {
       rows.set(saved.path, saved)
       return saved
     },
-    async reset() {
-      return false
+    async reset(_ctx, _theme, path) {
+      return rows.delete(path)
     },
   }
 
@@ -265,6 +265,68 @@ describe('saving one template', () => {
     )
 
     expect(response.status).toBe(403)
+  })
+})
+
+describe('restoring the bundled template', () => {
+  it('drops the override and answers 204', async () => {
+    const store = fakeRepositories([
+      {
+        id: 'row_1',
+        theme: 'default',
+        path: 'templates/post',
+        source: 'custom',
+        revision: 2,
+        updatedAt: new Date('2026-03-03T00:00:00.000Z'),
+      },
+    ])
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    const response = await send(
+      '/theme/template?path=templates/post',
+      { method: 'DELETE', headers: { [CSRF_HEADER]: csrfToken } },
+      cookie,
+    )
+
+    expect(response.status).toBe(204)
+
+    // And the bundled source is what a read answers with now.
+    const after = (await (
+      await send('/theme/template?path=templates/post', undefined, cookie)
+    ).json()) as { source: string; overridden: boolean }
+    expect(after.overridden).toBe(false)
+    expect(after.source).toContain("{% layout 'layouts/base' %}")
+  })
+
+  it('says so when there was nothing to restore', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    // "Restored" when nothing was overridden would be a lie the operator cannot
+    // see through.
+    const response = await send(
+      '/theme/template?path=templates/post',
+      { method: 'DELETE', headers: { [CSRF_HEADER]: csrfToken } },
+      cookie,
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  it('refuses a name the theme does not ship', async () => {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    const response = await send(
+      '/theme/template?path=templates/mine',
+      { method: 'DELETE', headers: { [CSRF_HEADER]: csrfToken } },
+      cookie,
+    )
+
+    expect(response.status).toBe(404)
   })
 })
 

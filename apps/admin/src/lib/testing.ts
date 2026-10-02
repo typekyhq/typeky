@@ -81,6 +81,7 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     getThemeTemplate: unexpected('getThemeTemplate'),
     saveThemeTemplate: unexpected('saveThemeTemplate'),
     previewThemeTemplate: unexpected('previewThemeTemplate'),
+    resetThemeTemplate: unexpected('resetThemeTemplate'),
 
     ...overrides,
   }

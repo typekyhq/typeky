@@ -129,6 +129,8 @@ export interface ApiClient {
   getThemeTemplate(path: string): Promise<ThemeTemplateResponse>
   saveThemeTemplate(path: string, source: string): Promise<ThemeTemplateResponse>
   previewThemeTemplate(path: string, source: string): Promise<ThemePreviewResponse>
+  /** Drops the override, putting the bundled template back. */
+  resetThemeTemplate(path: string): Promise<void>
 }
 
 /** The filters the media grid can ask for. */
@@ -542,6 +544,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         await send('POST', '/theme/preview', { path, source }),
         'the preview response did not match the contract',
       )
+    },
+
+    async resetThemeTemplate(path) {
+      // A query parameter, like the read: the name contains a slash.
+      await send('DELETE', `/theme/template?path=${encodeURIComponent(path)}`)
     },
   }
 

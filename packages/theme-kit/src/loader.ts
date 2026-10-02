@@ -54,6 +54,8 @@ export interface TemplateLoader {
 interface OverrideRow {
   path: string
   source: string
+  /** The row's own revision. Part of what tells one isolate the overrides moved. */
+  revision: number
 }
 
 const LIQUID_EXTENSION = '.liquid'
@@ -78,7 +80,7 @@ export function createTemplateLoader(options: TemplateLoaderOptions): TemplateLo
 
   async function loadOverrides(): Promise<Map<string, string>> {
     const rows = await options.db.all<OverrideRow>(
-      'SELECT path, source FROM theme_templates WHERE theme = ?',
+      'SELECT path, source, revision FROM theme_templates WHERE theme = ?',
       [options.theme],
     )
 
@@ -101,15 +103,60 @@ export function createTemplateLoader(options: TemplateLoaderOptions): TemplateLo
       )
     }
 
+    // Derived from what was read, not from a counter in this process.
+    //
+    // A counter is only ever bumped by `invalidate()`, which only the isolate
+    // that handled the save ever calls: every other isolate keeps rendering the
+    // template it loaded, for as long as the isolate lives. Reading the revision
+    // out of the rows is what makes "saved" mean "live" everywhere at once, and
+    // it costs nothing extra -- this is the same query that fetched the rows.
+    revision = hashRevision(rows)
+
     return map
   }
 
-  /** One query per revision, shared by every lookup in that revision. */
-  function overrides(): Promise<Map<string, string>> {
-    if (loaded === undefined || loadedRevision !== revision) {
-      loadedRevision = revision
-      loaded = loadOverrides()
+  /**
+   * A stable number for a set of overrides.
+   *
+   * `path` and the row's own revision are enough: a save bumps that revision, so
+   * any change to any override moves this. The source itself is deliberately not
+   * hashed -- it is the largest column, and the row's revision already changes
+   * whenever it does.
+   */
+  function hashRevision(rows: OverrideRow[]): number {
+    const signature = rows
+      .map((row) => `${row.path}:${String(row.revision)}`)
+      .sort()
+      .join('|')
+
+    let hash = 1
+    for (let index = 0; index < signature.length; index += 1) {
+      hash = (hash * 31 + signature.charCodeAt(index)) % 2_147_483_647
     }
+
+    return hash
+  }
+
+  /**
+   * The overrides, read once per load.
+   *
+   * Memoised by the revision the *rows* produced, not by a counter here, so a
+   * loader that is rebuilt for a request sees whatever was saved since -- even if
+   * it was saved in another isolate, which is the only way "saved" can mean
+   * "live" everywhere at once.
+   *
+   * `loadedRevision` is set when the load finishes rather than when it starts: the
+   * revision is derived from the rows, so it changes *during* the load, and
+   * writing it early would make every load look stale to the one after it.
+   */
+  function overrides(): Promise<Map<string, string>> {
+    if (loaded !== undefined && loadedRevision === revision) return loaded
+
+    loaded = loadOverrides().then((map) => {
+      loadedRevision = revision
+      return map
+    })
+
     return loaded
   }
 

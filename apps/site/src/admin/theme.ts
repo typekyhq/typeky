@@ -106,6 +106,33 @@ export async function readThemeTemplate(
   return c.json(body)
 }
 
+/**
+ * Drops an override, putting the bundled template back.
+ *
+ * The name is checked against the baseline first, as everywhere else. Deleting a
+ * row that is not there answers 404 rather than pretending: "restored" when
+ * nothing was overridden would be a lie the operator cannot see through.
+ */
+export async function resetThemeTemplate(
+  c: Context<AdminEnv>,
+  repositories: RepositoryResolver,
+): Promise<Response> {
+  const store = repositories(c.env)
+  if (store === null) return apiError(c, 'database_not_configured')
+
+  const theme = await currentTheme(store)
+  const path = c.req.query('path')
+
+  if (path === undefined || !Object.hasOwn(BASELINE, path)) {
+    return apiError(c, 'not_found', 'the theme does not ship a template by that name')
+  }
+
+  const dropped = await store.themeTemplates.reset(defaultContext(), theme, path)
+  if (!dropped) return apiError(c, 'not_found', 'that template has no override to restore')
+
+  return c.body(null, 204)
+}
+
 /* -------------------------------------------------------------- helpers -- */
 
 /**

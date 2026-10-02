@@ -211,6 +211,44 @@ describe('the theme screen', () => {
     expect(frame.getAttribute('srcdoc')).toContain('rendered from')
   })
 
+  it('offers to restore the bundled template, and re-reads what came back', async () => {
+    const resetThemeTemplate = vi.fn(async () => undefined)
+    const listThemeTemplates = vi.fn(async () => ({ theme: 'default', items: ITEMS }))
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderSection(withTheme({ resetThemeTemplate, listThemeTemplates }))
+
+    const row = (await screen.findByText('templates/post')).closest('li')!
+    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await screen.findByTestId('surface')
+
+    // Only offered for a template that actually has an override.
+    await userEvent.click(screen.getByRole('button', { name: 'Restore default' }))
+
+    await waitFor(() => {
+      expect(resetThemeTemplate).toHaveBeenCalledWith('templates/post')
+    })
+    // Re-read rather than assumed: the editor shows the baseline again.
+    await waitFor(() => {
+      expect(screen.getByTestId('surface')).toHaveProperty('value', 'SOURCE OF templates/post')
+    })
+  })
+
+  it('does not offer to restore a template that has no override', async () => {
+    renderSection(
+      withTheme({
+        async listThemeTemplates() {
+          return { theme: 'default', items: ITEMS.map((item) => ({ ...item, overridden: false })) }
+        },
+      }),
+    )
+
+    const row = (await screen.findByText('templates/post')).closest('li')!
+    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await screen.findByTestId('surface')
+
+    expect(screen.queryByRole('button', { name: 'Restore default' })).toBeNull()
+  })
+
   it('says so when the theme cannot be loaded', async () => {
     renderSection(
       withTheme({
