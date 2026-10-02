@@ -1,77 +1,116 @@
-import { NavLink, Route, Routes } from 'react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { useState } from 'react'
+import { Route, Routes } from 'react-router'
+import { toast } from 'sonner'
+import { AppHeader } from '@/components/app-header'
+import { AppSidebar } from '@/components/app-sidebar'
+import { SectionPage } from '@/components/section-page'
+import { SignInScreen } from '@/components/sign-in-screen'
+import { ErrorState, LoadingState } from '@/components/states'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { apiClient } from '@/lib/client'
+import type { ApiClient } from '@/lib/api-client'
+import { NAVIGATION } from '@/lib/navigation'
+import { useSession } from '@/lib/session'
 
 /**
  * The admin shell.
  *
- * Deliberately thin for now: routing and layout only. Navigation chrome,
- * breadcrumbs, toasts and loading states arrive with the real screens, and this
- * is the file they will grow into.
+ * Four states, in the order they can happen: asking the server whether a session
+ * exists, unable to ask at all, signed out, signed in. Keeping "cannot reach the
+ * server" separate from "signed out" matters -- telling somebody their password
+ * is wrong when the network is down is worse than saying nothing.
  */
+export function App({ client = apiClient }: { client?: ApiClient }) {
+  const { state, signIn, signOut, reload } = useSession(client)
 
-const navigation: Array<{ to: string; label: string; end?: boolean }> = [
-  { to: '/', label: 'Dashboard', end: true },
-]
+  if (state.status === 'loading') return <LoadingScreen />
 
-export function App() {
+  if (state.status === 'unreachable') {
+    return <UnreachableScreen message={state.message} onRetry={reload} />
+  }
+
+  if (state.status === 'signedOut') {
+    return <SignInScreen onSubmit={signIn} />
+  }
+
+  async function handleSignOut() {
+    try {
+      await signOut()
+    } catch {
+      // The local session is already cleared; the server just did not hear about
+      // it, and saying so is better than pretending it worked.
+      toast.error('Signed out here, but the server could not be reached.')
+    }
+  }
+
+  return <Shell actorId={state.session.actorId} onSignOut={handleSignOut} />
+}
+
+function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void }) {
+  const [sectionsOpen, setSectionsOpen] = useState(false)
+
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-4xl items-center gap-6 px-4">
-          <span className="text-sm font-semibold">Typeky</span>
-          <Separator orientation="vertical" className="h-5" />
-          <nav className="flex items-center gap-4 text-sm">
-            {navigation.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  isActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-      </header>
+    <div className="flex min-h-dvh bg-background text-foreground">
+      {/* First in the tab order, invisible until focused: keyboard users should
+          not have to walk the whole section list to reach the page. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+      >
+        Skip to content
+      </a>
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
+      <AppSidebar className="hidden md:flex" />
+
+      <Sheet open={sectionsOpen} onOpenChange={setSectionsOpen}>
+        <SheetContent side="left" className="w-64 p-0">
+          <SheetHeader className="border-b">
+            <SheetTitle>Sections</SheetTitle>
+          </SheetHeader>
+          <AppSidebar className="border-r-0" onNavigate={() => setSectionsOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AppHeader actorId={actorId} onSignOut={onSignOut} onOpenSections={() => setSectionsOpen(true)} />
+
+        {/* tabIndex -1 so the skip link can move focus here. */}
+        <main id="main" tabIndex={-1} className="flex-1 px-4 py-6 outline-none md:px-6">
+          <Routes>
+            {NAVIGATION.map((section) => (
+              <Route key={section.to} path={section.to} element={<SectionPage section={section} />} />
+            ))}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   )
 }
 
-function Dashboard() {
+function LoadingScreen() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>The admin panel is wired up</CardTitle>
-        <CardDescription>
-          Sign-in, content editing and theme editing are still ahead. This page exists so the build,
-          the routing and the component pipeline can be verified end to end.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">
-        Requests to <code>/api/admin/*</code> are served by the Worker.
-      </CardContent>
-    </Card>
+    <main id="main" className="flex min-h-dvh items-center justify-center p-6">
+      <LoadingState label="Checking your session" className="w-full max-w-sm" />
+    </main>
   )
 }
 
-function NotFound() {
+function UnreachableScreen({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Not found</CardTitle>
-        <CardDescription>This screen does not exist yet.</CardDescription>
-      </CardHeader>
-    </Card>
+    <main id="main" className="flex min-h-dvh items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <ErrorState title="Cannot reach the server" description={message} onRetry={onRetry} />
+      </div>
+    </main>
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-xl font-semibold">Not found</h1>
+      <p className="text-sm text-muted-foreground">There is no screen at this address.</p>
+    </div>
   )
 }
