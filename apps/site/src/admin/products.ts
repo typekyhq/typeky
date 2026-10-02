@@ -10,6 +10,7 @@ import type { Context } from 'hono'
 import {
   apiError,
   describeIssues,
+  isUniqueViolation,
   readJsonBody,
   type AdminEnv,
   type RepositoryResolver,
@@ -203,10 +204,6 @@ function slugTaken(c: Context<AdminEnv>, slug: string, owner: Product | null): R
       : `The slug "${slug}" is already used by "${owner.title}".`
 
   return apiError(c, 'slug_taken', message)
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Error && /UNIQUE constraint failed/i.test(error.message)
 }
 
 

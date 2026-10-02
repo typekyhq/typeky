@@ -133,3 +133,18 @@ export {
   type SiteWrite,
   type SocialLink,
 } from './site'
+
+export {
+  TAXONOMY_CONTENT_TYPES,
+  taxonomyResponseSchema,
+  termSchema,
+  termWriteSchema,
+  vocabularySchema,
+  vocabularyWriteSchema,
+  type TaxonomyContentType,
+  type TaxonomyResponse,
+  type Term,
+  type TermWrite,
+  type Vocabulary,
+  type VocabularyWrite,
+} from './taxonomy'

@@ -221,6 +221,13 @@ export function createTermRepository(db: DbPort): TermRepository {
       return row?.total ?? 0
     },
 
+    async usageCounts(_ctx: TenantContext): Promise<Map<string, number>> {
+      const rows = await db.all<{ term_id: string; total: number }>(
+        'SELECT term_id, count(*) AS total FROM content_terms GROUP BY term_id',
+      )
+      return new Map(rows.map((row) => [row.term_id, row.total]))
+    },
+
     async forContent(_ctx: TenantContext, contentType: ContentType, contentId: string): Promise<Term[]> {
       const rows = await db.all<TermRow>(
         `SELECT ${QUALIFIED_COLUMNS} FROM content_terms ct

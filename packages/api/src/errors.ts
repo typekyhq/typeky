@@ -24,6 +24,8 @@ export const API_ERROR_CODES = [
   'not_found',
   /** The content's slug is already in use, so the URL would be ambiguous. */
   'slug_taken',
+  /** A vocabulary with that name exists; two would be indistinguishable. */
+  'name_taken',
   /** No bucket is bound, so uploads and media reads cannot be served. */
   'storage_not_configured',
   'internal_error',
@@ -44,6 +46,7 @@ export const API_ERROR_STATUS: Record<ApiErrorCode, number> = {
   database_not_configured: 503,
   not_found: 404,
   slug_taken: 409,
+  name_taken: 409,
   storage_not_configured: 503,
   internal_error: 500,
 }

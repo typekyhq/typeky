@@ -11,6 +11,7 @@ import type { Context } from 'hono'
 import {
   apiError,
   describeIssues,
+  isUniqueViolation,
   readJsonBody,
   type AdminEnv,
   type RepositoryResolver,
@@ -216,15 +217,6 @@ function slugTaken(c: Context<AdminEnv>, slug: string, owner: Post | null): Resp
       : `The slug "${slug}" is already used by "${owner.title}".`
 
   return apiError(c, 'slug_taken', message)
-}
-
-/**
- * SQLite reports a unique index violation in the message. Matching on text is
- * unpleasant, but the alternative is letting the one race an operator can cause
- * by hand surface as an internal error.
- */
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Error && /UNIQUE constraint failed/i.test(error.message)
 }
 
 

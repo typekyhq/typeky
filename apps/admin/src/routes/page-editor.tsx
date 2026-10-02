@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { Field } from '@/components/field'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SeoPanel } from '@/components/seo-panel'
@@ -21,6 +22,7 @@ import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { useT } from '@/lib/i18n'
+import { slugify } from '@/lib/slug'
 import { tabOwning, type FormTab } from '@/lib/tabs'
 
 /**
@@ -342,40 +344,6 @@ export function PageEditorPage() {
   )
 }
 
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  error,
-  hint,
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-  error?: string
-  hint?: string
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        value={value}
-        aria-invalid={error !== undefined}
-        aria-describedby={error !== undefined ? `${id}-error` : undefined}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {error !== undefined && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-      {hint !== undefined && error === undefined && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  )
-}
 
 function toForm(page: PageResponse): PageForm {
   return {
@@ -400,16 +368,6 @@ function toWrite(form: PageForm, status: ContentStatus): PageWrite {
     seo: form.seo,
     blocks: form.blocks,
   }
-}
-
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80)
 }
 
 function collectIssues(

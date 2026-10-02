@@ -40,6 +40,11 @@ export const NAVIGATION: NavigationItem[] = [
       descriptionKey: 'nav.products.description',
     },
   {
+      to: '/taxonomy',
+      labelKey: 'nav.taxonomy',
+      descriptionKey: 'nav.taxonomy.description',
+    },
+  {
       to: '/media',
       labelKey: 'nav.media',
       descriptionKey: 'nav.media.description',

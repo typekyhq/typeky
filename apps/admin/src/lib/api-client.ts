@@ -17,6 +17,9 @@ import {
   sessionSchema,
   licenseResponseSchema,
   siteResponseSchema,
+  taxonomyResponseSchema,
+  termSchema,
+  vocabularySchema,
   type ApiErrorCode,
   type BulkAction,
   type BulkResult,
@@ -40,9 +43,14 @@ import {
   type SiteResponse,
   type SiteWrite,
   type SortDirection,
+  type TaxonomyResponse,
+  type Term,
+  type TermWrite,
   type ThemePreviewResponse,
   type ThemeTemplateListResponse,
   type ThemeTemplateResponse,
+  type Vocabulary,
+  type VocabularyWrite,
 } from '@typeky/api'
 
 /**
@@ -136,6 +144,15 @@ export interface ApiClient {
   previewThemeTemplate(path: string, source: string): Promise<ThemePreviewResponse>
   /** Drops the override, putting the bundled template back. */
   resetThemeTemplate(path: string): Promise<void>
+
+  /** The whole taxonomy -- every vocabulary and every term -- in one request. */
+  readTaxonomy(): Promise<TaxonomyResponse>
+  createVocabulary(vocabulary: VocabularyWrite): Promise<Vocabulary>
+  saveVocabulary(id: string, vocabulary: VocabularyWrite): Promise<Vocabulary>
+  deleteVocabulary(id: string): Promise<void>
+  createTerm(term: TermWrite): Promise<Term>
+  saveTerm(id: string, term: TermWrite): Promise<Term>
+  deleteTerm(id: string): Promise<void>
 }
 
 /** The filters the media grid can ask for. */
@@ -562,6 +579,54 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async resetThemeTemplate(path) {
       // A query parameter, like the read: the name contains a slash.
       await send('DELETE', `/theme/template?path=${encodeURIComponent(path)}`)
+    },
+
+    async readTaxonomy() {
+      return readContract(
+        taxonomyResponseSchema,
+        await send('GET', '/taxonomy'),
+        'the taxonomy did not match the contract',
+      )
+    },
+
+    async createVocabulary(vocabulary) {
+      return readContract(
+        vocabularySchema,
+        await send('POST', '/taxonomy/vocabularies', vocabulary),
+        'the vocabulary did not match the contract',
+      )
+    },
+
+    async saveVocabulary(id, vocabulary) {
+      return readContract(
+        vocabularySchema,
+        await send('PUT', `/taxonomy/vocabularies/${encodeURIComponent(id)}`, vocabulary),
+        'the vocabulary did not match the contract',
+      )
+    },
+
+    async deleteVocabulary(id) {
+      await send('DELETE', `/taxonomy/vocabularies/${encodeURIComponent(id)}`)
+    },
+
+    async createTerm(term) {
+      return readContract(
+        termSchema,
+        await send('POST', '/taxonomy/terms', term),
+        'the term did not match the contract',
+      )
+    },
+
+    async saveTerm(id, term) {
+      return readContract(
+        termSchema,
+        await send('PUT', `/taxonomy/terms/${encodeURIComponent(id)}`, term),
+        'the term did not match the contract',
+      )
+    },
+
+    async deleteTerm(id) {
+      await send('DELETE', `/taxonomy/terms/${encodeURIComponent(id)}`)
     },
   }
 

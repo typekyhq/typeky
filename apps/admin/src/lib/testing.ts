@@ -106,6 +106,16 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     previewThemeTemplate: unexpected('previewThemeTemplate'),
     resetThemeTemplate: unexpected('resetThemeTemplate'),
 
+    // A site with no taxonomy renders the screen's own empty state, which is
+    // what a component test means unless it overrides this.
+    readTaxonomy: async () => ({ vocabularies: [], terms: [] }),
+    createVocabulary: unexpected('createVocabulary'),
+    saveVocabulary: unexpected('saveVocabulary'),
+    deleteVocabulary: unexpected('deleteVocabulary'),
+    createTerm: unexpected('createTerm'),
+    saveTerm: unexpected('saveTerm'),
+    deleteTerm: unexpected('deleteTerm'),
+
     ...overrides,
   }
 }

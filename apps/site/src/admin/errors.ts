@@ -75,3 +75,17 @@ export function describeIssues(issues: ReadonlyArray<{ path: ReadonlyArray<unkno
 
   return paths.length === 0 ? 'the request body is not valid' : `invalid fields: ${paths.join(', ')}`
 }
+
+/**
+ * Whether a write failed against a unique index.
+ *
+ * SQLite reports the violation in the message. Matching on text is unpleasant,
+ * but the alternative is letting the one race an operator can cause by hand --
+ * two tabs saving the same slug -- surface as an internal error.
+ *
+ * Shared, because posts, pages, products and terms all have a unique column and
+ * all four owe the operator the same answer.
+ */
+export function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Error && /UNIQUE constraint failed/i.test(error.message)
+}

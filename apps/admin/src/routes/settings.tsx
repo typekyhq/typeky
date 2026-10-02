@@ -7,6 +7,7 @@ import {
 } from '@typeky/api'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { Field } from '@/components/field'
 import { LicensePanel } from '@/components/license-panel'
 import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
@@ -656,42 +657,6 @@ export function SettingsPage() {
   )
 }
 
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  error,
-  hint,
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-  error?: string
-  hint?: string
-}) {
-  const describedBy = error !== undefined ? `${id}-error` : undefined
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={error !== undefined}
-        aria-describedby={describedBy}
-      />
-      {error !== undefined && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-      {hint !== undefined && error === undefined && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  )
-}
 
 /**
  * The document a deployment starts from.

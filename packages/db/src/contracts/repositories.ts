@@ -145,6 +145,13 @@ export interface TermRepository {
    * refused -- the assignments go with it -- so this is a warning, not a gate.
    */
   usage(ctx: TenantContext, id: string): Promise<number>
+  /**
+   * The same count for every term at once.
+   *
+   * The taxonomy screen renders every term of every vocabulary, so asking per row
+   * would be a query per row for a number it already has the rows for.
+   */
+  usageCounts(ctx: TenantContext): Promise<Map<string, number>>
   /** The terms a piece of content carries, vocabulary by vocabulary. */
   forContent(ctx: TenantContext, contentType: ContentType, contentId: string): Promise<Term[]>
   /** Replaces the terms on a piece of content with exactly this set. */

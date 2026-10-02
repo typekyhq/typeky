@@ -54,6 +54,15 @@ import {
 } from './session'
 import { readLicense } from './license'
 import { readSite, writeSite } from './site'
+import {
+  createTerm,
+  createVocabulary,
+  deleteTerm,
+  deleteVocabulary,
+  readTaxonomy,
+  updateTerm,
+  updateVocabulary,
+} from './taxonomy'
 
 /**
  * The admin JSON API.
@@ -214,6 +223,17 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.get('/media/:id/content', (c) => readMediaContent(c, repositories, blobs))
   api.get('/media/:id/usages', (c) => readMediaUsages(c, repositories))
   api.delete('/media/:id', (c) => deleteMedia(c, repositories, blobs))
+
+  // The taxonomy: vocabularies and their terms. One read for the whole screen,
+  // because vocabularies and terms are two halves of one list; the writes are per
+  // resource, because the screen changes one thing at a time.
+  api.get('/taxonomy', (c) => readTaxonomy(c, repositories))
+  api.post('/taxonomy/vocabularies', (c) => createVocabulary(c, repositories))
+  api.put('/taxonomy/vocabularies/:id', (c) => updateVocabulary(c, repositories))
+  api.delete('/taxonomy/vocabularies/:id', (c) => deleteVocabulary(c, repositories))
+  api.post('/taxonomy/terms', (c) => createTerm(c, repositories))
+  api.put('/taxonomy/terms/:id', (c) => updateTerm(c, repositories))
+  api.delete('/taxonomy/terms/:id', (c) => deleteTerm(c, repositories))
 
   // The theme's templates. Read-only for now, and deliberately without a way to
   // create one: a site may edit what its theme ships and nothing more.
