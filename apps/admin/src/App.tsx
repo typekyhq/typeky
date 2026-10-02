@@ -21,6 +21,7 @@ import { apiClient } from '@/lib/client'
 import type { ApiClient } from '@/lib/api-client'
 import { NAVIGATION } from '@/lib/navigation'
 import { useLicense } from '@/lib/license'
+import { PanelPreferenceProvider } from '@/lib/panel-preference'
 import { useSession, type SessionController } from '@/lib/session'
 
 /**
@@ -50,7 +51,9 @@ export function App({ client = apiClient }: { client?: ApiClient }) {
 
   return (
     <ApiClientProvider value={client}>
-      <Routed session={session} />
+      <PanelPreferenceProvider>
+        <Routed session={session} />
+      </PanelPreferenceProvider>
     </ApiClientProvider>
   )
 }

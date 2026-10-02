@@ -1,3 +1,4 @@
+import { DATE_FORMAT_PATTERN } from '@typeky/core'
 import * as z from 'zod/mini'
 
 /**
@@ -29,6 +30,43 @@ export const socialLinkSchema = z.object({ label: LABEL, href: HREF })
 
 export type SocialLink = z.infer<typeof socialLinkSchema>
 
+/**
+ * A BCP 47 language tag, loosely.
+ *
+ * `en`, `zh-CN`, `pt-BR`. Validated for shape rather than against a registry:
+ * the tag goes into `<html lang>` and into a `Content-Language`, and a browser
+ * or a crawler is the thing that decides whether it knows the language.
+ */
+const LANGUAGE = z.string().check(z.minLength(2), z.maxLength(35), z.regex(/^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i))
+
+/**
+ * A date format, checked against the directives the platform can render.
+ *
+ * The same pattern the preview formatter and the theme's `| date:` filter are
+ * held to, from `@typeky/core`. An unknown directive has to be refused here,
+ * because Liquid renders one as `"nd"` rather than failing -- a typo would
+ * otherwise reach a reader as a plausible-looking date.
+ */
+const DATE_FORMAT = z
+  .string()
+  .check(
+    z.minLength(1),
+    z.maxLength(60),
+    // A message, because the default one quotes a regular expression at the
+    // operator. What they can act on is the list of directives.
+    z.regex(DATE_FORMAT_PATTERN, 'use only the listed directives, for example %Y-%m-%d'),
+  )
+
+/** Settings that belong to the admin panel rather than to the site. */
+export const adminSettingsSchema = z.object({
+  /** Which language file the panel reads. */
+  language: z.optional(LANGUAGE),
+  /** How the panel writes a timestamp. */
+  dateFormat: z.optional(DATE_FORMAT),
+})
+
+export type AdminSettings = z.infer<typeof adminSettingsSchema>
+
 export const siteSettingsSchema = z.object({
   /** Six hex digits, which is the one shape a colour input produces. */
   accentColor: z.optional(z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/))),
@@ -42,6 +80,12 @@ export const siteSettingsSchema = z.object({
   footer: z.optional(z.string().check(z.maxLength(500))),
   /** ICP filing number, for deployments in mainland China. */
   filingNumber: z.optional(z.string().check(z.maxLength(60))),
+  /** The language the site is written in, for `<html lang>`. */
+  language: z.optional(LANGUAGE),
+  /** How the site writes a date. */
+  dateFormat: z.optional(DATE_FORMAT),
+  /** The panel's own language and dates, which are not the site's. */
+  admin: z.optional(adminSettingsSchema),
 })
 
 export type SiteSettings = z.infer<typeof siteSettingsSchema>

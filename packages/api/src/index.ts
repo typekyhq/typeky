@@ -120,11 +120,13 @@ export {
 } from './theme'
 
 export {
+  adminSettingsSchema,
   navItemSchema,
   siteResponseSchema,
   siteSettingsSchema,
   siteWriteSchema,
   socialLinkSchema,
+  type AdminSettings,
   type NavItem,
   type SiteResponse,
   type SiteSettings,

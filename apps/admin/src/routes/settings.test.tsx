@@ -252,3 +252,96 @@ describe('a deployment that has not been set up yet', () => {
     await waitFor(() => expect(screen.queryByText('This site has not been set up yet')).toBeNull())
   })
 })
+
+/**
+ * Language and dates.
+ *
+ * Four settings, two for the site and two for this panel, and the point of each
+ * is that it changes something a person can see. The previews are the part worth
+ * testing: a format string is not readable, and a settings screen that accepts
+ * one without showing what it produces is a screen that makes the operator
+ * deploy to find out.
+ */
+describe('language and dates', () => {
+  it('shows what the site date format will produce', async () => {
+    renderPage(
+      fakeClient({
+        async getSite() {
+          return { ...SITE, settings: { ...SITE.settings, dateFormat: '%Y年%-m月%-d日' } }
+        },
+      }),
+    )
+
+    const field = await screen.findByLabelText('Site date format')
+
+    expect(field).toHaveProperty('value', '%Y年%-m月%-d日')
+    // The preview instant is 2026-01-05T09:07:03Z, rendered in UTC.
+    expect(screen.getByText('2026年1月5日')).toBeTruthy()
+  })
+
+  it('shows the default format when the site has not chosen one', async () => {
+    renderPage(fakeClient())
+
+    await screen.findByLabelText('Site date format')
+
+    expect(screen.getByText('January 5, 2026')).toBeTruthy()
+  })
+
+  it('refuses a directive it cannot render, before the network', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    const field = await screen.findByLabelText('Site date format')
+    await userEvent.clear(field)
+    // `%q` renders as "nd" in the theme, which is why it has to be refused here
+    // rather than discovered in a footer.
+    await userEvent.type(field, '%q')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(saveSite).not.toHaveBeenCalled()
+    expect(await screen.findByText(/use only the listed directives/)).toBeTruthy()
+  })
+
+  it('saves the site language', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    const language = await screen.findByLabelText('Site language')
+    await userEvent.clear(language)
+    await userEvent.type(language, 'zh-CN')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({ settings: { language: 'zh-CN' } })
+  })
+
+  it('saves the panel date format', async () => {
+    // The panel's own two settings sit under `settings.admin`, so that changing
+    // how the site writes a date does not change how the panel does.
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    const field = await screen.findByLabelText('Panel date format')
+    await userEvent.type(field, '%H:%M')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    const written = saveSite.mock.calls[0]?.[0]
+
+    expect(written?.settings.admin?.dateFormat).toBe('%H:%M')
+    // Untouched fields come back as they were loaded -- the fixture has no site
+    // date format, and editing the panel's must not invent one.
+    expect(written?.settings.dateFormat).toBeUndefined()
+  })
+
+  it('offers only the languages this panel is translated into', async () => {
+    renderPage(fakeClient())
+
+    const select = await screen.findByLabelText('Panel language')
+    const options = [...select.querySelectorAll('option')].map((option) => option.getAttribute('value'))
+
+    // One today. The list is what the panel can actually render, so it grows when
+    // a translation is added rather than when somebody wants one.
+    expect(options).toEqual(['en'])
+  })
+})

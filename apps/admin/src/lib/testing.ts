@@ -16,6 +16,17 @@ import type { ApiClient } from './api-client'
 
 const EMPTY_PAGE = { items: [], total: 0, limit: 20, offset: 0 }
 
+/** What a deployment nobody has set up yet returns. */
+const EMPTY_SITE = {
+  name: '',
+  tagline: null,
+  logoMediaId: null,
+  theme: 'default',
+  settings: {},
+  nav: [],
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
+
 export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
   const unexpected = <T>(name: string): (() => Promise<T>) => () => {
     throw new Error(`the test API client received an unexpected call to ${name}`)
@@ -34,7 +45,13 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     async signOut() {},
     loadSession: unexpected('loadSession'),
 
-    getSite: unexpected('getSite'),
+    // A shell-level read now, not only the settings screen's: the panel's own
+    // language and date format are stored in the site document, so every screen
+    // asks for it once. An empty document is what a screen that has not been set
+    // up yet sees, and it renders.
+    async getSite() {
+      return EMPTY_SITE
+    },
     saveSite: unexpected('saveSite'),
 
     // A free deployment, which is what a component test means unless it says

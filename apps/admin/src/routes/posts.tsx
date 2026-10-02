@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import {
   BulkBar,
   describeBulk,
-  formatDate,
   PAGE_SIZE,
   PageHeader,
   Pager,
@@ -24,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
+import { usePanelPreference } from '@/lib/panel-preference'
 
 /**
  * The post list.
@@ -45,6 +45,7 @@ const SORTS: readonly SortChoice[] = [
 
 export function PostsSection() {
   const client = useApiClient()
+  const panel = usePanelPreference()
   const navigate = useNavigate()
 
   const [state, setState] = useState<LoadState>('loading')
@@ -270,7 +271,7 @@ export function PostsSection() {
                       <StatusText status={post.status} />
                     </td>
                     <td className="hidden py-3 pr-3 text-muted-foreground sm:table-cell">
-                      {formatDate(post.updatedAt)}
+                      {panel.format(post.updatedAt)}
                     </td>
                     <td className="py-3">
                       <RowActions

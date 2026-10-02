@@ -4,7 +4,7 @@
     <h1>{{ content.title }}</h1>
     <p class="meta">
       {% if content.published_at %}
-        <time datetime="{{ content.published_at }}">{{ content.published_at | date: '%B %-d, %Y' }}</time>
+        <time datetime="{{ content.published_at }}">{{ content.published_at | date: site.date_format, 'UTC' }}</time>
       {% endif %}
       {% if content.category %}<span class="category">{{ content.category }}</span>{% endif %}
     </p>

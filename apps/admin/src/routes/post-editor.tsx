@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
+import { usePanelPreference } from '@/lib/panel-preference'
 
 /**
  * The post editor.
@@ -68,6 +69,7 @@ const EMPTY_FORM: PostForm = {
 
 export function PostEditorPage() {
   const client = useApiClient()
+  const panel = usePanelPreference()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const isNew = id === undefined || id === 'new'
@@ -242,7 +244,7 @@ export function PostEditorPage() {
       {post !== null && (
         <p className="text-sm text-muted-foreground" data-testid="post-meta">
           {post.status === 'published' ? 'Published' : 'Draft'} · revision {post.revision} · updated{' '}
-          {new Date(post.updatedAt).toLocaleString()}
+          {panel.format(post.updatedAt)}
         </p>
       )}
 

@@ -36,6 +36,16 @@ export interface SiteForTemplates {
   logo_url?: string
   /** BCP 47, for the `lang` attribute. */
   language: string
+  /**
+   * A strftime format for `| date`, e.g. `%B %-d, %Y`.
+   *
+   * The platform does not format dates for the theme; it hands over the format
+   * the site was configured with, and the theme renders. That keeps the theme's
+   * own `datetime` attributes and its text in one place -- and it is why the
+   * bundled theme passes `'UTC'` alongside it, since a Worker runs in UTC and a
+   * laptop does not.
+   */
+  date_format: string
   nav: NavItem[]
   settings: SiteSettingsForTemplates
   /**

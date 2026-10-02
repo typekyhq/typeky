@@ -300,6 +300,47 @@ describe('the attribution', () => {
   })
 })
 
+describe('language and dates', () => {
+  const home = page({ title: 'Home', slug: 'home', isHome: true })
+
+  it('writes the configured language into the html element', async () => {
+    const { render } = setUp({ pages: [home] })
+
+    expect((await render('/')).html).toContain('<html lang="en">')
+  })
+
+  it('uses the configured language and date format, not the built-in defaults', async () => {
+    // The site row is the only place these come from, and neither used to be
+    // reachable: `language` was overwritten with 'en' on the way into the context,
+    // and a date format was not a setting at all.
+    const site = {
+      ...SITE,
+      settings: { ...SITE.settings, language: 'zh-CN', dateFormat: '%Y年%-m月%-d日' },
+    } as unknown as Site
+
+    const { render } = setUp({ pages: [home], posts: [post({ title: 'Hello', slug: 'hello' })], site })
+
+    const list = (await render('/posts')).html
+
+    expect(list).toContain('<html lang="zh-CN">')
+    // 2026-01-01T00:00:00Z, in UTC, in the format the site was configured with.
+    expect(list).toContain('2026年1月1日')
+    expect(list).not.toContain('January 1, 2026')
+  })
+
+  it('renders in UTC rather than in the machine the Worker happens to run on', async () => {
+    // A date near midnight is the case that shows it: the bundled theme asks for
+    // UTC, so the same content renders the same date in development and in
+    // production even when the two are in different zones.
+    const { render } = setUp({
+      posts: [post({ title: 'Late', slug: 'late', publishedAt: new Date('2026-01-01T23:30:00.000Z') })],
+      pages: [home],
+    })
+
+    expect((await render('/posts')).html).toContain('January 1, 2026')
+  })
+})
+
 describe('a site that is not set up', () => {
   it('says so rather than rendering an empty theme', async () => {
     const { render } = setUp({ site: null })

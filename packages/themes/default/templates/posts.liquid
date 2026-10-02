@@ -5,7 +5,7 @@
 
 <ul class="post-list">
   {% for post in content %}
-    <li>{% render 'snippets/post-card', post: post %}</li>
+    <li>{% render 'snippets/post-card', post: post, site: site %}</li>
   {% else %}
     {% comment %}
       `for ... else` rather than a length check: with an empty list there is

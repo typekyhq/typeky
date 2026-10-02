@@ -1,4 +1,4 @@
-import { attributionFor } from '@typeky/core'
+import { attributionFor, DEFAULT_DATE_FORMAT, DEFAULT_LANGUAGE } from '@typeky/core'
 import { structuredData } from './seo'
 import type { Block, PageKind, Pagination, RenderContext } from '@typeky/core'
 
@@ -165,7 +165,9 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       name: site.name,
       ...(site.tagline === null ? {} : { tagline: site.tagline }),
       ...(resolve(site.logoMediaId) === undefined ? {} : { logo_url: resolve(site.logoMediaId) }),
-      language: typeof site.settings.language === 'string' ? site.settings.language : 'en',
+      language: typeof site.settings.language === 'string' ? site.settings.language : DEFAULT_LANGUAGE,
+      date_format:
+        typeof site.settings.dateFormat === 'string' ? site.settings.dateFormat : DEFAULT_DATE_FORMAT,
       nav: [...site.nav]
         .sort((left, right) => left.order - right.order)
         .map((entry) => ({ label: entry.label, href: entry.href })),

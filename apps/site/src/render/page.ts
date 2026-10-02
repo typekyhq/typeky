@@ -324,8 +324,9 @@ function siteInput(site: Site, whiteLabel: boolean): ContextInput['site'] {
     name: site.name,
     tagline: site.tagline,
     logoMediaId: site.logoMediaId,
-    // The row's settings are the platform's shape; the context is the template's.
-    settings: { ...site.settings, language: 'en' },
+    // Passed through as stored. It used to be spread with a hardcoded `language:
+    // 'en'`, which meant a site could not be anything else.
+    settings: { ...site.settings },
     nav: site.nav,
     whiteLabel,
   }

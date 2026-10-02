@@ -16,8 +16,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  DEFAULT_ADMIN_DATE_FORMAT,
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_LANGUAGE,
+  formatDate,
+} from '@typeky/core'
 import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
+import { ADMIN_LOCALES, LANGUAGE_TAGS } from '@/lib/locales'
+import { formatLocal, usePanelPreference } from '@/lib/panel-preference'
 import { describeApiError } from '@/lib/session'
 
 /**
@@ -34,10 +42,21 @@ import { describeApiError } from '@/lib/session'
 
 type Status = 'loading' | 'ready' | 'error'
 
+/**
+ * The instant the format previews are rendered at.
+ *
+ * Fixed rather than `new Date()` so the two previews sit still while somebody
+ * types, and so the site's preview can say plainly which moment it is showing --
+ * a format's output cannot be checked against a date that keeps moving.
+ */
+const PREVIEW_INSTANT = '2026-01-05T09:07:03.000Z'
+const PREVIEW_INSTANT_UTC_LABEL = '2026-01-05 09:07 UTC'
+
 const DEFAULT_ACCENT = '#111827'
 
 export function SettingsPage() {
   const client = useApiClient()
+  const panel = usePanelPreference()
   const [status, setStatus] = useState<Status>('loading')
   const [loadError, setLoadError] = useState('')
   const [draft, setDraft] = useState<SiteWrite | null>(null)
@@ -112,7 +131,10 @@ export function SettingsPage() {
       setDraft(toDraft(saved))
       // The row exists now, so this is an ordinary settings screen from here on.
       setCreating(false)
-      toast.success(`Saved at ${new Date(saved.updatedAt).toLocaleTimeString()}`)
+      // The shell caches this preference; without this the list and the editors
+      // would keep writing dates the old way until a reload.
+      panel.refresh()
+      toast.success(`Saved at ${panel.format(saved.updatedAt)}`)
     } catch (thrown) {
       toast.error(describeApiError(thrown))
     } finally {
@@ -135,6 +157,13 @@ export function SettingsPage() {
   const settings = draft.settings
   const nav = [...draft.nav].sort((left, right) => left.order - right.order)
   const socialLinks = settings.socialLinks ?? []
+
+  // The site's preview is rendered in UTC, which is what the bundled theme asks
+  // for and what a Worker runs in; the panel's is in the operator's own zone.
+  const sitePreview = formatDate(PREVIEW_INSTANT, settings.dateFormat ?? DEFAULT_DATE_FORMAT, {
+    timeZone: 'UTC',
+  })
+  const adminPreview = formatLocal(PREVIEW_INSTANT, settings.admin?.dateFormat ?? DEFAULT_ADMIN_DATE_FORMAT)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -456,6 +485,121 @@ export function SettingsPage() {
               }))
             }
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Language and dates</CardTitle>
+          <CardDescription>
+            The site and this panel are written in their own language, and write dates their own way.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="language">Site language</Label>
+            <Input
+              id="language"
+              list="language-tags"
+              value={settings.language ?? ''}
+              placeholder={DEFAULT_LANGUAGE}
+              aria-invalid={issues['settings.language'] !== undefined}
+              onChange={(event) =>
+                update((current) => ({
+                  ...current,
+                  settings: { ...current.settings, language: event.target.value },
+                }))
+              }
+            />
+            <datalist id="language-tags">
+              {LANGUAGE_TAGS.map((tag) => (
+                <option key={tag} value={tag} />
+              ))}
+            </datalist>
+            {issues['settings.language'] !== undefined && (
+              <p className="text-sm text-destructive">{issues['settings.language']}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              A BCP 47 tag such as <code>en</code> or <code>zh-CN</code>. It becomes the page&rsquo;s{' '}
+              <code>lang</code> attribute, which is what tells a screen reader and a search engine what the text is.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dateFormat">Site date format</Label>
+            <Input
+              id="dateFormat"
+              value={settings.dateFormat ?? ''}
+              placeholder={DEFAULT_DATE_FORMAT}
+              aria-invalid={issues['settings.dateFormat'] !== undefined}
+              onChange={(event) =>
+                update((current) => ({
+                  ...current,
+                  settings: { ...current.settings, dateFormat: event.target.value },
+                }))
+              }
+            />
+            {issues['settings.dateFormat'] !== undefined && (
+              <p className="text-sm text-destructive">{issues['settings.dateFormat']}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              {PREVIEW_INSTANT_UTC_LABEL} → <span className="font-medium">{sitePreview}</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Directives: <code>%Y %m %d %B %b %A %a %H %I %M %S %p</code>, with <code>%-m</code> and{' '}
+              <code>%-d</code> for no leading zero, and <code>%%</code> for a literal one. Anything else is refused
+              rather than rendered as something else.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adminLanguage">Panel language</Label>
+            <select
+              id="adminLanguage"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={settings.admin?.language ?? DEFAULT_LANGUAGE}
+              onChange={(event) =>
+                update((current) => ({
+                  ...current,
+                  settings: { ...current.settings, admin: { ...current.settings.admin, language: event.target.value } },
+                }))
+              }
+            >
+              {ADMIN_LOCALES.map((locale) => (
+                <option key={locale.value} value={locale.value}>
+                  {locale.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-muted-foreground">
+              Only the languages this panel has been translated into appear here. It ships with one.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adminDateFormat">Panel date format</Label>
+            <Input
+              id="adminDateFormat"
+              value={settings.admin?.dateFormat ?? ''}
+              placeholder={DEFAULT_ADMIN_DATE_FORMAT}
+              aria-invalid={issues['settings.admin.dateFormat'] !== undefined}
+              onChange={(event) =>
+                update((current) => ({
+                  ...current,
+                  settings: {
+                    ...current.settings,
+                    admin: { ...current.settings.admin, dateFormat: event.target.value },
+                  },
+                }))
+              }
+            />
+            {issues['settings.admin.dateFormat'] !== undefined && (
+              <p className="text-sm text-destructive">{issues['settings.admin.dateFormat']}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              → <span className="font-medium">{adminPreview}</span> in your own time zone
+            </p>
+          </div>
         </CardContent>
       </Card>
 

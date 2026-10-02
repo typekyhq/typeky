@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
+import { usePanelPreference } from '@/lib/panel-preference'
 
 /**
  * The theme's templates.
@@ -44,6 +45,7 @@ const GROUPS: ReadonlyArray<{ group: ThemeTemplateGroup; title: string; descript
 
 export function ThemeSection() {
   const client = useApiClient()
+  const panel = usePanelPreference()
 
   const [state, setState] = useState<LoadState>('loading')
   const [error, setError] = useState('')
@@ -229,7 +231,7 @@ export function ThemeSection() {
                       <p className="text-xs text-muted-foreground">
                         {describeSize(item.bytes)}
                         {item.overridden && item.updatedAt !== null
-                          ? ` · customised ${new Date(item.updatedAt).toLocaleString()}`
+                          ? ` · customised ${panel.format(item.updatedAt)}`
                           : ''}
                       </p>
                     </div>

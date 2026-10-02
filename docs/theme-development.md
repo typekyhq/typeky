@@ -90,6 +90,7 @@ there are no functions to call and nothing to fetch.
 | `site.tagline` | string? | |
 | `site.logo_url` | string? | Already a URL; a media id would be useless here |
 | `site.language` | string | BCP 47, for the `lang` attribute |
+| `site.date_format` | string | A strftime format for `\| date`. The site's own setting |
 | `site.nav` | array | `{ label, href }`, already in the order the operator set |
 | `site.settings.footer` | string? | |
 | `site.settings.social_links` | array? | `{ label, href }` |
@@ -164,6 +165,28 @@ and, besides Liquid's own filters, exactly these platform ones:
 Anything else fails loudly rather than rendering nothing. That is on purpose: a
 filter that silently produces an empty string reads as a theme bug, and you would
 go looking in the wrong place.
+
+### Dates
+
+Liquid's own `date` filter is available, and the format it takes is the site's to
+choose: `site.date_format` is the string the operator typed into the settings.
+The bundled theme writes it this way —
+
+```liquid
+<time datetime="{{ content.published_at }}">{{ content.published_at | date: site.date_format, 'UTC' }}</time>
+```
+
+— and the second argument is worth copying. The filter formats in the runtime's
+own time zone when it is not given one: a Cloudflare Worker runs in UTC and your
+laptop does not, so a date near midnight renders as one day locally and another
+after a deploy. Passing `'UTC'` makes the two agree, and keeps the `datetime`
+attribute's ISO value and the text beside it talking about the same day.
+
+The operator's format string is checked before it is saved, against a fixed list
+of directives (`%Y %m %d %B %b %A %a %H %I %M %S %p`, plus `%-m` and `%-d` for no
+leading zero). A directive outside that list is refused rather than rendered —
+which matters because Liquid renders an unknown one as `"nd"` rather than
+failing, and a plausible-looking date is worse than a visible error.
 
 ## Four rules that will bite you
 
