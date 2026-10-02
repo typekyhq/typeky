@@ -57,6 +57,17 @@ export {
 } from './posts'
 
 export {
+  getPageListResponseSchema,
+  getPageResponseSchema,
+  getPageSummarySchema,
+  getPageWriteSchema,
+  type PageListResponse,
+  type PageResponse,
+  type PageSummary,
+  type PageWrite,
+} from './pages'
+
+export {
   navItemSchema,
   siteResponseSchema,
   siteSettingsSchema,

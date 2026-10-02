@@ -123,18 +123,28 @@ describe('liquid runtime', () => {
       )
     })
 
-    it('aborts a render that runs past renderLimit', async () => {
-      // memoryLimit is raised so the runaway loop trips the time budget rather
-      // than the allocation budget first; with production limits the memory
-      // limit is normally what stops this shape of template.
-      const { render } = createLiquidRuntime({
-        limits: { renderLimit: 80, memoryLimit: 1_000_000_000 },
-      })
+    it(
+      'aborts a render that runs past renderLimit',
+      async () => {
+        // memoryLimit is raised so the runaway loop trips the time budget rather
+        // than the allocation budget first; with production limits the memory
+        // limit is normally what stops this shape of template.
+        const { render } = createLiquidRuntime({
+          limits: { renderLimit: 80, memoryLimit: 1_000_000_000 },
+        })
 
-      await expect(render('{% for i in (1..100000000) %}{{ i }}{% endfor %}')).rejects.toThrow(
-        /render limit/,
-      )
-    })
+        await expect(render('{% for i in (1..100000000) %}{{ i }}{% endfor %}')).rejects.toThrow(
+          /render limit/,
+        )
+      },
+      // Building the range alone takes about a second of real work, because the
+      // loop is deliberately enormous. Under the whole suite running in parallel
+      // that second stretches, and the default five seconds starts deciding the
+      // outcome -- measuring how busy the machine was rather than whether the
+      // runtime aborted. The assertion is unchanged: if the abort stopped
+      // working, this still fails, just later.
+      30_000,
+    )
 
     it('aborts the same runaway loop under the production limits, whichever trips first', async () => {
       const { render } = createLiquidRuntime()

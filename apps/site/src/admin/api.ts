@@ -5,6 +5,15 @@ import type { MiddlewareHandler } from 'hono'
 import { repositoriesFor } from '../repositories'
 import { csrfTokenMatches, isSafeMethod } from './csrf'
 import { apiError, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
+import {
+  createPage,
+  deletePage,
+  readPage,
+  readPages,
+  setPageHome,
+  setPageStatus,
+  updatePage,
+} from './pages'
 import { verifyPassword } from './password'
 import { createPost, deletePost, readPost, readPosts, setPostStatus, updatePost } from './posts'
 import {
@@ -106,6 +115,18 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // Its own endpoint so the list can publish without the whole document and
   // without a second round trip to fetch it.
   api.post('/posts/:id/status', (c) => setPostStatus(c, repositories))
+
+  // Pages, the same shape, plus the one flag the database allows only once.
+  api.get('/pages', (c) => readPages(c, repositories))
+  api.post('/pages', (c) => createPage(c, repositories))
+  api.get('/pages/:id', (c) => readPage(c, repositories))
+  api.put('/pages/:id', (c) => updatePage(c, repositories))
+  api.delete('/pages/:id', (c) => deletePage(c, repositories))
+  api.post('/pages/:id/status', (c) => setPageStatus(c, repositories))
+  // Not a field on the write: changing the home page is a move between rows,
+  // and putting it in a whole-document write would make the outcome depend on
+  // the order two saves happened to arrive in.
+  api.post('/pages/:id/home', (c) => setPageHome(c, repositories))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 

@@ -227,14 +227,14 @@ export interface PageResult<T> {
 
 export interface ListQuery {
   status?: ContentStatus
+  /** Case-insensitive match on the resource's own text columns. */
+  search?: string
   limit?: number
   offset?: number
 }
 
 export interface ListPostsQuery extends ListQuery {
   category?: string
-  /** Case-insensitive match on title, slug or excerpt. */
-  search?: string
 }
 
 export interface ListMediaQuery {

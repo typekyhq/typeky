@@ -46,6 +46,16 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     deletePost: unexpected('deletePost'),
     setPostStatus: unexpected('setPostStatus'),
 
+    async listPages() {
+      return EMPTY_PAGE
+    },
+    getPage: unexpected('getPage'),
+    createPage: unexpected('createPage'),
+    savePage: unexpected('savePage'),
+    deletePage: unexpected('deletePage'),
+    setPageStatus: unexpected('setPageStatus'),
+    setPageHome: unexpected('setPageHome'),
+
     ...overrides,
   }
 }

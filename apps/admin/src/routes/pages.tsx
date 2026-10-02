@@ -1,4 +1,4 @@
-import type { PostSummary } from '@typeky/api'
+import type { PageSummary } from '@typeky/api'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -20,22 +20,23 @@ import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 
 /**
- * The post list.
+ * The page list.
  *
- * Filter, search and paging are all server-side, and each of the first two
- * returns to the first page: the row the operator was looking at is no longer
- * there, so keeping the offset would show an empty page.
+ * Same shape as posts, with the home page made visible in two ways: a word
+ * beside the title, because "which page is my home page" is a question the list
+ * should answer without opening anything, and a "Set as home" action, because
+ * changing it is a move between rows rather than a field on one.
  */
 
 type LoadState = 'loading' | 'ready' | 'error'
 
-export function PostsSection() {
+export function PagesSection() {
   const client = useApiClient()
   const navigate = useNavigate()
 
   const [state, setState] = useState<LoadState>('loading')
   const [loadError, setLoadError] = useState('')
-  const [items, setItems] = useState<PostSummary[]>([])
+  const [items, setItems] = useState<PageSummary[]>([])
   const [total, setTotal] = useState(0)
 
   const [filter, setFilter] = useState<StatusFilter>('all')
@@ -51,7 +52,7 @@ export function PostsSection() {
     setState('loading')
 
     client
-      .listPosts({
+      .listPages({
         ...(filter === 'all' ? {} : { status: filter }),
         ...(search === '' ? {} : { search }),
         limit: PAGE_SIZE,
@@ -78,11 +79,12 @@ export function PostsSection() {
 
   const reload = useCallback(() => setAttempt((value) => value + 1), [])
 
-  async function toggleStatus(post: PostSummary) {
-    setBusyId(post.id)
+  async function makeHome(page: PageSummary) {
+    setBusyId(page.id)
     try {
-      await client.setPostStatus(post.id, post.status === 'published' ? 'draft' : 'published')
-      toast.success(post.status === 'published' ? 'Moved back to draft.' : 'Published.')
+      await client.setPageHome(page.id)
+      toast.success(`“${page.title}” is now the home page.`)
+      // Two rows change, so the list is reloaded rather than patched.
       reload()
     } catch (thrown) {
       toast.error(describeApiError(thrown))
@@ -91,14 +93,26 @@ export function PostsSection() {
     }
   }
 
-  async function remove(post: PostSummary) {
-    if (!window.confirm(`Delete “${post.title}”? This cannot be undone.`)) return
-
-    setBusyId(post.id)
+  async function toggleStatus(page: PageSummary) {
+    setBusyId(page.id)
     try {
-      await client.deletePost(post.id)
-      toast.success('Post deleted.')
-      // Deleting the only row of a page would otherwise land on an empty list.
+      await client.setPageStatus(page.id, page.status === 'published' ? 'draft' : 'published')
+      toast.success(page.status === 'published' ? 'Moved back to draft.' : 'Published.')
+      reload()
+    } catch (thrown) {
+      toast.error(describeApiError(thrown))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function remove(page: PageSummary) {
+    if (!window.confirm(`Delete “${page.title}”? This cannot be undone.`)) return
+
+    setBusyId(page.id)
+    try {
+      await client.deletePage(page.id)
+      toast.success('Page deleted.')
       if (items.length === 1 && offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE))
       else reload()
     } catch (thrown) {
@@ -109,14 +123,17 @@ export function PostsSection() {
   }
 
   if (state === 'error') {
-    return <ErrorState title="Cannot load posts" description={loadError} onRetry={reload} />
+    return <ErrorState title="Cannot load pages" description={loadError} onRetry={reload} />
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Posts" description="Blog posts, newest first.">
-        <Button type="button" onClick={() => navigate('/posts/new')}>
-          New post
+      <PageHeader
+        title="Pages"
+        description="Standalone pages, including the one marked as the home page."
+      >
+        <Button type="button" onClick={() => navigate('/pages/new')}>
+          New page
         </Button>
       </PageHeader>
 
@@ -131,7 +148,7 @@ export function PostsSection() {
         <SearchBox
           value={searchInput}
           onChange={setSearchInput}
-          placeholder="Title, slug or excerpt"
+          placeholder="Title or slug"
           onSubmit={() => {
             setSearch(searchInput.trim())
             setOffset(0)
@@ -142,16 +159,16 @@ export function PostsSection() {
       <Card>
         <CardContent>
           {state === 'loading' && items.length === 0 ? (
-            <LoadingState label="Loading posts" />
+            <LoadingState label="Loading pages" />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {search === ''
-                ? 'No posts yet. The first one starts with “New post”.'
+                ? 'No pages yet. The first one starts with “New page”.'
                 : `Nothing matches “${search}”.`}
             </p>
           ) : (
             <table className="w-full border-collapse text-sm">
-              <caption className="sr-only">Posts</caption>
+              <caption className="sr-only">Pages</caption>
               <thead>
                 <tr className="border-b text-left">
                   <th scope="col" className="py-2 pr-3 font-medium">
@@ -164,6 +181,9 @@ export function PostsSection() {
                     Status
                   </th>
                   <th scope="col" className="hidden py-2 pr-3 font-medium sm:table-cell">
+                    Order
+                  </th>
+                  <th scope="col" className="hidden py-2 pr-3 font-medium sm:table-cell">
                     Updated
                   </th>
                   <th scope="col" className="py-2 font-medium">
@@ -172,32 +192,50 @@ export function PostsSection() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((post) => (
-                  <tr key={post.id} className="border-b align-top last:border-b-0">
+                {items.map((page) => (
+                  <tr key={page.id} className="border-b align-top last:border-b-0">
                     <td className="py-3 pr-3">
                       <Link
-                        to={`/posts/${post.id}`}
+                        to={`/pages/${page.id}`}
                         className="font-medium underline-offset-4 hover:underline focus-visible:underline"
                       >
-                        {post.title}
+                        {page.title}
                       </Link>
-                      {post.category !== null && (
-                        <p className="text-xs text-muted-foreground">{post.category}</p>
+                      {page.isHome && (
+                        <p className="text-xs text-muted-foreground" data-testid="home-marker">
+                          Home page
+                        </p>
                       )}
                     </td>
-                    <td className="py-3 pr-3 text-muted-foreground">{post.slug}</td>
+                    <td className="py-3 pr-3 text-muted-foreground">{page.slug}</td>
                     <td className="py-3 pr-3">
-                      <StatusText status={post.status} />
+                      <StatusText status={page.status} />
                     </td>
                     <td className="hidden py-3 pr-3 text-muted-foreground sm:table-cell">
-                      {formatDate(post.updatedAt)}
+                      {page.sortOrder}
+                    </td>
+                    <td className="hidden py-3 pr-3 text-muted-foreground sm:table-cell">
+                      {formatDate(page.updatedAt)}
                     </td>
                     <td className="py-3">
                       <RowActions
-                        status={post.status}
-                        busy={busyId === post.id}
-                        onToggleStatus={() => toggleStatus(post)}
-                        onDelete={() => remove(post)}
+                        status={page.status}
+                        busy={busyId === page.id}
+                        onToggleStatus={() => toggleStatus(page)}
+                        onDelete={() => remove(page)}
+                        extra={
+                          page.isHome ? null : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              disabled={busyId === page.id}
+                              onClick={() => makeHome(page)}
+                            >
+                              Set as home
+                            </Button>
+                          )
+                        }
                       />
                     </td>
                   </tr>

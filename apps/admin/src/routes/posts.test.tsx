@@ -73,7 +73,7 @@ describe('the post list', () => {
 
     expect(await screen.findByRole('link', { name: 'Release notes' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Release plan' })).toBeTruthy()
-    expect(screen.getByTestId('post-count').textContent).toBe('1–2 of 2')
+    expect(screen.getByTestId('content-count').textContent).toBe('1–2 of 2')
   })
 
   it('asks for a status filter and returns to the first page', async () => {

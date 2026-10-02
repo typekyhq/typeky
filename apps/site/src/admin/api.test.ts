@@ -159,11 +159,14 @@ describe('session-protected endpoints', () => {
     expect(response.status).toBe(401)
   })
 
-  it('lets an authenticated read through to the not-yet-implemented handler', async () => {
+  it('lets an authenticated read through to the handler, which answers for the path', async () => {
     const { env } = environment()
     const { cookie } = await signIn(env)
 
-    const response = await send('/api/admin/pages', env, { headers: { cookie } })
+    // A path no resource claims: the guards have run and handed it on, which is
+    // what this is about. Naming a real resource here would make the test depend
+    // on that resource continuing to return 404.
+    const response = await send('/api/admin/nowhere', env, { headers: { cookie } })
 
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: 'not_found' })
@@ -251,12 +254,12 @@ describe('csrf', () => {
     const { env } = environment()
     const { cookie, csrfToken } = await signIn(env)
 
-    const response = await send('/api/admin/pages', env, {
+    const response = await send('/api/admin/nowhere', env, {
       method: 'POST',
       headers: { cookie, [CSRF_HEADER]: csrfToken },
     })
 
-    // Past the guard, into the catch-all: no write endpoints exist yet.
+    // Past the guard, into the catch-all.
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: 'not_found' })
   })
@@ -265,7 +268,7 @@ describe('csrf', () => {
     const { env } = environment()
     const { cookie } = await signIn(env)
 
-    expect((await send('/api/admin/pages', env, { headers: { cookie } })).status).toBe(404)
+    expect((await send('/api/admin/nowhere', env, { headers: { cookie } })).status).toBe(404)
   })
 
   it('does not demand a token to log in', async () => {

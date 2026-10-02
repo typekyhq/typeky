@@ -126,6 +126,60 @@ describe('page repository', () => {
     await expect(pages.setHome(ctx, 'missing')).rejects.toThrow(/not found/)
   })
 
+  it('refuses two home pages at the database level, not just in the code above it', async () => {
+    const { db, pages } = setup()
+    const first = await pages.upsert(ctx, { title: 'First', slug: 'first' })
+    const second = await pages.upsert(ctx, { title: 'Second', slug: 'second' })
+    await pages.setHome(ctx, first.id)
+
+    // The partial unique index is the guarantee. `setHome` could be rewritten,
+    // or a second writer added, and its own tests would still pass -- but no
+    // statement can put two rows at is_home = 1, which is what the acceptance
+    // criterion means by "unique at the database level".
+    await expect(db.run('UPDATE pages SET is_home = 1 WHERE id = ?', [second.id])).rejects.toThrow(
+      /UNIQUE constraint failed/i,
+    )
+  })
+
+  it('does not let an ordinary save change the home flag', async () => {
+    const { pages } = setup()
+    const first = await pages.upsert(ctx, { title: 'First', slug: 'first' })
+    await pages.setHome(ctx, first.id)
+
+    // `is_home` is not part of a write, so saving a page cannot clear the
+    // current home page or collide with it.
+    const second = await pages.upsert(ctx, { title: 'Second', slug: 'second' })
+    const resaved = await pages.upsert(ctx, { id: first.id, title: 'Renamed', slug: 'first' })
+
+    expect(second.isHome).toBe(false)
+    expect(resaved.isHome).toBe(true)
+    expect((await pages.home(ctx))?.id).toBe(first.id)
+  })
+
+  it('searches title and slug without regard to case', async () => {
+    const { pages } = setup()
+    await pages.upsert(ctx, { title: 'About the studio', slug: 'about' })
+    await pages.upsert(ctx, { title: 'Contact', slug: 'contact-us' })
+
+    const byTitle = await pages.list(ctx, { search: 'STUDIO' })
+    const bySlug = await pages.list(ctx, { search: 'contact' })
+
+    expect(byTitle.items.map((page) => page.slug)).toEqual(['about'])
+    expect(bySlug.items.map((page) => page.slug)).toEqual(['contact-us'])
+  })
+
+  it('combines a search with a status filter, and treats a percent sign as a character', async () => {
+    const { pages } = setup()
+    await pages.upsert(ctx, { title: '100% recycled', slug: 'recycled', status: 'published' })
+    await pages.upsert(ctx, { title: '100 drafts', slug: 'hundred' })
+
+    const filtered = await pages.list(ctx, { search: '100%' })
+    const withStatus = await pages.list(ctx, { search: 'recycled', status: 'published' })
+
+    expect(filtered.items.map((page) => page.slug)).toEqual(['recycled'])
+    expect(withStatus.total).toBe(1)
+  })
+
   it('reports whether a delete removed anything', async () => {
     const { pages } = setup()
     const page = await pages.upsert(ctx, { title: 'About', slug: 'about' })

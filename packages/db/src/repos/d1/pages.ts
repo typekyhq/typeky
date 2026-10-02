@@ -2,7 +2,7 @@ import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } f
 import type { DbPort, SqlParam } from '@typeky/platform'
 import { resolveWindow } from '../../contracts'
 import type { ListQuery, Page, PageRepository, PageResult, PageWrite, SeoMetadata, TenantContext } from '../../contracts'
-import { asBoolean, asDate } from './support'
+import { asBoolean, asDate, searchAcross } from './support'
 
 const COLUMNS = [
   'id',
@@ -67,6 +67,14 @@ export function createPageRepository(db: DbPort): PageRepository {
         conditions.push('status = ?')
         params.push(query.status)
       }
+
+      const search = query.search?.trim()
+      if (search !== undefined && search !== '') {
+        const condition = searchAcross(['title', 'slug'], search)
+        conditions.push(condition.sql)
+        params.push(...condition.params)
+      }
+
       const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : ''
 
       const count = await db.first<{ total: number }>(`SELECT count(*) AS total FROM pages${where}`, params)

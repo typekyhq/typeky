@@ -1,6 +1,8 @@
 import {
   CSRF_HEADER,
   apiErrorBodySchema,
+  getPageListResponseSchema,
+  getPageResponseSchema,
   getPostListResponseSchema,
   getPostResponseSchema,
   sessionSchema,
@@ -8,6 +10,9 @@ import {
   type ApiErrorCode,
   type ContentStatus,
   type LoginRequest,
+  type PageListResponse,
+  type PageResponse,
+  type PageWrite,
   type PostListResponse,
   type PostResponse,
   type PostWrite,
@@ -63,18 +68,26 @@ export interface ApiClient {
   getSite(): Promise<SiteResponse>
   saveSite(site: SiteWrite): Promise<SiteResponse>
 
-  listPosts(query?: PostQuery): Promise<PostListResponse>
+  listPosts(query?: ContentQuery): Promise<PostListResponse>
   getPost(id: string): Promise<PostResponse>
   createPost(post: PostWrite): Promise<PostResponse>
   savePost(id: string, post: PostWrite): Promise<PostResponse>
   deletePost(id: string): Promise<void>
   setPostStatus(id: string, status: ContentStatus): Promise<PostResponse>
+
+  listPages(query?: ContentQuery): Promise<PageListResponse>
+  getPage(id: string): Promise<PageResponse>
+  createPage(page: PageWrite): Promise<PageResponse>
+  savePage(id: string, page: PageWrite): Promise<PageResponse>
+  deletePage(id: string): Promise<void>
+  setPageStatus(id: string, status: ContentStatus): Promise<PageResponse>
+  setPageHome(id: string): Promise<PageResponse>
 }
 
-/** The filters the list screen can ask for. */
-export interface PostQuery {
+/** The filters the content lists can ask for. */
+export interface ContentQuery {
   status?: ContentStatus
-  /** Matched against title, slug and excerpt. */
+  /** Matched against the resource's own text columns. */
   search?: string
   limit?: number
   offset?: number
@@ -260,6 +273,58 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         'the status response did not match the contract',
       )
     },
+
+    async listPages(query = {}) {
+      return readContract(
+        getPageListResponseSchema(),
+        await send('GET', `/pages${toQueryString(query)}`),
+        'the page list did not match the contract',
+      )
+    },
+
+    async getPage(id) {
+      return readContract(
+        getPageResponseSchema(),
+        await send('GET', `/pages/${encodeURIComponent(id)}`),
+        'the page did not match the contract',
+      )
+    },
+
+    async createPage(page) {
+      return readContract(
+        getPageResponseSchema(),
+        await send('POST', '/pages', page),
+        'the save response did not match the contract',
+      )
+    },
+
+    async savePage(id, page) {
+      return readContract(
+        getPageResponseSchema(),
+        await send('PUT', `/pages/${encodeURIComponent(id)}`, page),
+        'the save response did not match the contract',
+      )
+    },
+
+    async deletePage(id) {
+      await send('DELETE', `/pages/${encodeURIComponent(id)}`)
+    },
+
+    async setPageStatus(id, status) {
+      return readContract(
+        getPageResponseSchema(),
+        await send('POST', `/pages/${encodeURIComponent(id)}/status`, { status }),
+        'the status response did not match the contract',
+      )
+    },
+
+    async setPageHome(id) {
+      return readContract(
+        getPageResponseSchema(),
+        await send('POST', `/pages/${encodeURIComponent(id)}/home`),
+        'the home response did not match the contract',
+      )
+    },
   }
 
   return client
@@ -270,7 +335,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
  * term cannot be answered from a different cache entry than a request for
  * everything.
  */
-function toQueryString(query: PostQuery): string {
+function toQueryString(query: ContentQuery): string {
   const params = new URLSearchParams()
 
   if (query.status !== undefined) params.set('status', query.status)

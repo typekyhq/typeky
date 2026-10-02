@@ -1,8 +1,8 @@
 import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
-import { escapeLikeTerm, resolveWindow } from '../../contracts'
+import { resolveWindow } from '../../contracts'
 import type { ListPostsQuery, Post, PostRepository, PostWrite, SeoMetadata, TenantContext } from '../../contracts'
-import { asDate } from './support'
+import { asDate, searchAcross } from './support'
 
 const COLUMNS = [
   'id',
@@ -84,11 +84,9 @@ export function createPostRepository(db: DbPort): PostRepository {
       // false one in the way the surrounding AND expects.
       const search = query.search?.trim()
       if (search !== undefined && search !== '') {
-        const term = `%${escapeLikeTerm(search.toLowerCase())}%`
-        conditions.push(
-          `(lower(title) LIKE ? ESCAPE '\\' OR lower(slug) LIKE ? ESCAPE '\\' OR lower(coalesce(excerpt, '')) LIKE ? ESCAPE '\\')`,
-        )
-        params.push(term, term, term)
+        const condition = searchAcross(['title', 'slug', 'excerpt'], search)
+        conditions.push(condition.sql)
+        params.push(...condition.params)
       }
 
       const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : ''
