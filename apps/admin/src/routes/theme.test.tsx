@@ -68,22 +68,39 @@ function withTheme(overrides: Partial<ApiClient> = {}): ApiClient {
   })
 }
 
+/**
+ * Opens a file from the tree, the way a person does: click its name.
+ *
+ * The name is the file and, for one that has been edited, the badge beside it --
+ * which is what is on the row. Anchored, so that `post` does not also match
+ * `posts` and make the query ambiguous.
+ */
+async function openFile(name: string): Promise<void> {
+  await userEvent.click(await screen.findByRole('button', { name: new RegExp(`^${name}(, Customised)?$`) }))
+}
+
 describe('the theme screen', () => {
   it('groups the templates the theme ships', async () => {
     renderSection(withTheme())
 
+    const tree = await screen.findByTestId('theme-tree')
+
+    // The folders, then the files inside them by name -- the way a file manager
+    // lists them. The whole path is on the editor beside the tree.
     for (const title of ['Layouts', 'Templates', 'Snippets']) {
-      expect(await screen.findByText(title)).toBeTruthy()
+      expect(within(tree).getByText(title)).toBeTruthy()
     }
-    expect(screen.getByText('layouts/base')).toBeTruthy()
-    expect(screen.getByText('templates/post')).toBeTruthy()
-    expect(screen.getByText('snippets/header')).toBeTruthy()
+    for (const name of ['base', 'post', 'header']) {
+      // By text rather than by role: the file that has been edited carries the
+      // badge on its button, and this is asserting that the file is listed.
+      expect(within(tree).getByText(name)).toBeTruthy()
+    }
   })
 
   it('marks the ones that have been customised, and counts them', async () => {
     renderSection(withTheme())
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
+    const row = (await screen.findByRole('button', { name: 'post, Customised' })).closest('li')!
     expect(within(row).getByTestId('customised-marker').textContent).toBe('Customised')
     expect(screen.getByText('1 of 3 templates have been customised.')).toBeTruthy()
   })
@@ -111,8 +128,7 @@ describe('the theme screen', () => {
   it('opens a template in the editor', async () => {
     renderSection(withTheme())
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await openFile('post')
 
     await waitFor(() => {
       expect(screen.getByTestId('surface')).toHaveProperty('value', 'SOURCE OF templates/post')
@@ -128,8 +144,7 @@ describe('the theme screen', () => {
     }))
     renderSection(withTheme({ saveThemeTemplate }))
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await openFile('post')
     await screen.findByTestId('surface')
 
     await userEvent.clear(screen.getByTestId('surface'))
@@ -148,8 +163,7 @@ describe('the theme screen', () => {
     })
     renderSection(withTheme({ saveThemeTemplate }))
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await openFile('post')
     await screen.findByTestId('surface')
 
     await userEvent.clear(screen.getByTestId('surface'))
@@ -168,8 +182,7 @@ describe('the theme screen', () => {
   it('leaves Save and Discard unavailable until something changes', async () => {
     renderSection(withTheme())
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await openFile('post')
     await screen.findByTestId('surface')
 
     expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true)
@@ -188,8 +201,7 @@ describe('the theme screen', () => {
     }))
     renderSection(withTheme({ previewThemeTemplate }))
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await openFile('post')
     await screen.findByTestId('surface')
 
     // Edited but not saved, and the preview must use the edit rather than what
@@ -217,8 +229,7 @@ describe('the theme screen', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderSection(withTheme({ resetThemeTemplate, listThemeTemplates }))
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await openFile('post')
     await screen.findByTestId('surface')
 
     // Only offered for a template that actually has an override.
@@ -242,8 +253,7 @@ describe('the theme screen', () => {
       }),
     )
 
-    const row = (await screen.findByText('templates/post')).closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Edit' }))
+    await openFile('post')
     await screen.findByTestId('surface')
 
     expect(screen.queryByRole('button', { name: 'Restore default' })).toBeNull()
@@ -259,5 +269,65 @@ describe('the theme screen', () => {
     )
 
     expect(await screen.findByText('Cannot load the theme')).toBeTruthy()
+  })
+})
+
+/**
+ * Files on the left, the open one on the right.
+ *
+ * The point of the layout is that moving between templates is a click rather
+ * than an open-and-close, so what is worth pinning is that the tree says which
+ * file is open, that a folder can be folded away, and that nothing pretends to
+ * be a file before one is chosen.
+ */
+describe('choosing a file', () => {
+  it('opens with nothing chosen, and says so', async () => {
+    renderSection(withTheme())
+
+    expect(await screen.findByText('Choose a template')).toBeTruthy()
+    expect(screen.getByText(/Pick one on the left/)).toBeTruthy()
+    expect(screen.queryByTestId('open-path')).toBeNull()
+  })
+
+  it('marks the file that is open, and shows its whole path beside the editor', async () => {
+    renderSection(withTheme())
+    await openFile('post')
+
+    // The tree names it the way a file manager does; the editor names it the way
+    // the rest of the platform does, because that is the string a template uses.
+    expect(screen.getByRole('button', { name: 'post, Customised' }).getAttribute('aria-current')).toBe('true')
+    expect(screen.getByTestId('open-path').textContent).toBe('templates/post')
+  })
+
+  it('replaces what is open when another file is chosen', async () => {
+    renderSection(withTheme())
+
+    await openFile('post')
+    await screen.findByTestId('surface')
+
+    await openFile('base')
+
+    await waitFor(() => {
+      expect(screen.getByTestId('open-path').textContent).toBe('layouts/base')
+      expect(screen.getByTestId('surface')).toHaveProperty('value', 'SOURCE OF layouts/base')
+    })
+    expect(screen.getByRole('button', { name: 'base' }).getAttribute('aria-current')).toBe('true')
+  })
+
+  it('folds a folder away and back', async () => {
+    renderSection(withTheme())
+
+    const folder = await screen.findByRole('button', { name: /^Templates/ })
+    expect(folder.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('post')).toBeTruthy()
+
+    await userEvent.click(folder)
+
+    expect(screen.getByRole('button', { name: /^Templates/ }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('post')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: /^Templates/ }))
+
+    expect(screen.getByText('post')).toBeTruthy()
   })
 })
