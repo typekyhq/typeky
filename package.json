@@ -10,7 +10,7 @@
   },
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
-    "dev": "pnpm --filter @typeky/site dev",
+    "dev": "node scripts/dev.mjs",
     "dev:site": "pnpm --filter @typeky/site dev",
     "dev:admin": "pnpm --filter @typeky/admin dev",
     "types": "pnpm --filter @typeky/site types",

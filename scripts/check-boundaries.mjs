@@ -11,6 +11,7 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { gzipSync } from 'node:zlib'
 
 const root = resolve(import.meta.dirname, '..')
 const failures = []
@@ -51,9 +52,14 @@ function walk(dir) {
 /**
  * Red line 1: the site side renders through LiquidJS only. Enforced at the source
  * level here, and again against the build output below.
+ *
+ * The admin SPA is included because the two sides must not reach into each other
+ * (red line 2): the site may not import the admin, and the admin may not import
+ * the theme runtime.
  */
 const FORBIDDEN_FOR_SITE = [
   /^@typeky\/editor(?:\/|$)/,
+  /^@typeky\/admin(?:\/|$)/,
   /^hono\/jsx(?:\/|$)/,
   /^react(?:\/|$)/,
   /^react-dom(?:\/|$)/,
@@ -101,6 +107,59 @@ for (const rel of ['public/theme', 'public/static']) {
   }
 }
 
+// ---- 3. The admin bundle must not carry the theme runtime ----
+/**
+ * String literals rather than module names, because the bundle is minified and
+ * identifiers do not survive. These are messages only the Liquid side produces.
+ */
+const THEME_SIGNATURES = [
+  'template render limit exceeded',
+  'memory alloc limit exceeded',
+  'template not found: ',
+]
+
+/** Section 3.3 caps the admin first screen at 350 KB gzipped. */
+const ADMIN_FIRST_SCREEN_BUDGET_BYTES = 350 * 1024
+
+const adminDir = join(root, 'public/admin')
+const adminIndex = join(adminDir, 'index.html')
+let adminNote = '(no admin build yet)'
+
+if (existsSync(adminIndex)) {
+  const html = readFileSync(adminIndex, 'utf8')
+  const referenced = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
+    .map((match) => match[1])
+    .filter((url) => url.startsWith('/admin/'))
+
+  let firstScreenGzip = 0
+  for (const url of referenced) {
+    const file = join(adminDir, url.replace(/^\/admin\//, ''))
+    if (!existsSync(file)) continue
+    firstScreenGzip += gzipSync(readFileSync(file)).length
+  }
+
+  if (referenced.length === 0) {
+    failures.push('admin index.html references no assets, so the size budget cannot be checked')
+  } else if (firstScreenGzip > ADMIN_FIRST_SCREEN_BUDGET_BYTES) {
+    const kb = (n) => `${Math.round(n / 1024)} KB`
+    failures.push(
+      `admin first screen is ${kb(firstScreenGzip)} gzipped, over the ${kb(ADMIN_FIRST_SCREEN_BUDGET_BYTES)} budget`,
+    )
+  }
+
+  adminNote = `(admin first screen ${Math.round(firstScreenGzip / 1024)} KB gzipped of ${Math.round(
+    ADMIN_FIRST_SCREEN_BUDGET_BYTES / 1024,
+  )} KB)`
+
+  for (const file of walk(adminDir)) {
+    if (!/\.(js|css|html)$/.test(file)) continue
+    const src = readFileSync(file, 'utf8')
+    for (const sig of THEME_SIGNATURES) {
+      if (src.includes(sig)) failures.push(`admin bundle carries the theme runtime (${sig}): ${file}`)
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error('\nAsset boundary check failed:')
   for (const f of failures) console.error(`  x ${f}`)
@@ -111,4 +170,4 @@ const note =
   assetsScanned === 0
     ? '(no site build output yet, asset scan skipped)'
     : `(scanned ${siteFilesScanned} source files and ${assetsScanned} build files)`
-console.log(`check:boundaries -- passed ${note}`)
+console.log(`check:boundaries -- passed ${note} ${adminNote}`)

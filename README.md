@@ -81,7 +81,7 @@ Read [CONTRIBUTING](CONTRIBUTING.md) before opening a pull request — it holds 
 | Milestone | Scope | Status |
 | :---- | :---- | :---- |
 | M1 | Monorepo skeleton, data model, Liquid runtime | done |
-| M2 | Admin panel and authentication | planned |
+| M2 | Admin panel and authentication | in progress |
 | M3 | Block editor | planned |
 | M4 | CRUD for the three content types, media library | planned |
 | M5 | **Online theme editing** | planned |
