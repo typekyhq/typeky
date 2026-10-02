@@ -1,5 +1,6 @@
 import { API_ERROR_STATUS, type ApiErrorBody, type ApiErrorCode } from '@typeky/api'
 import type { Repositories } from '@typeky/db'
+import type { BlobPort } from '@typeky/platform'
 import type { Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type { Env } from '../env'
@@ -19,6 +20,15 @@ export type AdminEnv = { Bindings: Env; Variables: { session: Session } }
  * handler needs it and the router that wires them up needs the type.
  */
 export type RepositoryResolver = (env: AdminEnv['Bindings']) => Repositories | null
+
+/**
+ * How a request finds blob storage; the app supplies the R2 one.
+ *
+ * Separate from the repositories because the two can be configured apart: a
+ * deployment may have a database and no bucket, which is a state the media
+ * endpoints have to report rather than trip over.
+ */
+export type BlobResolver = (env: AdminEnv['Bindings']) => BlobPort | null
 
 /**
  * One error shape for every endpoint, with the status derived from the code so

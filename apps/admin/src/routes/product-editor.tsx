@@ -5,11 +5,13 @@ import {
   type ProductResponse,
   type ProductSpec,
   type ProductWrite,
+  type SeoMetadata,
 } from '@typeky/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { MediaField, MediaPicker } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,6 +46,11 @@ interface ProductForm {
   coverMediaId: string
   /** A string in the form, because a number input is empty before it is typed in. */
   sortOrder: string
+  /**
+   * Carried through untouched: the write replaces the whole document, so a field
+   * the form does not edit still has to be sent back or it is cleared.
+   */
+  seo: SeoMetadata
   gallery: string[]
   specs: ProductSpec[]
   blocks: Block[]
@@ -58,6 +65,7 @@ const EMPTY_FORM: ProductForm = {
   ctaUrl: '',
   coverMediaId: '',
   sortOrder: '0',
+  seo: {},
   gallery: [],
   specs: [],
   blocks: [],
@@ -80,6 +88,7 @@ export function ProductEditorPage() {
 
   const heldId = useRef<string | null>(null)
   const [editorKey, setEditorKey] = useState('new')
+  const [galleryPickerOpen, setGalleryPickerOpen] = useState(false)
 
   const slugTouched = useRef(false)
   const isNewProduct = product === null
@@ -317,12 +326,10 @@ export function ProductEditorPage() {
       <Card>
         <CardHeader>
           <CardTitle>Images</CardTitle>
-          <CardDescription>
-            Media ids, one per entry. The picker that chooses them arrives with the media library.
-          </CardDescription>
+          <CardDescription>The cover, then the gallery. Both hold media ids.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field
+          <MediaField
             id="coverMediaId"
             label="Cover image"
             value={form.coverMediaId}
@@ -371,13 +378,27 @@ export function ProductEditorPage() {
 
           {issues.gallery !== undefined && <p className="text-sm text-destructive">{issues.gallery}</p>}
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => update((current) => ({ ...current, gallery: [...current.gallery, ''] }))}
-          >
-            Add image
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => update((current) => ({ ...current, gallery: [...current.gallery, ''] }))}
+            >
+              Add image
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setGalleryPickerOpen(true)}>
+              Add from library
+            </Button>
+          </div>
+
+          <MediaPicker
+            open={galleryPickerOpen}
+            onOpenChange={setGalleryPickerOpen}
+            title="Add to the gallery"
+            onSelect={(item) =>
+              update((current) => ({ ...current, gallery: [...current.gallery, item.id] }))
+            }
+          />
         </CardContent>
       </Card>
 
@@ -569,6 +590,7 @@ function toForm(product: ProductResponse): ProductForm {
     ctaUrl: product.ctaUrl ?? '',
     coverMediaId: product.coverMediaId ?? '',
     sortOrder: String(product.sortOrder),
+    seo: product.seo,
     gallery: product.gallery,
     specs: product.specs,
     blocks: product.blocks,
@@ -588,6 +610,7 @@ function toWrite(form: ProductForm, status: ContentStatus): ProductWrite {
     ctaUrl: text(form.ctaUrl),
     coverMediaId: text(form.coverMediaId),
     sortOrder: Number.isInteger(sortOrder) && sortOrder >= 0 ? sortOrder : 0,
+    seo: form.seo,
     // Empty rows are dropped rather than refused: an unfinished row is an
     // intention, not a mistake, and saving should not be blocked by one.
     gallery: form.gallery.map((entry) => entry.trim()).filter((entry) => entry !== ''),

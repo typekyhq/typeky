@@ -7,11 +7,17 @@ import {
   getPostResponseSchema,
   getProductListResponseSchema,
   getProductResponseSchema,
+  mediaListResponseSchema,
+  mediaItemSchema,
+  mediaUsageSchema,
   sessionSchema,
   siteResponseSchema,
   type ApiErrorCode,
   type ContentStatus,
   type LoginRequest,
+  type MediaItem,
+  type MediaListResponse,
+  type MediaUsage,
   type PageListResponse,
   type PageResponse,
   type PageWrite,
@@ -94,6 +100,20 @@ export interface ApiClient {
   saveProduct(id: string, product: ProductWrite): Promise<ProductResponse>
   deleteProduct(id: string): Promise<void>
   setProductStatus(id: string, status: ContentStatus): Promise<ProductResponse>
+
+  listMedia(query?: MediaQuery): Promise<MediaListResponse>
+  uploadMedia(file: File, details: { alt?: string; width?: number; height?: number }): Promise<MediaItem>
+  mediaUsages(id: string): Promise<MediaUsage>
+  deleteMedia(id: string): Promise<void>
+  /** Where the admin serves an item's bytes from. */
+  mediaContentUrl(id: string): string
+}
+
+/** The filters the media grid can ask for. */
+export interface MediaQuery {
+  search?: string
+  limit?: number
+  offset?: number
 }
 
 /** The filters the content lists can ask for. */
@@ -132,21 +152,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
   let csrfToken: string | undefined
 
-  async function send(method: string, path: string, body?: unknown): Promise<Response> {
-    const headers = new Headers()
-    if (body !== undefined) headers.set('content-type', 'application/json')
-
-    // Only writes carry the token: a read has nothing to forge, and putting it
-    // on every request only widens where it can be logged.
-    if (!SAFE_METHODS.has(method) && csrfToken !== undefined) headers.set(CSRF_HEADER, csrfToken)
-
+  /** Sends a request and turns a non-2xx response into something throwable. */
+  async function request(method: string, path: string, init: RequestInit = {}): Promise<Response> {
     const response = await doFetch(`${baseUrl}${path}`, {
       method,
-      headers,
       // The default, but this is the reason the __Host- session cookie travels,
       // so it is worth stating rather than relying on a default.
       credentials: 'same-origin',
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...init,
     })
 
     if (response.ok) return response
@@ -155,6 +168,20 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     // The session is gone; holding on to its token would only produce 403s.
     if (error.code === 'unauthorized') csrfToken = undefined
     throw error
+  }
+
+  async function send(method: string, path: string, body?: unknown): Promise<Response> {
+    const headers = new Headers()
+    if (body !== undefined) headers.set('content-type', 'application/json')
+
+    // Only writes carry the token: a read has nothing to forge, and putting it
+    // on every request only widens where it can be logged.
+    if (!SAFE_METHODS.has(method) && csrfToken !== undefined) headers.set(CSRF_HEADER, csrfToken)
+
+    return request(method, path, {
+      headers,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
   }
 
   async function toApiError(response: Response): Promise<ApiError> {
@@ -380,6 +407,56 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         await send('POST', `/products/${encodeURIComponent(id)}/status`, { status }),
         'the status response did not match the contract',
       )
+    },
+
+    async listMedia(query = {}) {
+      const params = new URLSearchParams()
+      if (query.search !== undefined && query.search.trim() !== '') params.set('search', query.search.trim())
+      if (query.limit !== undefined) params.set('limit', String(query.limit))
+      if (query.offset !== undefined && query.offset > 0) params.set('offset', String(query.offset))
+      const encoded = params.toString()
+
+      return readContract(
+        mediaListResponseSchema,
+        await send('GET', `/media${encoded === '' ? '' : `?${encoded}`}`),
+        'the media list did not match the contract',
+      )
+    },
+
+    async uploadMedia(file, details) {
+      const query = new URLSearchParams({ filename: file.name })
+      if (details.alt !== undefined && details.alt !== '') query.set('alt', details.alt)
+      if (details.width !== undefined) query.set('width', String(details.width))
+      if (details.height !== undefined) query.set('height', String(details.height))
+
+      const headers = new Headers()
+      // The file's own type, because that is what the Worker checks before it
+      // stores anything. A file the browser could not identify is sent as opaque
+      // bytes so it is refused there rather than silently mislabelled here.
+      headers.set('content-type', file.type === '' ? 'application/octet-stream' : file.type)
+      if (csrfToken !== undefined) headers.set(CSRF_HEADER, csrfToken)
+
+      return readContract(
+        mediaItemSchema,
+        await request('POST', `/media?${query.toString()}`, { headers, body: file }),
+        'the upload response did not match the contract',
+      )
+    },
+
+    async mediaUsages(id) {
+      return readContract(
+        mediaUsageSchema,
+        await send('GET', `/media/${encodeURIComponent(id)}/usages`),
+        'the usage response did not match the contract',
+      )
+    },
+
+    async deleteMedia(id) {
+      await send('DELETE', `/media/${encodeURIComponent(id)}`)
+    },
+
+    mediaContentUrl(id) {
+      return `${baseUrl}/media/${encodeURIComponent(id)}/content`
     },
   }
 

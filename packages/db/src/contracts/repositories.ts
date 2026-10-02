@@ -15,6 +15,7 @@ import type {
   ListPostsQuery,
   ListQuery,
   MediaItem,
+  MediaUsage,
   MediaWrite,
   Page,
   PageResult,
@@ -69,6 +70,17 @@ export interface MediaRepository {
   list(ctx: TenantContext, query?: ListMediaQuery): Promise<PageResult<MediaItem>>
   byId(ctx: TenantContext, id: string): Promise<MediaItem | null>
   insert(ctx: TenantContext, input: MediaWrite): Promise<MediaItem>
+  /**
+   * Where this media is used, so a delete can say what it will affect before it
+   * happens.
+   *
+   * Deleting clears the references rather than being refused -- the schema's
+   * ON DELETE SET NULL already says so -- which makes the count a warning rather
+   * than a gate. It has to be honest about the JSON columns too: a body is Block
+   * JSON and an image block holds a media id, so a check that only looked at
+   * `cover_media_id` would quietly miss most of the places an image is used.
+   */
+  usages(ctx: TenantContext, id: string): Promise<MediaUsage>
   /** Deleting media clears references to it rather than blocking the delete. */
   remove(ctx: TenantContext, id: string): Promise<boolean>
 }

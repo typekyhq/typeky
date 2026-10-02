@@ -182,3 +182,24 @@ describe('social links', () => {
     expect(screen.queryByLabelText('Link 1 label')).toBeNull()
   })
 })
+
+describe('the logo', () => {
+  it('can be chosen from the media library instead of pasting an id', async () => {
+    renderPage(fakeClient())
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose' }))
+
+    expect(await screen.findByText('Choose for logo')).toBeTruthy()
+  })
+
+  it('is carried through a save when it is not touched', async () => {
+    const saveSite = vi.fn(async (write: unknown) => ({ ...SITE, ...(write as object) }))
+    renderPage(fakeClient({ saveSite }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(saveSite).toHaveBeenCalledWith(expect.objectContaining({ logoMediaId: 'media_logo' }))
+    })
+  })
+})

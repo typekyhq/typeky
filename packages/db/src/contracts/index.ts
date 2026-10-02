@@ -16,6 +16,8 @@ export {
   type ListPostsQuery,
   type ListQuery,
   type MediaItem,
+  type MediaUsage,
+  type MediaUsagePlace,
   type MediaWrite,
   type NavItem,
   type Page,

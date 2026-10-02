@@ -254,3 +254,70 @@ describe('creating a product', () => {
     expect(screen.getByLabelText('Slug').getAttribute('aria-invalid')).toBe('true')
   })
 })
+
+describe('choosing media', () => {
+  function withMedia(overrides: Partial<ApiClient> = {}): ApiClient {
+    return loaded({
+      async listMedia() {
+        return { items: [], total: 0, limit: 24, offset: 0 }
+      },
+      ...overrides,
+    })
+  }
+
+  it('offers the library for the cover image', async () => {
+    renderEditor(withMedia())
+
+    await screen.findByLabelText('Cover image')
+    await userEvent.click(screen.getByRole('button', { name: 'Choose' }))
+
+    expect(await screen.findByText('Choose for cover image')).toBeTruthy()
+  })
+
+  it('adds to the gallery from the library rather than by typing an id', async () => {
+    renderEditor(
+      withMedia({
+        async listMedia() {
+          return {
+            items: [
+              {
+                id: 'media_new',
+                filename: 'extra.png',
+                mimeType: 'image/png',
+                byteSize: 1024,
+                width: 100,
+                height: 100,
+                altText: null,
+                createdAt: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+            total: 1,
+            limit: 24,
+            offset: 0,
+          }
+        },
+      }),
+    )
+
+    await screen.findByLabelText('Image 1')
+    await userEvent.click(screen.getByRole('button', { name: 'Add from library' }))
+    await userEvent.click(await screen.findByRole('button', { name: /extra\.png/ }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Image 3')).toHaveProperty('value', 'media_new')
+    })
+  })
+
+  it('carries the fields no form edits through a save', async () => {
+    const saveProduct = vi.fn(async (_id: string, write: unknown) => ({ ...PRODUCT, ...(write as object) }))
+    renderEditor(withMedia({ saveProduct }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Save draft' }))
+
+    await waitFor(() => {
+      const written = saveProduct.mock.calls.at(-1)?.[1] as Record<string, unknown>
+      expect(written.coverMediaId).toBe('media_cover')
+      expect(written.seo).toEqual(PRODUCT.seo)
+    })
+  })
+})

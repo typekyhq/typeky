@@ -7,6 +7,7 @@ import {
 } from '@typeky/api'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -166,6 +167,18 @@ export function SettingsPage() {
             {issues['settings.accentColor'] !== undefined && (
               <p className="text-sm text-destructive">{issues['settings.accentColor']}</p>
             )}
+          </div>
+          <div className="sm:col-span-2">
+            <MediaField
+              id="logoMediaId"
+              label="Logo"
+              value={draft.logoMediaId ?? ''}
+              error={issues.logoMediaId}
+              hint="Shown in the header and used as the fallback social image."
+              onChange={(value) =>
+                update((current) => ({ ...current, logoMediaId: value === '' ? null : value }))
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -410,10 +423,6 @@ export function SettingsPage() {
           />
         </CardContent>
       </Card>
-
-      <p className="text-sm text-muted-foreground">
-        The logo is set from the media library, which arrives with the content work.
-      </p>
     </form>
   )
 }

@@ -35,6 +35,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   database_not_configured: 'This deployment has no database configured.',
   not_found: 'That endpoint does not exist yet.',
   slug_taken: 'That slug is already in use. Choose another one.',
+  storage_not_configured: 'This deployment has no media storage configured.',
   internal_error: 'The server could not complete the request.',
 }
 

@@ -3,8 +3,16 @@ import { Hono } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import type { MiddlewareHandler } from 'hono'
 import { repositoriesFor } from '../repositories'
+import { blobsFor } from '../blobs'
 import { csrfTokenMatches, isSafeMethod } from './csrf'
-import { apiError, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
+import { apiError, readJsonBody, type AdminEnv, type BlobResolver, type RepositoryResolver } from './errors'
+import {
+  deleteMedia,
+  readMedia,
+  readMediaContent,
+  readMediaUsages,
+  uploadMedia,
+} from './media'
 import {
   createPage,
   deletePage,
@@ -53,12 +61,15 @@ export interface AdminApiOptions {
    * test can supply its own instead of arranging a database binding.
    */
   repositories?: RepositoryResolver
+  /** Resolves blob storage. Defaults to R2; a test supplies an in-memory one. */
+  blobs?: BlobResolver
 }
 
 const DEFAULT_ACTOR_ID = 'admin'
 
 export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   const repositories = options.repositories ?? repositoriesFor
+  const blobs = options.blobs ?? blobsFor
   const api = new Hono<AdminEnv>()
 
   // Login carries no CSRF token because there is no session yet to bind one to.
@@ -143,6 +154,14 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.put('/products/:id', (c) => updateProduct(c, repositories))
   api.delete('/products/:id', (c) => deleteProduct(c, repositories))
   api.post('/products/:id/status', (c) => setProductStatus(c, repositories))
+
+  // Media. The upload is a POST whose body is the file and whose content type is
+  // the file's own; everything else about it is a query parameter.
+  api.get('/media', (c) => readMedia(c, repositories))
+  api.post('/media', (c) => uploadMedia(c, repositories, blobs))
+  api.get('/media/:id/content', (c) => readMediaContent(c, repositories, blobs))
+  api.get('/media/:id/usages', (c) => readMediaUsages(c, repositories))
+  api.delete('/media/:id', (c) => deleteMedia(c, repositories, blobs))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 

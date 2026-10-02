@@ -244,6 +244,18 @@ export interface ListMediaQuery {
   offset?: number
 }
 
+/** One kind of content that references a piece of media. */
+export interface MediaUsagePlace {
+  kind: 'post' | 'page' | 'product' | 'site'
+  count: number
+}
+
+export interface MediaUsage {
+  /** How many content rows reference it, counting each row once. */
+  total: number
+  places: MediaUsagePlace[]
+}
+
 /**
  * Neutralises the wildcards in a search term before it reaches `LIKE`.
  *

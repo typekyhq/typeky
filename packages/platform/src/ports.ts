@@ -40,3 +40,36 @@ export interface DbPort {
    */
   batch(statements: DbStatement[]): Promise<void>
 }
+
+/** An object read back from blob storage. */
+export interface BlobContents {
+  /** The caller owns this and should stream it on rather than buffer it. */
+  body: ReadableStream
+  contentType: string | null
+  byteSize: number
+}
+
+/**
+ * The object storage surface.
+ *
+ * `signedUrl` is absent on purpose. Direct-to-R2 uploads need an S3 token that
+ * the Worker's binding does not provide, and uploads through the Worker are
+ * simpler to deploy: same origin, no extra secret, and a photo is far below the
+ * request-size limit. That is a decision, not an omission, and it is recorded
+ * where decisions live.
+ *
+ * Bodies are streams in both directions. A Worker has a fixed memory budget, and
+ * a photograph can be most of it.
+ */
+export interface BlobPort {
+  /**
+   * Stores an object and answers with its size.
+   *
+   * The size comes back from the store rather than from the caller: an upload
+   * truncated on the wire has to be recorded as the length it really has, or the
+   * media row disagrees with the object it points at.
+   */
+  put(key: string, body: ReadableStream, contentType: string): Promise<{ byteSize: number }>
+  get(key: string): Promise<BlobContents | null>
+  delete(key: string): Promise<void>
+}

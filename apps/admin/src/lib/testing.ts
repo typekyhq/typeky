@@ -65,6 +65,16 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     deleteProduct: unexpected('deleteProduct'),
     setProductStatus: unexpected('setProductStatus'),
 
+    async listMedia() {
+      return EMPTY_PAGE
+    },
+    uploadMedia: unexpected('uploadMedia'),
+    mediaUsages: unexpected('mediaUsages'),
+    deleteMedia: unexpected('deleteMedia'),
+    mediaContentUrl(id: string) {
+      return `/api/admin/media/${id}/content`
+    },
+
     ...overrides,
   }
 }

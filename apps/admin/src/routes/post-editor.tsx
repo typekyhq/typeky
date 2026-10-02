@@ -1,9 +1,16 @@
 import type { Block } from '@typeky/core'
-import { getPostWriteSchema, type ContentStatus, type PostResponse, type PostWrite } from '@typeky/api'
+import {
+  getPostWriteSchema,
+  type ContentStatus,
+  type PostResponse,
+  type PostWrite,
+  type SeoMetadata,
+} from '@typeky/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,6 +42,15 @@ interface PostForm {
   category: string
   /** Comma-separated in the form; split into the stored list on save. */
   tags: string
+  coverMediaId: string
+  /**
+   * Carried through untouched.
+   *
+   * The write replaces the whole document, so a field the form does not edit has
+   * to be sent back as it arrived -- omitting it would clear it, which is how a
+   * whole-document write turns a missing input into data loss.
+   */
+  seo: SeoMetadata
   blocks: Block[]
 }
 
@@ -44,6 +60,8 @@ const EMPTY_FORM: PostForm = {
   excerpt: '',
   category: '',
   tags: '',
+  coverMediaId: '',
+  seo: {},
   blocks: [],
 }
 
@@ -289,6 +307,17 @@ export function PostEditorPage() {
               </p>
             )}
           </div>
+
+          <div className="sm:col-span-2">
+            <MediaField
+              id="coverMediaId"
+              label="Cover image"
+              value={form.coverMediaId}
+              error={issues.coverMediaId}
+              hint="Shown on the post list and in social previews."
+              onChange={(value) => update((current) => ({ ...current, coverMediaId: value }))}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -351,6 +380,8 @@ function toForm(post: PostResponse): PostForm {
     excerpt: post.excerpt ?? '',
     category: post.category ?? '',
     tags: post.tags.join(', '),
+    coverMediaId: post.coverMediaId ?? '',
+    seo: post.seo,
     blocks: post.blocks,
   }
 }
@@ -366,6 +397,8 @@ function toWrite(form: PostForm, status: ContentStatus): PostWrite {
     // an empty string that would render as a blank line somewhere.
     excerpt: excerpt === '' ? null : excerpt,
     category: category === '' ? null : category,
+    coverMediaId: form.coverMediaId.trim() === '' ? null : form.coverMediaId.trim(),
+    seo: form.seo,
     tags: form.tags
       .split(',')
       .map((tag) => tag.trim())

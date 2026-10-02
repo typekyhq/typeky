@@ -28,11 +28,11 @@ const POST: PostResponse = {
   title: 'Release notes',
   slug: 'release-notes',
   excerpt: 'What changed',
-  coverMediaId: null,
+  coverMediaId: 'media_cover',
   blocks: [{ type: 'paragraph', content: [{ type: 'text', text: 'Body' }] }],
   tags: ['release', 'notes'],
   category: 'News',
-  seo: {},
+  seo: { description: 'What changed this month' },
   status: 'draft',
   revision: 2,
   publishedAt: null,
@@ -53,8 +53,7 @@ function renderEditor(client: ApiClient, path = '/posts/post_1') {
 }
 
 describe('opening a post', () => {
-  it('fills the form from the server', async () => {
-    renderEditor(
+  it('fills the form from the server', async () => {    renderEditor(
       fakeApiClient({
         async getPost() {
           return POST
@@ -206,5 +205,46 @@ describe('a slug that is already taken', () => {
     expect(slug.getAttribute('aria-describedby')).toBe('slug-error')
     expect(message.getAttribute('id')).toBe('slug-error')
     expect(slug.getAttribute('aria-invalid')).toBe('true')
+  })
+})
+
+describe('the cover image', () => {
+  it('can be chosen from the media library', async () => {
+    renderEditor(
+      fakeApiClient({
+        async getPost() {
+          return POST
+        },
+        async listMedia() {
+          return { items: [], total: 0, limit: 24, offset: 0 }
+        },
+      }),
+    )
+
+    await screen.findByLabelText('Cover image')
+    await userEvent.click(screen.getByRole('button', { name: 'Choose' }))
+
+    expect(await screen.findByText('Choose for cover image')).toBeTruthy()
+  })
+
+  it('is carried through a save, because the write replaces the whole document', async () => {
+    const savePost = vi.fn(async (_id: string, write: unknown) => ({ ...POST, ...(write as object) }))
+    renderEditor(
+      fakeApiClient({
+        async getPost() {
+          return POST
+        },
+        savePost,
+      }),
+    )
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Save draft' }))
+
+    await waitFor(() => {
+      const written = savePost.mock.calls.at(-1)?.[1] as Record<string, unknown>
+      expect(written.coverMediaId).toBe('media_cover')
+      // A field no form edits yet still has to survive, or saving clears it.
+      expect(written.seo).toEqual(POST.seo)
+    })
   })
 })

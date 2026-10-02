@@ -5,3 +5,4 @@
  * pull a Node builtin into a Worker bundle.
  */
 export { createMemoryDb, type MemoryDb } from './memory-db'
+export { createMemoryBlob, type MemoryBlob } from './memory-blob'

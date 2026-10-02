@@ -80,6 +80,16 @@ export {
 } from './products'
 
 export {
+  MEDIA_USAGE_KINDS,
+  mediaItemSchema,
+  mediaListResponseSchema,
+  mediaUsageSchema,
+  type MediaItem,
+  type MediaListResponse,
+  type MediaUsage,
+} from './media'
+
+export {
   navItemSchema,
   siteResponseSchema,
   siteSettingsSchema,

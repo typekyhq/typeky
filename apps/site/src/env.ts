@@ -21,6 +21,13 @@ export interface Env {
   /** D1. Absent until the resource is created and the binding uncommented. */
   DB?: D1Database
 
+  /**
+   * R2. Media uploads. Absent until the bucket is created and the binding
+   * uncommented, which is why a deployment without it reports the media
+   * endpoints as unavailable rather than failing halfway through an upload.
+   */
+  MEDIA?: R2Bucket
+
   /** Admin account name. Defaults to `admin`. */
   ADMIN_USERNAME?: string
 

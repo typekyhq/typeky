@@ -1,5 +1,11 @@
 import type { Block } from '@typeky/core'
-import { getPageWriteSchema, type ContentStatus, type PageResponse, type PageWrite } from '@typeky/api'
+import {
+  getPageWriteSchema,
+  type ContentStatus,
+  type PageResponse,
+  type PageWrite,
+  type SeoMetadata,
+} from '@typeky/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -29,10 +35,15 @@ interface PageForm {
   slug: string
   /** A string in the form, because a number input is empty before it is typed in. */
   sortOrder: string
+  /**
+   * Carried through untouched: the write replaces the whole document, so a field
+   * the form does not edit still has to be sent back or it is cleared.
+   */
+  seo: SeoMetadata
   blocks: Block[]
 }
 
-const EMPTY_FORM: PageForm = { title: '', slug: '', sortOrder: '0', blocks: [] }
+const EMPTY_FORM: PageForm = { title: '', slug: '', sortOrder: '0', seo: {}, blocks: [] }
 
 export function PageEditorPage() {
   const client = useApiClient()
@@ -318,6 +329,7 @@ function toForm(page: PageResponse): PageForm {
     title: page.title,
     slug: page.slug,
     sortOrder: String(page.sortOrder),
+    seo: page.seo,
     blocks: page.blocks,
   }
 }
@@ -332,6 +344,7 @@ function toWrite(form: PageForm, status: ContentStatus): PageWrite {
     // A blank or unparseable order means zero rather than a validation error:
     // the field is a convenience, and getting it wrong should not block a save.
     sortOrder: Number.isInteger(sortOrder) && sortOrder >= 0 ? sortOrder : 0,
+    seo: form.seo,
     blocks: form.blocks,
   }
 }

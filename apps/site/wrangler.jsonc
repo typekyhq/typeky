@@ -4,7 +4,7 @@
   //   pnpm --filter @typeky/site exec wrangler r2 bucket create typeky-media
   //   pnpm --filter @typeky/site exec wrangler kv namespace create CACHE
   //
-  // "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "typeky-media" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "typeky-media" }],
 
   // Same placeholder story as D1 below: local development never reads the id,
   // and it is replaced with the value printed by
