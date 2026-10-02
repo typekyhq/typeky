@@ -110,5 +110,32 @@ export function createPlatformFilters(
     return `${base}${path.startsWith('/') ? '' : '/'}${path}`
   }
 
-  return { asset_url: assetUrl, url: siteUrl, money, t: translate, render_blocks: renderBlocks }
+  /**
+   * JSON for a <script type="application/ld+json"> block.
+   *
+   * Not json, which is built for putting JSON inside an attribute or a text node
+   * and escapes the quotes along with everything else -- so the block comes out
+   * as \&#34; and no validator can read it. This keeps the JSON valid and escapes
+   * the three characters that could end the element early, which is what stops a
+   * title containing </script> from breaking out of it.
+   */
+  const jsonLd: RawFilter = {
+    raw: true,
+    handler: (value) =>
+      JSON.stringify(value ?? null)
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029'),
+  }
+
+  return {
+    asset_url: assetUrl,
+    url: siteUrl,
+    money,
+    t: translate,
+    render_blocks: renderBlocks,
+    json_ld: jsonLd,
+  }
 }

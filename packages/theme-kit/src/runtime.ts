@@ -110,7 +110,7 @@ export const LIQUID_NATIVE_FILTERS = [
 ] as const
 
 /** Filters this platform adds. */
-export const LIQUID_PLATFORM_FILTERS = ['asset_url', 'url', 'money', 't', 'render_blocks'] as const
+export const LIQUID_PLATFORM_FILTERS = ['asset_url', 'url', 'money', 't', 'render_blocks', 'json_ld'] as const
 
 /** Everything a template may use. */
 export const LIQUID_FILTERS = [...LIQUID_NATIVE_FILTERS, ...LIQUID_PLATFORM_FILTERS] as const
