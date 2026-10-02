@@ -1,5 +1,29 @@
+{% comment %}
+  Everything a crawler or a chat client reads about this page.
+
+  The values are computed by the platform -- the absolute canonical URL, the
+  resolved social image -- and this only prints them. `content` is passed because
+  one post property is worth emitting; on a list it is an array, and the `and`
+  below is what keeps that from mattering.
+{% endcomment %}
 <title>{{ seo.title }}</title>
 {% if seo.description %}<meta name="description" content="{{ seo.description }}">{% endif %}
 {% if page.canonical %}<link rel="canonical" href="{{ page.canonical }}">{% endif %}
+
+<meta property="og:type" content="{% if page.kind == 'post' %}article{% else %}website{% endif %}">
+<meta property="og:title" content="{{ seo.title }}">
+{% if seo.description %}<meta property="og:description" content="{{ seo.description }}">{% endif %}
+{% if page.canonical %}<meta property="og:url" content="{{ page.canonical }}">{% endif %}
+<meta property="og:site_name" content="{{ site.name }}">
 {% if seo.og_image %}<meta property="og:image" content="{{ seo.og_image }}">{% endif %}
-{% if seo.json_ld %}<script type="application/ld+json">{{ seo.json_ld | json }}</script>{% endif %}
+{% if page.kind == 'post' and content.published_at %}
+  <meta property="article:published_time" content="{{ content.published_at }}">
+{% endif %}
+
+{% comment %} The same again for the network with its own vocabulary. {% endcomment %}
+<meta name="twitter:card" content="{% if seo.og_image %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="{{ seo.title }}">
+{% if seo.description %}<meta name="twitter:description" content="{{ seo.description }}">{% endif %}
+{% if seo.og_image %}<meta name="twitter:image" content="{{ seo.og_image }}">{% endif %}
+
+{% if seo.json_ld %}<script type="application/ld+json">{{ seo.json_ld | json_ld }}</script>{% endif %}

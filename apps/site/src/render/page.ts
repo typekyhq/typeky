@@ -240,6 +240,7 @@ function pageInput(page: Page, kind: PageKind): ItemInput {
     slug: page.slug,
     blocks: page.blocks,
     seo: page.seo as Record<string, unknown>,
+    updatedAt: page.updatedAt,
   }
 }
 
@@ -255,6 +256,7 @@ function postInput(post: Post): ItemInput {
     tags: post.tags,
     coverMediaId: post.coverMediaId,
     publishedAt: post.publishedAt,
+    updatedAt: post.updatedAt,
   }
 }
 
@@ -272,6 +274,7 @@ function productInput(product: Product): ItemInput {
     priceLabel: product.priceLabel,
     ctaLabel: product.ctaLabel,
     ctaUrl: product.ctaUrl,
+    updatedAt: product.updatedAt,
   }
 }
 

@@ -8,6 +8,7 @@ import type { Env } from './env'
 import { serveMedia } from './media'
 import { errorPage, notFoundPage } from './pages'
 import { renderPage } from './render/page'
+import { renderRobots, renderSitemap } from './render/sitemap'
 import { repositoriesFor } from './repositories'
 
 /**
@@ -50,6 +51,26 @@ export function createApp(): Hono<{ Bindings: Env }> {
   // Media, served to visitors. Registered before the catch-all because a media
   // URL has no file extension and would otherwise be treated as a page.
   app.get('/media/:id', (c) => serveMedia(c.env, c.req.param('id'), c.req.raw))
+
+  // `robots.txt` and `sitemap.xml` before the catch-all too: both have a file
+  // extension, so the catch-all would answer them with a plain 404 and a crawler
+  // would take that for an answer.
+  app.get('/robots.txt', (c) => {
+    return c.body(renderRobots(new URL(c.req.url).origin), 200, {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'public, max-age=3600',
+    })
+  })
+
+  app.get('/sitemap.xml', async (c) => {
+    const store = repositoriesFor(c.env)
+    if (store === null) return c.text('Not Found', 404)
+
+    return c.body(await renderSitemap(store, new URL(c.req.url).origin), 200, {
+      'content-type': 'application/xml; charset=utf-8',
+      'cache-control': 'public, max-age=3600',
+    })
+  })
 
   app.get('*', async (c) => {
     const path = new URL(c.req.url).pathname

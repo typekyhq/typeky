@@ -209,6 +209,33 @@ describe('rendering content pages', () => {
   })
 })
 
+describe('structured data in the page', () => {
+  it('is JSON a validator can read, not escaped markup', async () => {
+    const { render } = setUp({
+      posts: [post({ title: 'Hello', slug: 'hello' })],
+    })
+
+    const result = await render('/posts/hello')
+    const block = /<script type="application\/ld\+json">([^<]*)<\/script>/.exec(result.html)
+
+    expect(block).not.toBeNull()
+
+    // Rendering found this broken: the quotes came out as `&#34;` and nothing
+    // could parse the block. The filter that fixed it is asserted on its own too.
+    const json = block?.[1] ?? ''
+    expect(json).not.toContain('&#34;')
+    expect(JSON.parse(json)).toMatchObject({ '@type': 'BlogPosting', headline: 'Hello' })
+  })
+
+  it('says nothing on a page that does not exist', async () => {
+    const { render } = setUp({})
+
+    // A 404 has nothing to describe, and telling a crawler it exists is worse
+    // than saying nothing.
+    expect((await render('/nope')).html).not.toContain('application/ld+json')
+  })
+})
+
 describe('a site that is not set up', () => {
   it('says so rather than rendering an empty theme', async () => {
     const { render } = setUp({ site: null })

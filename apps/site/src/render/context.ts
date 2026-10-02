@@ -1,3 +1,4 @@
+import { structuredData } from './seo'
 import type { Block, PageKind, Pagination, RenderContext } from '@typeky/core'
 
 /**
@@ -48,6 +49,8 @@ export interface ItemInput {
   ctaLabel?: string | null
   ctaUrl?: string | null
   publishedAt?: Date | null
+  /** Used for  in structured data. */
+  updatedAt?: Date | null
   /** Extra fields a template reads, already resolved. */
   extra?: Record<string, unknown>
 }
@@ -131,6 +134,19 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
   const canonical =
     typeof item.seo.canonical === 'string' ? item.seo.canonical : absolute(baseUrl, url)
 
+  // Structured data, built here so a template only prints it.
+  const jsonLd = structuredData({
+    kind: item.kind,
+    url: canonical ?? absolute(baseUrl, url),
+    title,
+    ...(description === undefined ? {} : { description }),
+    ...(ogImage === undefined ? {} : { image: ogImage }),
+    siteName: site.name,
+    ...(resolve(site.logoMediaId) === undefined ? {} : { logoUrl: resolve(site.logoMediaId) }),
+    ...(item.publishedAt === null || item.publishedAt === undefined ? {} : { publishedAt: item.publishedAt }),
+    ...(item.updatedAt === null || item.updatedAt === undefined ? {} : { updatedAt: item.updatedAt }),
+  })
+
   const socialLinks = Array.isArray(site.settings.socialLinks)
     ? (site.settings.socialLinks as { label: string; href: string }[])
     : undefined
@@ -166,6 +182,7 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       title,
       ...(description === undefined ? {} : { description }),
       ...(ogImage === undefined ? {} : { og_image: ogImage }),
+      ...(jsonLd === undefined ? {} : { json_ld: jsonLd }),
     },
 
     ...(input.preview === true ? { preview: true } : {}),
