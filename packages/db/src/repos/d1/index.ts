@@ -5,7 +5,9 @@ import { createPageRepository } from './pages'
 import { createPostRepository } from './posts'
 import { createProductRepository } from './products'
 import { createSiteRepository } from './sites'
+import { createTermRepository } from './terms'
 import { createThemeTemplateRepository } from './theme-templates'
+import { createVocabularyRepository } from './vocabularies'
 
 /**
  * Builds the SQLite repository set over an injected database port.
@@ -22,5 +24,7 @@ export function createD1Repositories(db: DbPort): Repositories {
     products: createProductRepository(db),
     media: createMediaRepository(db),
     themeTemplates: createThemeTemplateRepository(db),
+    vocabularies: createVocabularyRepository(db),
+    terms: createTermRepository(db),
   }
 }

@@ -18,7 +18,7 @@ function renderDefault(column: ColumnDef): string {
   return column.defaultSql as string
 }
 
-function renderColumn(column: ColumnDef): string {
+function renderColumn(table: TableDef, column: ColumnDef): string {
   let expression = isNumeric(column.type)
     ? `integer('${column.name}')`
     : `text('${column.name}')`
@@ -29,9 +29,13 @@ function renderColumn(column: ColumnDef): string {
   if (column.unique) expression += '.unique()'
   if (column.defaultSql !== undefined) expression += `.default(${renderDefault(column)})`
 
-  if (column.references) {
-    const { table, column: target, onDelete } = column.references
-    const targetExpression = `${toIdentifier(table)}.${toIdentifier(target)}`
+  // A self-reference is emitted as a table-level `foreignKey` instead, in
+  // `renderExtras`. Drizzle's column form takes a thunk that closes over the
+  // table being defined, and TypeScript cannot infer it -- `terms.parentId`
+  // referring to `terms.id` is a type that depends on itself.
+  if (column.references && column.references.table !== table.name) {
+    const { table: target, column: targetColumn, onDelete } = column.references
+    const targetExpression = `${toIdentifier(target)}.${toIdentifier(targetColumn)}`
     expression += onDelete
       ? `.references(() => ${targetExpression}, { onDelete: '${onDelete}' })`
       : `.references(() => ${targetExpression})`
@@ -53,6 +57,16 @@ function renderExtras(table: TableDef): string {
     const columns = index.columns.map(renderIndexColumn).join(', ')
     const where = index.where ? '.where(sql`' + index.where + '`)' : ''
     entries.push(`  ${builder}.on(${columns})${where},`)
+  }
+
+  for (const column of table.columns) {
+    const reference = column.references
+    if (reference === undefined || reference.table !== table.name) continue
+
+    const onDelete = reference.onDelete ? `.onDelete('${reference.onDelete}')` : ''
+    entries.push(
+      `  foreignKey({ columns: [t.${toIdentifier(column.name)}], foreignColumns: [t.${toIdentifier(reference.column)}] })${onDelete},`,
+    )
   }
 
   for (const unique of table.uniques ?? []) {
@@ -89,7 +103,12 @@ export function renderDrizzleSchema(model: LogicalModel): string {
       index.columns.some((column) => typeof column !== 'string' && column.desc === true),
   )
 
+  const usesForeignKey = model.tables.some((table) =>
+    table.columns.some((column) => column.references?.table === table.name),
+  )
+
   const imports: string[] = []
+  if (usesForeignKey) imports.push('foreignKey')
   if (usesIndex) imports.push('index')
   imports.push('integer')
   imports.push('sqliteTable')
@@ -101,7 +120,7 @@ export function renderDrizzleSchema(model: LogicalModel): string {
   const sqlImport = usesSql ? "\nimport { sql } from 'drizzle-orm'" : ''
 
   const blocks = model.tables.map((table) => {
-    const columns = table.columns.map(renderColumn).join('\n')
+    const columns = table.columns.map((column) => renderColumn(table, column)).join('\n')
     return `export const ${toIdentifier(table.name)} = sqliteTable('${table.name}', {\n${columns}\n}${renderExtras(table)})`
   })
 

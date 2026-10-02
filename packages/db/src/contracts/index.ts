@@ -15,6 +15,7 @@ export {
   type BlockContent,
   type ContentSort,
   type ContentStatus,
+  type ContentType,
   type ListMediaQuery,
   type ListPostsQuery,
   type ListQuery,
@@ -37,8 +38,13 @@ export {
   type SiteWrite,
   type SocialLink,
   type SortDirection,
+  type Term,
+  type TermNode,
+  type TermWrite,
   type ThemeTemplate,
   type ThemeTemplateWrite,
+  type Vocabulary,
+  type VocabularyWrite,
 } from './types'
 
 export type {
@@ -48,5 +54,7 @@ export type {
   ProductRepository,
   Repositories,
   SiteRepository,
+  TermRepository,
   ThemeTemplateRepository,
+  VocabularyRepository,
 } from './repositories'

@@ -190,7 +190,100 @@ const themeTemplates: TableDef = {
   uniques: [{ columns: ['theme', 'path'] }],
 }
 
+/**
+ * Taxonomies, the Drupal way: a vocabulary is a named container of terms, and a
+ * content type says which vocabularies it may draw from.
+ *
+ * What this replaces is a single text column on the content type. That cannot be
+ * renamed without rewriting content, cannot be reused, and cannot nest.
+ */
+const vocabularies: TableDef = {
+  name: 'vocabularies',
+  note: 'A named set of terms. Bound to content types rather than to one of them.',
+  columns: [
+    { name: 'id', type: 'uuid', primaryKey: true },
+    { name: 'name', type: 'text', notNull: true },
+    { name: 'description', type: 'text' },
+    {
+      name: 'content_types',
+      type: 'json',
+      notNull: true,
+      defaultSql: "'[]'",
+      note: "which content types may use it: 'post' | 'product'",
+    },
+    { name: 'sort_order', type: 'integer', notNull: true, defaultSql: '0' },
+    { name: 'created_at', type: 'timestamp', notNull: true },
+    { name: 'updated_at', type: 'timestamp', notNull: true },
+  ],
+  // Two vocabularies with the same name would be indistinguishable in every
+  // picker, which is a mistake rather than a choice.
+  uniques: [{ columns: ['name'] }],
+  indexes: [{ name: 'idx_vocabularies_sort', columns: ['sort_order'] }],
+}
+
+const terms: TableDef = {
+  name: 'terms',
+  note: 'One term. `parent_id` is a self-reference, which is what makes it a tree.',
+  columns: [
+    { name: 'id', type: 'uuid', primaryKey: true },
+    {
+      name: 'vocabulary_id',
+      type: 'uuid',
+      notNull: true,
+      references: { table: 'vocabularies', column: 'id', onDelete: 'cascade' },
+    },
+    {
+      name: 'parent_id',
+      type: 'uuid',
+      // Deleting a branch takes its children with it: a child whose parent is
+      // gone has no path, and a term with no path is not a term.
+      references: { table: 'terms', column: 'id', onDelete: 'cascade' },
+    },
+    { name: 'name', type: 'text', notNull: true },
+    { name: 'slug', type: 'text', notNull: true },
+    { name: 'description', type: 'text' },
+    { name: 'sort_order', type: 'integer', notNull: true, defaultSql: '0' },
+    { name: 'created_at', type: 'timestamp', notNull: true },
+    { name: 'updated_at', type: 'timestamp', notNull: true },
+  ],
+  // Unique inside its vocabulary, not globally: two vocabularies may each have a
+  // term with the same slug.
+  uniques: [{ columns: ['vocabulary_id', 'slug'] }],
+  indexes: [
+    { name: 'idx_terms_vocabulary', columns: ['vocabulary_id', 'sort_order'] },
+    { name: 'idx_terms_parent', columns: ['parent_id'] },
+  ],
+}
+
+/**
+ * What a piece of content carries.
+ *
+ * A join table rather than a column, because a post may carry several terms --
+ * that is most of the point of a taxonomy. The unique index is the triple, not
+ * the id: the same term cannot be attached twice.
+ */
+const contentTerms: TableDef = {
+  name: 'content_terms',
+  note: 'Which terms a post or a product carries.',
+  columns: [
+    { name: 'id', type: 'uuid', primaryKey: true },
+    { name: 'content_type', type: 'text', notNull: true, note: "'post' | 'product'" },
+    { name: 'content_id', type: 'uuid', notNull: true },
+    {
+      name: 'term_id',
+      type: 'uuid',
+      notNull: true,
+      references: { table: 'terms', column: 'id', onDelete: 'cascade' },
+    },
+  ],
+  indexes: [
+    { name: 'idx_content_terms_content', columns: ['content_type', 'content_id'] },
+    { name: 'idx_content_terms_term', columns: ['term_id'] },
+    { name: 'uq_content_terms', columns: ['content_type', 'content_id', 'term_id'], unique: true },
+  ],
+}
+
 export const model: LogicalModel = {
   formatVersion: 1,
-  tables: [media, sites, pages, posts, products, themeTemplates],
+  tables: [media, sites, pages, posts, products, themeTemplates, vocabularies, terms, contentTerms],
 }

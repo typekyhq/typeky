@@ -12,6 +12,7 @@
 import type { TenantContext } from './context'
 import type {
   ContentStatus,
+  ContentType,
   ListMediaQuery,
   ListPostsQuery,
   ListQuery,
@@ -27,8 +28,13 @@ import type {
   ProductWrite,
   Site,
   SiteWrite,
+  Term,
+  TermNode,
+  TermWrite,
   ThemeTemplate,
   ThemeTemplateWrite,
+  Vocabulary,
+  VocabularyWrite,
 } from './types'
 
 export interface SiteRepository {
@@ -108,6 +114,43 @@ export interface ThemeTemplateRepository {
   reset(ctx: TenantContext, theme: string, path: string): Promise<boolean>
 }
 
+export interface VocabularyRepository {
+  list(ctx: TenantContext): Promise<Vocabulary[]>
+  byId(ctx: TenantContext, id: string): Promise<Vocabulary | null>
+  /** The vocabularies a content type may draw from, in sort order. */
+  forContentType(ctx: TenantContext, contentType: ContentType): Promise<Vocabulary[]>
+  /** Creates when `input.id` is absent, otherwise replaces that vocabulary. */
+  upsert(ctx: TenantContext, input: VocabularyWrite): Promise<Vocabulary>
+  /** Removes the vocabulary and, by cascade, every term in it. */
+  remove(ctx: TenantContext, id: string): Promise<boolean>
+}
+
+export interface TermRepository {
+  /** Every term of a vocabulary, flat and in the order the tree renders them. */
+  list(ctx: TenantContext, vocabularyId: string): Promise<Term[]>
+  /** The same terms assembled into a tree, which is what the admin edits. */
+  tree(ctx: TenantContext, vocabularyId: string): Promise<TermNode[]>
+  byId(ctx: TenantContext, id: string): Promise<Term | null>
+  /** The ancestry of a term, root first and the term itself last. */
+  path(ctx: TenantContext, id: string): Promise<Term[]>
+  /** Creates when `input.id` is absent, otherwise replaces that term. */
+  upsert(ctx: TenantContext, input: TermWrite): Promise<Term>
+  /** Removes the term, its descendants and its assignments. */
+  remove(ctx: TenantContext, id: string): Promise<boolean>
+  /**
+   * How many pieces of content carry this term.
+   *
+   * For the same reason media has a `usages`: a delete that says what it will
+   * affect is a delete someone can make a decision about. Deleting a term is not
+   * refused -- the assignments go with it -- so this is a warning, not a gate.
+   */
+  usage(ctx: TenantContext, id: string): Promise<number>
+  /** The terms a piece of content carries, vocabulary by vocabulary. */
+  forContent(ctx: TenantContext, contentType: ContentType, contentId: string): Promise<Term[]>
+  /** Replaces the terms on a piece of content with exactly this set. */
+  assign(ctx: TenantContext, contentType: ContentType, contentId: string, termIds: string[]): Promise<void>
+}
+
 export interface Repositories {
   sites: SiteRepository
   pages: PageRepository
@@ -115,4 +158,6 @@ export interface Repositories {
   products: ProductRepository
   media: MediaRepository
   themeTemplates: ThemeTemplateRepository
+  vocabularies: VocabularyRepository
+  terms: TermRepository
 }

@@ -214,6 +214,69 @@ export interface ThemeTemplateWrite {
   source: string
 }
 
+/* -------------------------------------------------------------- taxonomy -- */
+
+/*
+ * Taxonomies, the Drupal way: a vocabulary is a named container of terms, and a
+ * vocabulary says which content types may draw from it. A term may point at a
+ * parent, which is what makes a vocabulary a tree rather than a list.
+ *
+ * This replaces a single text column on the content type. The difference is not
+ * the shape of the form -- it is that a term exists independently of the content
+ * that uses it. That is what lets it be renamed once, reused by several posts,
+ * nested, and counted.
+ */
+
+/** The content types a vocabulary may be attached to. */
+export type ContentType = 'post' | 'product'
+
+export interface Vocabulary {
+  id: string
+  name: string
+  description: string | null
+  /** The content types allowed to draw from this vocabulary. */
+  contentTypes: ContentType[]
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Term {
+  id: string
+  vocabularyId: string
+  /** `null` for a root term. */
+  parentId: string | null
+  name: string
+  slug: string
+  description: string | null
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+/** A term with its children attached, which is how the admin tree renders it. */
+export interface TermNode extends Term {
+  children: TermNode[]
+}
+
+export interface VocabularyWrite {
+  id?: string
+  name: string
+  description?: string | null
+  contentTypes?: ContentType[]
+  sortOrder?: number
+}
+
+export interface TermWrite {
+  id?: string
+  vocabularyId: string
+  parentId?: string | null
+  name: string
+  slug: string
+  description?: string | null
+  sortOrder?: number
+}
+
 /* --------------------------------------------------------------- queries -- */
 
 export interface PageResult<T> {

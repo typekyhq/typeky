@@ -6,7 +6,7 @@ import { model } from './schema'
  * would emit something broken, so these run before the drift check.
  */
 describe('logical persistence model', () => {
-  it('declares exactly the six CE MVP tables', () => {
+  it('declares exactly the CE tables', () => {
     expect(model.tables.map((table) => table.name)).toEqual([
       'media',
       'sites',
@@ -14,6 +14,9 @@ describe('logical persistence model', () => {
       'posts',
       'products',
       'theme_templates',
+      'vocabularies',
+      'terms',
+      'content_terms',
     ])
   })
 
@@ -28,14 +31,34 @@ describe('logical persistence model', () => {
 
     for (const table of model.tables) {
       for (const column of table.columns) {
-        if (!column.references) continue
+        const target = column.references?.table
+        // A self-reference is not a forward reference: `terms.parent_id` points
+        // at the table it is part of, which is declared by definition.
+        if (target === undefined || target === table.name) continue
         expect(
-          declared.has(column.references.table),
-          `${table.name}.${column.name} references ${column.references.table}, which is declared later`,
+          declared.has(target),
+          `${table.name}.${column.name} references ${target}, which is declared later`,
         ).toBe(true)
       }
       declared.add(table.name)
     }
+  })
+
+  it('scopes term slugs to a vocabulary and assignments to one term each', () => {
+    const terms = model.tables.find((table) => table.name === 'terms')
+    expect(terms?.uniques).toEqual([{ columns: ['vocabulary_id', 'slug'] }])
+    expect(terms?.columns.find((column) => column.name === 'parent_id')?.references).toEqual({
+      table: 'terms',
+      column: 'id',
+      onDelete: 'cascade',
+    })
+
+    const assignments = model.tables.find((table) => table.name === 'content_terms')
+    expect(assignments?.indexes).toContainEqual({
+      name: 'uq_content_terms',
+      columns: ['content_type', 'content_id', 'term_id'],
+      unique: true,
+    })
   })
 
   it('gives every table one primary key and unique column names', () => {
