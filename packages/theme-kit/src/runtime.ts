@@ -1,4 +1,6 @@
 import { Liquid } from 'liquidjs'
+import type { FS } from 'liquidjs'
+import type { ParsedTemplateCache } from './cache'
 import { createPlatformFilters } from './filters'
 
 /**
@@ -134,6 +136,10 @@ export interface LiquidRuntimeOptions {
   translations?: Record<string, string>
   /** Wired from `@typeky/core` once `blockToHtml()` exists (M3). */
   renderBlocks?: (blocks: unknown) => string
+  /** Template filesystem. Without one, `{% render %}` and `{% layout %}` cannot resolve a name. */
+  fs?: FS
+  /** Parsed-template cache. Pass `createRevisionCache` so saving a template clears it. */
+  cache?: boolean | ParsedTemplateCache
 }
 
 export interface LiquidRuntime {
@@ -154,7 +160,9 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
   const limits: RenderLimits = { ...DEFAULT_RENDER_LIMITS, ...options.limits }
 
   const engine = new Liquid({
-    cache: true,
+    cache: options.cache ?? true,
+    // Names are theme-root relative; `./` and `../` are not a supported spelling.
+    relativeReference: false,
     // Reads own properties only, so `{{ x.constructor }}` cannot walk the
     // prototype chain.
     ownPropertyOnly: true,
@@ -170,6 +178,7 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
     parseLimit: limits.parseLimit,
     renderLimit: limits.renderLimit,
     memoryLimit: limits.memoryLimit,
+    ...(options.fs === undefined ? {} : { fs: options.fs }),
   })
 
   restrictRegistry(engine.tags, LIQUID_TAGS)

@@ -214,9 +214,19 @@ importers:
 
   packages/theme-kit:
     dependencies:
+      '@typeky/platform':
+        specifier: workspace:*
+        version: link:../platform
       liquidjs:
         specifier: ^10.29.0
         version: 10.29.0
+    devDependencies:
+      '@typeky/core':
+        specifier: workspace:*
+        version: link:../core
+      '@typeky/db':
+        specifier: workspace:*
+        version: link:../db
 
   packages/themes/default: {}
 

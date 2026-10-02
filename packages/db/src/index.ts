@@ -11,3 +11,7 @@
 
 export * from './contracts'
 export { createD1Repositories } from './repos/d1'
+
+// Build-time helpers, re-exported so tests and scripts can build the real schema
+// instead of hand-copying DDL. Neither pulls in drizzle-orm at runtime.
+export { renderDrizzleSchema, renderMigrationSql } from './generate'

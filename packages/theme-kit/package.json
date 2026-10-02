@@ -9,6 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@typeky/platform": "workspace:*",
     "liquidjs": "^10.29.0"
+  },
+  "devDependencies": {
+    "@typeky/core": "workspace:*",
+    "@typeky/db": "workspace:*"
   }
 }
