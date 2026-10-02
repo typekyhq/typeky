@@ -4,7 +4,7 @@ A lightweight site builder for **personal blogs, business websites and niche sit
 
 Deploy to **your own Cloudflare account** with **$0 monthly cost**. Content comes in three types — **pages, posts and products**. **Theme templates can be edited right in the admin panel and take effect immediately.**
 
-> **Status: early development.** This repository is a working skeleton; the product is **not yet usable**.
+> **Status: early development.** The admin panel works end to end — content, media and online theme editing — but the front end does not render pages yet, so a site cannot be hosted. That is the next milestone.
 > Progress lives in the commit log; each milestone is recorded in the [CHANGELOG](CHANGELOG.md).
 
 **English** | [简体中文](README.zh-CN.md)
@@ -75,6 +75,14 @@ pnpm check            # typecheck + tests + asset boundary assertions
 ```
 
 Read [CONTRIBUTING](CONTRIBUTING.md) before opening a pull request — it holds the architecture red lines and the commit conventions.
+
+## Documentation
+
+- [Documentation index](docs/README.md) — running it locally, and the day-to-day commands
+- [Theme development](docs/theme-development.md) — editing templates in the admin panel, and writing a theme: the Liquid surface, the data a template gets, and the four rules that are not obvious
+- [CONTRIBUTING](CONTRIBUTING.md) — repository layout, architecture red lines, and commit conventions
+- [CHANGELOG](CHANGELOG.md) — what each milestone delivered
+- [SECURITY](SECURITY.md) — reporting a vulnerability
 
 ## Roadmap
 
