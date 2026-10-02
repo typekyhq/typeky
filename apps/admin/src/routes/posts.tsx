@@ -1,16 +1,22 @@
-import type { PostSummary } from '@typeky/api'
+import type { BulkAction, PostSummary } from '@typeky/api'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import {
+  BulkBar,
+  describeBulk,
   formatDate,
   PAGE_SIZE,
   PageHeader,
   Pager,
   RowActions,
   SearchBox,
+  SelectionCell,
+  SelectionHead,
+  SortSelect,
   StatusFilterGroup,
   StatusText,
+  type SortChoice,
   type StatusFilter,
 } from '@/components/list-chrome'
 import { ErrorState, LoadingState } from '@/components/states'
@@ -29,6 +35,14 @@ import { describeApiError } from '@/lib/session'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
+/** Ordering a post list can ask for. One control holds the key and the direction. */
+const SORTS: readonly SortChoice[] = [
+  { value: 'published:desc', key: 'published', direction: 'desc', label: 'Newest published' },
+  { value: 'updated:desc', key: 'updated', direction: 'desc', label: 'Recently updated' },
+  { value: 'created:desc', key: 'created', direction: 'desc', label: 'Recently created' },
+  { value: 'title:asc', key: 'title', direction: 'asc', label: 'Title A–Z' },
+]
+
 export function PostsSection() {
   const client = useApiClient()
   const navigate = useNavigate()
@@ -42,9 +56,12 @@ export function PostsSection() {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
+  const [sort, setSort] = useState<SortChoice>(SORTS[0]!)
 
   const [attempt, setAttempt] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -54,6 +71,8 @@ export function PostsSection() {
       .listPosts({
         ...(filter === 'all' ? {} : { status: filter }),
         ...(search === '' ? {} : { search }),
+        sort: sort.key,
+        direction: sort.direction,
         limit: PAGE_SIZE,
         offset,
       })
@@ -62,6 +81,10 @@ export function PostsSection() {
           if (cancelled) return
           setItems(result.items)
           setTotal(result.total)
+          // A selection that survives a reload can contain rows that are no
+          // longer on screen, and a bulk action would then reach rows nobody
+          // can see.
+          setSelected(new Set())
           setState('ready')
         },
         (thrown: unknown) => {
@@ -74,9 +97,28 @@ export function PostsSection() {
     return () => {
       cancelled = true
     }
-  }, [client, filter, search, offset, attempt])
+  }, [client, filter, search, sort, offset, attempt])
 
   const reload = useCallback(() => setAttempt((value) => value + 1), [])
+
+  async function runBulk(action: BulkAction) {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (action === 'delete' && !window.confirm(`Delete ${String(ids.length)} post${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) {
+      return
+    }
+
+    setBulkBusy(true)
+    try {
+      toast.success(describeBulk(await client.bulkPosts(ids, action)))
+      setSelected(new Set())
+      reload()
+    } catch (thrown) {
+      toast.error(describeApiError(thrown))
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   async function toggleStatus(post: PostSummary) {
     setBusyId(post.id)
@@ -128,16 +170,35 @@ export function PostsSection() {
             setOffset(0)
           }}
         />
-        <SearchBox
-          value={searchInput}
-          onChange={setSearchInput}
-          placeholder="Title, slug or excerpt"
-          onSubmit={() => {
-            setSearch(searchInput.trim())
-            setOffset(0)
-          }}
-        />
+        <div className="flex flex-wrap items-end gap-2">
+          <SortSelect
+            choices={SORTS}
+            value={sort.value}
+            onChange={(next) => {
+              setSort(next)
+              setOffset(0)
+            }}
+          />
+          <SearchBox
+            value={searchInput}
+            onChange={setSearchInput}
+            placeholder="Title, slug or excerpt"
+            onSubmit={() => {
+              setSearch(searchInput.trim())
+              setOffset(0)
+            }}
+          />
+        </div>
       </div>
+
+      <BulkBar
+        count={selected.size}
+        busy={bulkBusy}
+        onPublish={() => void runBulk('publish')}
+        onDraft={() => void runBulk('draft')}
+        onDelete={() => void runBulk('delete')}
+        onClear={() => setSelected(new Set())}
+      />
 
       <Card>
         <CardContent>
@@ -154,6 +215,13 @@ export function PostsSection() {
               <caption className="sr-only">Posts</caption>
               <thead>
                 <tr className="border-b text-left">
+                  <SelectionHead
+                    allSelected={items.length > 0 && selected.size === items.length}
+                    someSelected={selected.size > 0}
+                    onChange={(next) =>
+                      setSelected(next ? new Set(items.map((post) => post.id)) : new Set())
+                    }
+                  />
                   <th scope="col" className="py-2 pr-3 font-medium">
                     Title
                   </th>
@@ -174,6 +242,18 @@ export function PostsSection() {
               <tbody>
                 {items.map((post) => (
                   <tr key={post.id} className="border-b align-top last:border-b-0">
+                    <SelectionCell
+                      label={post.title}
+                      checked={selected.has(post.id)}
+                      onChange={(next) =>
+                        setSelected((current) => {
+                          const updated = new Set(current)
+                          if (next) updated.add(post.id)
+                          else updated.delete(post.id)
+                          return updated
+                        })
+                      }
+                    />
                     <td className="py-3 pr-3">
                       <Link
                         to={`/posts/${post.id}`}

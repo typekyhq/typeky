@@ -14,6 +14,7 @@ import {
   type AdminEnv,
   type RepositoryResolver,
 } from './errors'
+import { readListQuery, runBulk } from './listing'
 
 /**
  * The product resource.
@@ -24,7 +25,6 @@ import {
  * that dropped one would silently empty a product's gallery.
  */
 
-const MAX_SEARCH_LENGTH = 200
 
 export async function readProducts(
   c: Context<AdminEnv>,
@@ -33,21 +33,10 @@ export async function readProducts(
   const store = repositories(c.env)
   if (store === null) return apiError(c, 'database_not_configured')
 
-  const status = c.req.query('status')
-  if (status !== undefined && status !== '' && status !== 'draft' && status !== 'published') {
-    return apiError(c, 'invalid_request', 'status must be draft or published')
-  }
+  const parsed = readListQuery(c)
+  if (!parsed.ok) return apiError(c, 'invalid_request', parsed.message)
 
-  const search = c.req.query('search')?.slice(0, MAX_SEARCH_LENGTH)
-  const limit = toInteger(c.req.query('limit'))
-  const offset = toInteger(c.req.query('offset'))
-
-  const result = await store.products.list(defaultContext(), {
-    ...(status === 'draft' || status === 'published' ? { status } : {}),
-    ...(search === undefined || search.trim() === '' ? {} : { search }),
-    ...(limit === undefined ? {} : { limit }),
-    ...(offset === undefined ? {} : { offset }),
-  })
+  const result = await store.products.list(defaultContext(), parsed.query)
 
   const body: ProductListResponse = {
     items: result.items.map(toSummary),
@@ -84,6 +73,14 @@ export function updateProduct(
   repositories: RepositoryResolver,
 ): Promise<Response> {
   return writeProduct(c, repositories, c.req.param('id'))
+}
+
+/** Publish, unpublish or delete a selection, in one request. */
+export function bulkProducts(
+  c: Context<AdminEnv>,
+  repositories: RepositoryResolver,
+): Promise<Response> {
+  return runBulk(c, repositories, (store) => store.products)
 }
 
 async function writeProduct(
@@ -212,12 +209,6 @@ function isUniqueViolation(error: unknown): boolean {
   return error instanceof Error && /UNIQUE constraint failed/i.test(error.message)
 }
 
-function toInteger(value: string | undefined): number | undefined {
-  if (value === undefined || value.trim() === '') return undefined
-
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined
-}
 
 function toSummary(product: Product): ProductSummary {
   return {

@@ -1,5 +1,5 @@
-import type { ContentStatus } from '@typeky/api'
-import type { FormEvent, ReactNode } from 'react'
+import type { BulkResult, ContentSort, ContentStatus, SortDirection } from '@typeky/api'
+import { type FormEvent, type ReactNode, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -153,6 +153,161 @@ export function Pager({
 
 export const PAGE_SIZE = 20
 
+/** The sort choices a list offers: the key and the direction, as one value. */
+export interface SortChoice {
+  /** `key:direction`, which is what the select holds. */
+  value: string
+  key: ContentSort
+  direction: SortDirection
+  label: string
+}
+
+export const SORT_DIRECTIONS_LIST: readonly SortDirection[] = ['asc', 'desc']
+
+/**
+ * One control for two values.
+ *
+ * The select holds `key:direction` rather than a separate direction toggle:
+ * sorting by a column and choosing which way is one decision, and a second
+ * control would let the two disagree in the URL.
+ */
+export function SortSelect({
+  choices,
+  value,
+  onChange,
+}: {
+  choices: readonly SortChoice[]
+  value: string
+  onChange: (next: SortChoice) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="list-sort">Sort</Label>
+      <select
+        id="list-sort"
+        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+        value={value}
+        onChange={(event) => {
+          const next = choices.find((choice) => choice.value === event.target.value)
+          if (next !== undefined) onChange(next)
+        }}
+      >
+        {choices.map((choice) => (
+          <option key={choice.value} value={choice.value}>
+            {choice.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+/**
+ * The select-all control.
+ *
+ * The indeterminate state matters: with some of the page selected, a ticked box
+ * would claim all of it is and an empty one would claim none is.
+ */
+export function SelectionHead({
+  allSelected,
+  someSelected,
+  onChange,
+}: {
+  allSelected: boolean
+  someSelected: boolean
+  onChange: (next: boolean) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (ref.current !== null) ref.current.indeterminate = someSelected && !allSelected
+  }, [someSelected, allSelected])
+
+  return (
+    <th scope="col" className="w-8 py-2 pr-2">
+      <input
+        ref={ref}
+        type="checkbox"
+        className="size-4 align-middle"
+        checked={allSelected}
+        aria-label="Select everything on this page"
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </th>
+  )
+}
+
+export function SelectionCell({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (next: boolean) => void
+}) {
+  return (
+    <td className="py-3 pr-2">
+      <input
+        type="checkbox"
+        className="size-4 align-middle"
+        checked={checked}
+        aria-label={`Select ${label}`}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </td>
+  )
+}
+
+/**
+ * What can be done with a selection.
+ *
+ * Shown only when there is one, so the list of a hundred looks the same as the
+ * list of one until it matters.
+ */
+export function BulkBar({
+  count,
+  busy,
+  onPublish,
+  onDraft,
+  onDelete,
+  onClear,
+}: {
+  count: number
+  busy: boolean
+  onPublish: () => void
+  onDraft: () => void
+  onDelete: () => void
+  onClear: () => void
+}) {
+  if (count === 0) return null
+
+  return (
+    <div
+      role="status"
+      className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2"
+      data-testid="bulk-bar"
+    >
+      <span className="text-sm font-medium">
+        {count} selected
+      </span>
+      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onPublish}>
+        Publish
+      </Button>
+      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onDraft}>
+        Move to draft
+      </Button>
+      <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onDelete}>
+        Delete
+      </Button>
+      <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onClear}>
+        Clear
+      </Button>
+    </div>
+  )
+}
+
+
 /** One row's actions, so every list offers the same two in the same order. */
 export function RowActions({
   status,
@@ -178,6 +333,16 @@ export function RowActions({
       </Button>
     </div>
   )
+}
+
+export function describeBulk(result: BulkResult): string {
+  if (result.changed === result.requested) {
+    return `${String(result.changed)} ${result.changed === 1 ? 'item' : 'items'} updated.`
+  }
+
+  // The selection is made in a browser and can be stale, so saying how many were
+  // actually there is more useful than reporting what was asked for.
+  return `${String(result.changed)} of ${String(result.requested)} changed; the rest were already gone.`
 }
 
 /** The status cell, spelled out rather than shown as a colour alone. */

@@ -11,6 +11,7 @@
 
 import type { TenantContext } from './context'
 import type {
+  ContentStatus,
   ListMediaQuery,
   ListPostsQuery,
   ListQuery,
@@ -47,7 +48,11 @@ export interface PageRepository {
   upsert(ctx: TenantContext, input: PageWrite): Promise<Page>
   /** Makes this page the home page, clearing the previous one atomically. */
   setHome(ctx: TenantContext, id: string): Promise<Page>
+  /** Publishes or unpublishes many rows in one statement. */
+  updateMany(ctx: TenantContext, ids: string[], change: { status: ContentStatus }): Promise<number>
   remove(ctx: TenantContext, id: string): Promise<boolean>
+  /** Removes many rows in one statement, answering how many existed. */
+  removeMany(ctx: TenantContext, ids: string[]): Promise<number>
 }
 
 export interface PostRepository {
@@ -55,7 +60,11 @@ export interface PostRepository {
   byId(ctx: TenantContext, id: string): Promise<Post | null>
   bySlug(ctx: TenantContext, slug: string): Promise<Post | null>
   upsert(ctx: TenantContext, input: PostWrite): Promise<Post>
+  /** Publishes or unpublishes many rows in one statement. */
+  updateMany(ctx: TenantContext, ids: string[], change: { status: ContentStatus }): Promise<number>
   remove(ctx: TenantContext, id: string): Promise<boolean>
+  /** Removes many rows in one statement, answering how many existed. */
+  removeMany(ctx: TenantContext, ids: string[]): Promise<number>
 }
 
 export interface ProductRepository {
@@ -63,7 +72,11 @@ export interface ProductRepository {
   byId(ctx: TenantContext, id: string): Promise<Product | null>
   bySlug(ctx: TenantContext, slug: string): Promise<Product | null>
   upsert(ctx: TenantContext, input: ProductWrite): Promise<Product>
+  /** Publishes or unpublishes many rows in one statement. */
+  updateMany(ctx: TenantContext, ids: string[], change: { status: ContentStatus }): Promise<number>
   remove(ctx: TenantContext, id: string): Promise<boolean>
+  /** Removes many rows in one statement, answering how many existed. */
+  removeMany(ctx: TenantContext, ids: string[]): Promise<number>
 }
 
 export interface MediaRepository {

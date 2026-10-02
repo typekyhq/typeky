@@ -229,9 +229,33 @@ export interface ListQuery {
   status?: ContentStatus
   /** Case-insensitive match on the resource's own text columns. */
   search?: string
+  /** Which column to order by; unknown values fall back to the natural order. */
+  sort?: ContentSort
+  direction?: SortDirection
   limit?: number
   offset?: number
 }
+
+/**
+ * The columns a list may be ordered by.
+ *
+ * A closed set rather than a column name, because this value ends up in the SQL
+ * text: the caller picks a key, and the key selects a statement this package
+ * wrote (see `orderByClause`).
+ */
+export type ContentSort = 'published' | 'updated' | 'created' | 'title' | 'order'
+
+export type SortDirection = 'asc' | 'desc'
+
+export const CONTENT_SORTS: readonly ContentSort[] = [
+  'published',
+  'updated',
+  'created',
+  'title',
+  'order',
+]
+
+export const SORT_DIRECTIONS: readonly SortDirection[] = ['asc', 'desc']
 
 export interface ListPostsQuery extends ListQuery {
   category?: string

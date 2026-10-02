@@ -45,6 +45,7 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     savePost: unexpected('savePost'),
     deletePost: unexpected('deletePost'),
     setPostStatus: unexpected('setPostStatus'),
+    bulkPosts: unexpected('bulkPosts'),
 
     async listPages() {
       return EMPTY_PAGE
@@ -55,6 +56,7 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     deletePage: unexpected('deletePage'),
     setPageStatus: unexpected('setPageStatus'),
     setPageHome: unexpected('setPageHome'),
+    bulkPages: unexpected('bulkPages'),
 
     async listProducts() {
       return EMPTY_PAGE
@@ -64,6 +66,7 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     saveProduct: unexpected('saveProduct'),
     deleteProduct: unexpected('deleteProduct'),
     setProductStatus: unexpected('setProductStatus'),
+    bulkProducts: unexpected('bulkProducts'),
 
     async listMedia() {
       return EMPTY_PAGE

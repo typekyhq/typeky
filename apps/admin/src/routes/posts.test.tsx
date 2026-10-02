@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ApiClient } from '@/lib/api-client'
 import { ApiClientProvider } from '@/lib/client-context'
 import { fakeApiClient } from '@/lib/testing'
+import { describeBulk } from '@/components/list-chrome'
 import { PostsSection } from './posts'
 
 const POSTS: PostSummary[] = [
@@ -198,5 +199,110 @@ describe('the post list', () => {
 
     expect(await screen.findByText('Nothing matches “nothing”.')).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
+  })
+})
+
+describe('sorting the list', () => {
+  it('asks for the ordering that was chosen, from the first page', async () => {
+    const listPosts = vi.fn(async () => ({ items: POSTS, total: 40, limit: 20, offset: 0 }))
+    renderSection(fakeApiClient({ listPosts }))
+
+    await screen.findByRole('link', { name: 'Release notes' })
+    await userEvent.selectOptions(screen.getByLabelText('Sort'), 'title:asc')
+
+    await waitFor(() => {
+      expect(listPosts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: 'title', direction: 'asc', offset: 0 }),
+      )
+    })
+  })
+})
+
+describe('acting on a selection', () => {
+  function withPosts(overrides: Partial<ApiClient> = {}): ApiClient {
+    return fakeApiClient({
+      async listPosts() {
+        return { items: POSTS, total: 2, limit: 20, offset: 0 }
+      },
+      ...overrides,
+    })
+  }
+
+  it('shows the bulk bar only once something is selected', async () => {
+    renderSection(withPosts())
+
+    await screen.findByRole('link', { name: 'Release notes' })
+    expect(screen.queryByTestId('bulk-bar')).toBeNull()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Release notes' }))
+
+    expect(screen.getByTestId('bulk-bar').textContent).toContain('1 selected')
+  })
+
+  it('selects the whole page from the header', async () => {
+    renderSection(withPosts())
+
+    await screen.findByRole('link', { name: 'Release notes' })
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select everything on this page' }))
+
+    expect(screen.getByTestId('bulk-bar').textContent).toContain('2 selected')
+  })
+
+  it('publishes the selection in one request', async () => {
+    const bulkPosts = vi.fn(async () => ({ action: 'publish' as const, requested: 2, changed: 2 }))
+    renderSection(withPosts({ bulkPosts }))
+
+    await screen.findByRole('link', { name: 'Release notes' })
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select everything on this page' }))
+    await userEvent.click(within(screen.getByTestId('bulk-bar')).getByRole('button', { name: 'Publish' }))
+
+    await waitFor(() => {
+      expect(bulkPosts).toHaveBeenCalledWith(['post_1', 'post_2'], 'publish')
+    })
+    // And the selection is cleared, because the rows underneath it just changed.
+    expect(screen.queryByTestId('bulk-bar')).toBeNull()
+  })
+
+  it('asks before deleting a selection, and does nothing when told no', async () => {
+    const bulkPosts = vi.fn()
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderSection(withPosts({ bulkPosts }))
+
+    await screen.findByRole('link', { name: 'Release notes' })
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Release notes' }))
+    await userEvent.click(within(screen.getByTestId('bulk-bar')).getByRole('button', { name: 'Delete' }))
+
+    expect(window.confirm).toHaveBeenCalled()
+    expect(bulkPosts).not.toHaveBeenCalled()
+  })
+
+  it('reports the action back to the list rather than guessing', async () => {
+    const bulkPosts = vi.fn(async () => ({ action: 'draft' as const, requested: 2, changed: 1 }))
+    renderSection(withPosts({ bulkPosts }))
+
+    await screen.findByRole('link', { name: 'Release notes' })
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select everything on this page' }))
+    await userEvent.click(within(screen.getByTestId('bulk-bar')).getByRole('button', { name: 'Move to draft' }))
+
+    await waitFor(() => {
+      expect(bulkPosts).toHaveBeenCalledWith(['post_1', 'post_2'], 'draft')
+    })
+    // The wording of the answer is `describeBulk`'s, tested on its own below.
+    expect(screen.queryByTestId('bulk-bar')).toBeNull()
+  })
+})
+
+describe('the bulk result wording', () => {
+  it('says the count when everything changed', () => {
+    expect(describeBulk({ action: 'publish', requested: 3, changed: 3 })).toBe('3 items updated.')
+    expect(describeBulk({ action: 'publish', requested: 1, changed: 1 })).toBe('1 item updated.')
+  })
+
+  it('says how many were actually there when the selection was stale', () => {
+    // The selection is made in a browser and somebody else may have deleted a
+    // row between the list rendering and the button being pressed.
+    expect(describeBulk({ action: 'delete', requested: 5, changed: 3 })).toBe(
+      '3 of 5 changed; the rest were already gone.',
+    )
   })
 })

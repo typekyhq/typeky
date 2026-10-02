@@ -6,11 +6,14 @@ export {
 } from './context'
 
 export {
+  CONTENT_SORTS,
   DEFAULT_PAGE_LIMIT,
   MAX_PAGE_LIMIT,
+  SORT_DIRECTIONS,
   escapeLikeTerm,
   resolveWindow,
   type BlockContent,
+  type ContentSort,
   type ContentStatus,
   type ListMediaQuery,
   type ListPostsQuery,
@@ -33,6 +36,7 @@ export {
   type SiteSettings,
   type SiteWrite,
   type SocialLink,
+  type SortDirection,
   type ThemeTemplate,
   type ThemeTemplateWrite,
 } from './types'

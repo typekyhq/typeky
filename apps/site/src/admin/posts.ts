@@ -15,6 +15,7 @@ import {
   type AdminEnv,
   type RepositoryResolver,
 } from './errors'
+import { readListQuery, runBulk } from './listing'
 
 /**
  * The post resource.
@@ -29,8 +30,6 @@ import {
  * field that quietly stops being saved.
  */
 
-/** A search long enough to be a mistake is truncated rather than refused. */
-const MAX_SEARCH_LENGTH = 200
 
 export async function readPosts(
   c: Context<AdminEnv>,
@@ -39,21 +38,10 @@ export async function readPosts(
   const store = repositories(c.env)
   if (store === null) return apiError(c, 'database_not_configured')
 
-  const status = c.req.query('status')
-  if (status !== undefined && status !== '' && status !== 'draft' && status !== 'published') {
-    return apiError(c, 'invalid_request', 'status must be draft or published')
-  }
+  const parsed = readListQuery(c)
+  if (!parsed.ok) return apiError(c, 'invalid_request', parsed.message)
 
-  const search = c.req.query('search')?.slice(0, MAX_SEARCH_LENGTH)
-  const limit = toInteger(c.req.query('limit'))
-  const offset = toInteger(c.req.query('offset'))
-
-  const result = await store.posts.list(defaultContext(), {
-    ...(status === 'draft' || status === 'published' ? { status } : {}),
-    ...(search === undefined || search.trim() === '' ? {} : { search }),
-    ...(limit === undefined ? {} : { limit }),
-    ...(offset === undefined ? {} : { offset }),
-  })
+  const result = await store.posts.list(defaultContext(), parsed.query)
 
   const body: PostListResponse = {
     items: result.items.map(toSummary),
@@ -84,6 +72,11 @@ export function createPost(c: Context<AdminEnv>, repositories: RepositoryResolve
 
 export function updatePost(c: Context<AdminEnv>, repositories: RepositoryResolver): Promise<Response> {
   return writePost(c, repositories, c.req.param('id'))
+}
+
+/** Publish, unpublish or delete a selection, in one request. */
+export function bulkPosts(c: Context<AdminEnv>, repositories: RepositoryResolver): Promise<Response> {
+  return runBulk(c, repositories, (store) => store.posts)
 }
 
 /**
@@ -234,12 +227,6 @@ function isUniqueViolation(error: unknown): boolean {
   return error instanceof Error && /UNIQUE constraint failed/i.test(error.message)
 }
 
-function toInteger(value: string | undefined): number | undefined {
-  if (value === undefined || value.trim() === '') return undefined
-
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined
-}
 
 function toSummary(post: Post): PostSummary {
   return {

@@ -84,6 +84,21 @@ function fakePagesRepository() {
       for (const [key, page] of rows) rows.set(key, { ...page, isHome: key === id })
       return { ...target, isHome: true }
     },
+    async updateMany(_ctx, ids, change) {
+      let changed = 0
+      for (const id of ids) {
+        const existing = rows.get(id)
+        if (existing === undefined) continue
+        rows.set(id, { ...existing, status: change.status, revision: existing.revision + 1 })
+        changed += 1
+      }
+      return changed
+    },
+    async removeMany(_ctx, ids) {
+      let removed = 0
+      for (const id of ids) if (rows.delete(id)) removed += 1
+      return removed
+    },
     async remove(_ctx, id) {
       return rows.delete(id)
     },

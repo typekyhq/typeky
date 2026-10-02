@@ -15,6 +15,7 @@ import {
 } from './media'
 import {
   createPage,
+  bulkPages,
   deletePage,
   readPage,
   readPages,
@@ -23,8 +24,17 @@ import {
   updatePage,
 } from './pages'
 import { verifyPassword } from './password'
-import { createPost, deletePost, readPost, readPosts, setPostStatus, updatePost } from './posts'
 import {
+  bulkPosts,
+  createPost,
+  deletePost,
+  readPost,
+  readPosts,
+  setPostStatus,
+  updatePost,
+} from './posts'
+import {
+  bulkProducts,
   createProduct,
   deleteProduct,
   readProduct,
@@ -128,6 +138,8 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // editor is creating or replacing.
   api.get('/posts', (c) => readPosts(c, repositories))
   api.post('/posts', (c) => createPost(c, repositories))
+  // Before `/:id`, or the id route would capture "bulk" as an id.
+  api.post('/posts/bulk', (c) => bulkPosts(c, repositories))
   api.get('/posts/:id', (c) => readPost(c, repositories))
   api.put('/posts/:id', (c) => updatePost(c, repositories))
   api.delete('/posts/:id', (c) => deletePost(c, repositories))
@@ -138,6 +150,7 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // Pages, the same shape, plus the one flag the database allows only once.
   api.get('/pages', (c) => readPages(c, repositories))
   api.post('/pages', (c) => createPage(c, repositories))
+  api.post('/pages/bulk', (c) => bulkPages(c, repositories))
   api.get('/pages/:id', (c) => readPage(c, repositories))
   api.put('/pages/:id', (c) => updatePage(c, repositories))
   api.delete('/pages/:id', (c) => deletePage(c, repositories))
@@ -150,6 +163,7 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // Products, the same shape again.
   api.get('/products', (c) => readProducts(c, repositories))
   api.post('/products', (c) => createProduct(c, repositories))
+  api.post('/products/bulk', (c) => bulkProducts(c, repositories))
   api.get('/products/:id', (c) => readProduct(c, repositories))
   api.put('/products/:id', (c) => updateProduct(c, repositories))
   api.delete('/products/:id', (c) => deleteProduct(c, repositories))

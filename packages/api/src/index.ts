@@ -35,12 +35,22 @@ export {
 } from './blocks'
 
 export {
+  BULK_ACTIONS,
   CONTENT_SLUG_PATTERN,
+  CONTENT_SORTS,
+  SORT_DIRECTIONS,
+  bulkRequestSchema,
   contentSlugSchema,
   contentStatusSchema,
+  bulkResultSchema,
   seoMetadataSchema,
+  type BulkAction,
+  type BulkRequest,
+  type BulkResult,
+  type ContentSort,
   type ContentStatus,
   type SeoMetadata,
+  type SortDirection,
 } from './content'
 
 export {

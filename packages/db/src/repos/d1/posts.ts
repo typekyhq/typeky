@@ -1,8 +1,16 @@
 import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
 import { resolveWindow } from '../../contracts'
-import type { ListPostsQuery, Post, PostRepository, PostWrite, SeoMetadata, TenantContext } from '../../contracts'
-import { asDate, searchAcross } from './support'
+import type {
+  ContentStatus,
+  ListPostsQuery,
+  Post,
+  PostRepository,
+  PostWrite,
+  SeoMetadata,
+  TenantContext,
+} from '../../contracts'
+import { asDate, deleteMany, orderByClause, searchAcross, setStatusMany } from './support'
 
 const COLUMNS = [
   'id',
@@ -57,6 +65,14 @@ function toPost(row: PostRow): Post {
   }
 }
 
+/** What a post list may be sorted by. A closed map, because a sort key becomes SQL. */
+const SORTABLE = {
+  published: 'published_at',
+  updated: 'updated_at',
+  created: 'created_at',
+  title: 'title',
+}
+
 export function createPostRepository(db: DbPort): PostRepository {
   async function findById(id: string): Promise<Post | null> {
     const row = await db.first<PostRow>(`SELECT ${COLUMNS} FROM posts WHERE id = ?`, [id])
@@ -98,7 +114,7 @@ export function createPostRepository(db: DbPort): PostRepository {
       // id tie-breaker keeps the order total, so OFFSET paging cannot repeat or
       // skip a row when several posts share a timestamp.
       const rows = await db.all<PostRow>(
-        `SELECT ${COLUMNS} FROM posts${where} ORDER BY published_at DESC, created_at DESC, id DESC LIMIT ? OFFSET ?`,
+        `SELECT ${COLUMNS} FROM posts${where} ORDER BY ${orderByClause(SORTABLE, query.sort, query.direction, 'published_at DESC, created_at DESC, id DESC')} LIMIT ? OFFSET ?`,
         [...params, limit, offset],
       )
 
@@ -179,6 +195,14 @@ export function createPostRepository(db: DbPort): PostRepository {
       const saved = await findById(id)
       if (saved === null) throw new Error(`post ${id} disappeared during upsert`)
       return saved
+    },
+
+    async updateMany(_ctx: TenantContext, ids: string[], change: { status: ContentStatus }): Promise<number> {
+      return setStatusMany(db, 'posts', ids, change.status)
+    },
+
+    async removeMany(_ctx: TenantContext, ids: string[]): Promise<number> {
+      return deleteMany(db, 'posts', ids)
     },
 
     async remove(_ctx: TenantContext, id: string): Promise<boolean> {

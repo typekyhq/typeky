@@ -1,15 +1,21 @@
-import type { ProductSummary } from '@typeky/api'
+import type { BulkAction, ProductSummary } from '@typeky/api'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import {
+  BulkBar,
+  describeBulk,
   PAGE_SIZE,
   PageHeader,
   Pager,
   RowActions,
   SearchBox,
+  SelectionCell,
+  SelectionHead,
+  SortSelect,
   StatusFilterGroup,
   StatusText,
+  type SortChoice,
   type StatusFilter,
 } from '@/components/list-chrome'
 import { ErrorState, LoadingState } from '@/components/states'
@@ -21,6 +27,13 @@ import { describeApiError } from '@/lib/session'
 /** The product list. Same shape as the other two, showing the price label. */
 
 type LoadState = 'loading' | 'ready' | 'error'
+
+/** Ordering a product list can ask for. */
+const SORTS: readonly SortChoice[] = [
+  { value: 'order:asc', key: 'order', direction: 'asc', label: 'Manual order' },
+  { value: 'updated:desc', key: 'updated', direction: 'desc', label: 'Recently updated' },
+  { value: 'title:asc', key: 'title', direction: 'asc', label: 'Title A–Z' },
+]
 
 export function ProductsSection() {
   const client = useApiClient()
@@ -35,9 +48,12 @@ export function ProductsSection() {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
+  const [sort, setSort] = useState<SortChoice>(SORTS[0]!)
 
   const [attempt, setAttempt] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -47,6 +63,8 @@ export function ProductsSection() {
       .listProducts({
         ...(filter === 'all' ? {} : { status: filter }),
         ...(search === '' ? {} : { search }),
+        sort: sort.key,
+        direction: sort.direction,
         limit: PAGE_SIZE,
         offset,
       })
@@ -55,6 +73,7 @@ export function ProductsSection() {
           if (cancelled) return
           setItems(result.items)
           setTotal(result.total)
+          setSelected(new Set())
           setState('ready')
         },
         (thrown: unknown) => {
@@ -67,9 +86,33 @@ export function ProductsSection() {
     return () => {
       cancelled = true
     }
-  }, [client, filter, search, offset, attempt])
+  }, [client, filter, search, sort, offset, attempt])
 
   const reload = useCallback(() => setAttempt((value) => value + 1), [])
+
+  async function runBulk(action: BulkAction) {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (
+      action === 'delete' &&
+      !window.confirm(
+        `Delete ${String(ids.length)} product${ids.length === 1 ? '' : 's'}? This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+
+    setBulkBusy(true)
+    try {
+      toast.success(describeBulk(await client.bulkProducts(ids, action)))
+      setSelected(new Set())
+      reload()
+    } catch (thrown) {
+      toast.error(describeApiError(thrown))
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   async function toggleStatus(product: ProductSummary) {
     setBusyId(product.id)
@@ -120,16 +163,35 @@ export function ProductsSection() {
             setOffset(0)
           }}
         />
-        <SearchBox
-          value={searchInput}
-          onChange={setSearchInput}
-          placeholder="Title, slug or summary"
-          onSubmit={() => {
-            setSearch(searchInput.trim())
-            setOffset(0)
-          }}
-        />
+        <div className="flex flex-wrap items-end gap-2">
+          <SortSelect
+            choices={SORTS}
+            value={sort.value}
+            onChange={(next) => {
+              setSort(next)
+              setOffset(0)
+            }}
+          />
+          <SearchBox
+            value={searchInput}
+            onChange={setSearchInput}
+            placeholder="Title, slug or summary"
+            onSubmit={() => {
+              setSearch(searchInput.trim())
+              setOffset(0)
+            }}
+          />
+        </div>
       </div>
+
+      <BulkBar
+        count={selected.size}
+        busy={bulkBusy}
+        onPublish={() => void runBulk('publish')}
+        onDraft={() => void runBulk('draft')}
+        onDelete={() => void runBulk('delete')}
+        onClear={() => setSelected(new Set())}
+      />
 
       <Card>
         <CardContent>
@@ -146,6 +208,13 @@ export function ProductsSection() {
               <caption className="sr-only">Products</caption>
               <thead>
                 <tr className="border-b text-left">
+                  <SelectionHead
+                    allSelected={items.length > 0 && selected.size === items.length}
+                    someSelected={selected.size > 0}
+                    onChange={(next) =>
+                      setSelected(next ? new Set(items.map((product) => product.id)) : new Set())
+                    }
+                  />
                   <th scope="col" className="py-2 pr-3 font-medium">
                     Title
                   </th>
@@ -166,6 +235,18 @@ export function ProductsSection() {
               <tbody>
                 {items.map((product) => (
                   <tr key={product.id} className="border-b align-top last:border-b-0">
+                    <SelectionCell
+                      label={product.title}
+                      checked={selected.has(product.id)}
+                      onChange={(next) =>
+                        setSelected((current) => {
+                          const updated = new Set(current)
+                          if (next) updated.add(product.id)
+                          else updated.delete(product.id)
+                          return updated
+                        })
+                      }
+                    />
                     <td className="py-3 pr-3">
                       <Link
                         to={`/products/${product.id}`}

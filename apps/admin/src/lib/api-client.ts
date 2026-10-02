@@ -10,9 +10,13 @@ import {
   mediaListResponseSchema,
   mediaItemSchema,
   mediaUsageSchema,
+  bulkResultSchema,
   sessionSchema,
   siteResponseSchema,
   type ApiErrorCode,
+  type BulkAction,
+  type BulkResult,
+  type ContentSort,
   type ContentStatus,
   type LoginRequest,
   type MediaItem,
@@ -30,6 +34,7 @@ import {
   type Session,
   type SiteResponse,
   type SiteWrite,
+  type SortDirection,
 } from '@typeky/api'
 
 /**
@@ -85,6 +90,7 @@ export interface ApiClient {
   savePost(id: string, post: PostWrite): Promise<PostResponse>
   deletePost(id: string): Promise<void>
   setPostStatus(id: string, status: ContentStatus): Promise<PostResponse>
+  bulkPosts(ids: string[], action: BulkAction): Promise<BulkResult>
 
   listPages(query?: ContentQuery): Promise<PageListResponse>
   getPage(id: string): Promise<PageResponse>
@@ -93,6 +99,7 @@ export interface ApiClient {
   deletePage(id: string): Promise<void>
   setPageStatus(id: string, status: ContentStatus): Promise<PageResponse>
   setPageHome(id: string): Promise<PageResponse>
+  bulkPages(ids: string[], action: BulkAction): Promise<BulkResult>
 
   listProducts(query?: ContentQuery): Promise<ProductListResponse>
   getProduct(id: string): Promise<ProductResponse>
@@ -100,6 +107,7 @@ export interface ApiClient {
   saveProduct(id: string, product: ProductWrite): Promise<ProductResponse>
   deleteProduct(id: string): Promise<void>
   setProductStatus(id: string, status: ContentStatus): Promise<ProductResponse>
+  bulkProducts(ids: string[], action: BulkAction): Promise<BulkResult>
 
   listMedia(query?: MediaQuery): Promise<MediaListResponse>
   uploadMedia(file: File, details: { alt?: string; width?: number; height?: number }): Promise<MediaItem>
@@ -121,6 +129,9 @@ export interface ContentQuery {
   status?: ContentStatus
   /** Matched against the resource's own text columns. */
   search?: string
+  /** Which column to order by. Unknown keys fall back to the natural order. */
+  sort?: ContentSort
+  direction?: SortDirection
   limit?: number
   offset?: number
 }
@@ -409,6 +420,30 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       )
     },
 
+    async bulkPosts(ids, action) {
+      return readContract(
+        bulkResultSchema,
+        await send('POST', '/posts/bulk', { ids, action }),
+        'the bulk response did not match the contract',
+      )
+    },
+
+    async bulkPages(ids, action) {
+      return readContract(
+        bulkResultSchema,
+        await send('POST', '/pages/bulk', { ids, action }),
+        'the bulk response did not match the contract',
+      )
+    },
+
+    async bulkProducts(ids, action) {
+      return readContract(
+        bulkResultSchema,
+        await send('POST', '/products/bulk', { ids, action }),
+        'the bulk response did not match the contract',
+      )
+    },
+
     async listMedia(query = {}) {
       const params = new URLSearchParams()
       if (query.search !== undefined && query.search.trim() !== '') params.set('search', query.search.trim())
@@ -473,6 +508,8 @@ function toQueryString(query: ContentQuery): string {
 
   if (query.status !== undefined) params.set('status', query.status)
   if (query.search !== undefined && query.search.trim() !== '') params.set('search', query.search.trim())
+  if (query.sort !== undefined) params.set('sort', query.sort)
+  if (query.direction !== undefined) params.set('direction', query.direction)
   if (query.limit !== undefined) params.set('limit', String(query.limit))
   if (query.offset !== undefined && query.offset > 0) params.set('offset', String(query.offset))
 

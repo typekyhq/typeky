@@ -157,4 +157,84 @@ describe('post repository', () => {
 
     expect((await posts.list(ctx, { search: '   ' })).total).toBe(1)
   })
+
+  it('orders by an allowed column, and falls back for one it does not know', async () => {
+    const { posts } = setup()
+    await posts.upsert(ctx, { title: 'Beta', slug: 'beta', status: 'published' })
+    await posts.upsert(ctx, { title: 'Alpha', slug: 'alpha', status: 'published' })
+
+    const byTitle = await posts.list(ctx, { sort: 'title', direction: 'asc' })
+    expect(byTitle.items.map((post) => post.title)).toEqual(['Alpha', 'Beta'])
+
+    // A bookmarked URL with a sort this version no longer offers should still
+    // show a list rather than fail.
+    const unknown = await posts.list(ctx, { sort: 'nonexistent' as never })
+    expect(unknown.items).toHaveLength(2)
+  })
+
+  it('keeps paging stable when rows share the value it sorts by', async () => {
+    const { posts } = setup()
+    for (const slug of ['a', 'b', 'c']) await posts.upsert(ctx, { title: slug.toUpperCase(), slug })
+
+    // Every row was created in the same millisecond, so without the id
+    // tie-breaker a second page could repeat or skip one.
+    const first = await posts.list(ctx, { sort: 'created', direction: 'asc', limit: 2, offset: 0 })
+    const second = await posts.list(ctx, { sort: 'created', direction: 'asc', limit: 2, offset: 2 })
+
+    expect([...first.items, ...second.items].map((post) => post.slug)).toEqual(['a', 'b', 'c'])
+  })
+})
+
+/**
+ * Bulk actions.
+ *
+ * Tested on one repository rather than three: the statements come from the
+ * shared helpers in `support.ts`, so what differs per resource is only the table
+ * name, which the other two repositories' own tests already exercise through
+ * their single-row writes.
+ */
+describe('bulk actions', () => {
+  it('publishes a selection in one statement', async () => {
+    const { posts } = setup()
+    const first = await posts.upsert(ctx, { title: 'First', slug: 'first' })
+    const second = await posts.upsert(ctx, { title: 'Second', slug: 'second' })
+    const untouched = await posts.upsert(ctx, { title: 'Untouched', slug: 'untouched' })
+
+    const changed = await posts.updateMany(ctx, [first.id, second.id], { status: 'published' })
+
+    expect(changed).toBe(2)
+    expect((await posts.byId(ctx, first.id))?.status).toBe('published')
+    expect((await posts.byId(ctx, first.id))?.publishedAt).not.toBeNull()
+    expect((await posts.byId(ctx, untouched.id))?.status).toBe('draft')
+  })
+
+  it('keeps the original publish date across an unpublish and republish', async () => {
+    const { posts } = setup()
+    const post = await posts.upsert(ctx, { title: 'Hello', slug: 'hello', status: 'published' })
+    const publishedAt = post.publishedAt
+
+    await posts.updateMany(ctx, [post.id], { status: 'draft' })
+    expect((await posts.byId(ctx, post.id))?.publishedAt).toBeNull()
+
+    await posts.updateMany(ctx, [post.id], { status: 'published' })
+    expect((await posts.byId(ctx, post.id))?.publishedAt).toEqual(publishedAt)
+  })
+
+  it('deletes a selection and answers how many were there', async () => {
+    const { posts } = setup()
+    const first = await posts.upsert(ctx, { title: 'First', slug: 'first' })
+    const second = await posts.upsert(ctx, { title: 'Second', slug: 'second' })
+
+    expect(await posts.removeMany(ctx, [first.id, second.id, 'never-existed'])).toBe(2)
+    expect(await posts.list(ctx)).toMatchObject({ total: 0 })
+  })
+
+  it('does nothing at all for an empty selection', async () => {
+    const { posts } = setup()
+    await posts.upsert(ctx, { title: 'Hello', slug: 'hello' })
+
+    expect(await posts.updateMany(ctx, [], { status: 'published' })).toBe(0)
+    expect(await posts.removeMany(ctx, [])).toBe(0)
+    expect((await posts.list(ctx)).total).toBe(1)
+  })
 })

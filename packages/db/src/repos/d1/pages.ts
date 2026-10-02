@@ -1,8 +1,25 @@
 import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
 import { resolveWindow } from '../../contracts'
-import type { ListQuery, Page, PageRepository, PageResult, PageWrite, SeoMetadata, TenantContext } from '../../contracts'
-import { asBoolean, asDate, searchAcross } from './support'
+import type {
+  ContentStatus,
+  ListQuery,
+  Page,
+  PageRepository,
+  PageResult,
+  PageWrite,
+  SeoMetadata,
+  TenantContext,
+} from '../../contracts'
+
+/** What a page list may be sorted by. A closed map, because a sort key becomes SQL. */
+const SORTABLE = {
+  order: 'sort_order',
+  updated: 'updated_at',
+  created: 'created_at',
+  title: 'title',
+}
+import { asBoolean, asDate, deleteMany, orderByClause, searchAcross, setStatusMany } from './support'
 
 const COLUMNS = [
   'id',
@@ -79,7 +96,7 @@ export function createPageRepository(db: DbPort): PageRepository {
 
       const count = await db.first<{ total: number }>(`SELECT count(*) AS total FROM pages${where}`, params)
       const rows = await db.all<PageRow>(
-        `SELECT ${COLUMNS} FROM pages${where} ORDER BY sort_order ASC, created_at ASC, id ASC LIMIT ? OFFSET ?`,
+        `SELECT ${COLUMNS} FROM pages${where} ORDER BY ${orderByClause(SORTABLE, query.sort, query.direction, 'sort_order ASC, created_at ASC, id ASC')} LIMIT ? OFFSET ?`,
         [...params, limit, offset],
       )
 
@@ -156,6 +173,14 @@ export function createPageRepository(db: DbPort): PageRepository {
       const saved = await findById(id)
       if (saved === null) throw new Error(`page ${id} disappeared while setting it as home`)
       return saved
+    },
+
+    async updateMany(_ctx: TenantContext, ids: string[], change: { status: ContentStatus }): Promise<number> {
+      return setStatusMany(db, 'pages', ids, change.status)
+    },
+
+    async removeMany(_ctx: TenantContext, ids: string[]): Promise<number> {
+      return deleteMany(db, 'pages', ids)
     },
 
     async remove(_ctx: TenantContext, id: string): Promise<boolean> {

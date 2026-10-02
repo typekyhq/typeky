@@ -1,5 +1,5 @@
 import { CSRF_HEADER } from '@typeky/api'
-import type { Post, PostRepository } from '@typeky/db'
+import type { ListQuery, Post, PostRepository } from '@typeky/db'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { fakeKv, makeTestEnv } from '../testing/env'
 import { createAdminApi } from './api'
@@ -28,9 +28,15 @@ beforeAll(async () => {
 function fakePostsRepository() {
   const rows = new Map<string, Post>()
   let sequence = 0
+  let lastQuery: ListQuery | undefined
 
   const repository: PostRepository = {
     async list(_ctx, query = {}) {
+      // Recorded rather than acted on: the ordering itself is SQL, and it is
+      // tested in @typeky/db. What this layer owes is passing the validated
+      // values through.
+      lastQuery = query
+
       const limit = query.limit ?? 20
       const offset = query.offset ?? 0
       const search = query.search?.toLowerCase()
@@ -78,16 +84,31 @@ function fakePostsRepository() {
       rows.set(id, post)
       return post
     },
+    async updateMany(_ctx, ids, change) {
+      let changed = 0
+      for (const id of ids) {
+        const existing = rows.get(id)
+        if (existing === undefined) continue
+        rows.set(id, { ...existing, status: change.status, revision: existing.revision + 1 })
+        changed += 1
+      }
+      return changed
+    },
+    async removeMany(_ctx, ids) {
+      let removed = 0
+      for (const id of ids) if (rows.delete(id)) removed += 1
+      return removed
+    },
     async remove(_ctx, id) {
       return rows.delete(id)
     },
   }
 
-  return { repository, rows }
+  return { repository, rows, lastQuery: () => lastQuery }
 }
 
 function setup(options: { repositories?: RepositoryResolver } = {}) {
-  const { repository, rows } = fakePostsRepository()
+  const { repository, rows, lastQuery } = fakePostsRepository()
   const cache = fakeKv()
 
   const api = createAdminApi({
@@ -137,7 +158,7 @@ function setup(options: { repositories?: RepositoryResolver } = {}) {
     )
   }
 
-  return { send, signIn, write, rows, repository }
+  return { send, signIn, write, rows, lastQuery }
 }
 
 const DRAFT = { title: 'Hello', slug: 'hello' }
@@ -358,8 +379,7 @@ describe('publishing from the list', () => {
   })
 })
 
-describe('deleting posts', () => {
-  it('deletes and then reports it gone', async () => {
+describe('deleting posts', () => {  it('deletes and then reports it gone', async () => {
     const { signIn, write, send } = setup()
     const auth = await signIn()
     const created = (await (await write('POST', '/posts', DRAFT, auth)).json()) as { id: string }
@@ -385,5 +405,100 @@ describe('deleting posts', () => {
     )
 
     expect(response.status).toBe(404)
+  })
+})
+
+describe('bulk actions', () => {
+  it('publishes a selection and answers how many changed', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+    const first = (await (await write('POST', '/posts', { title: 'A', slug: 'a' }, auth)).json()) as { id: string }
+    const second = (await (await write('POST', '/posts', { title: 'B', slug: 'b' }, auth)).json()) as { id: string }
+
+    const response = await write('POST', '/posts/bulk', { ids: [first.id, second.id], action: 'publish' }, auth)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ action: 'publish', requested: 2, changed: 2 })
+  })
+
+  it('says how many were actually there when the selection is stale', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+    const first = (await (await write('POST', '/posts', { title: 'A', slug: 'a' }, auth)).json()) as { id: string }
+
+    // Somebody else deleted one of these between the list rendering and the
+    // button being pressed.
+    const response = await write('POST', '/posts/bulk', { ids: [first.id, 'ghost'], action: 'draft' }, auth)
+
+    await expect(response.json()).resolves.toEqual({ action: 'draft', requested: 2, changed: 1 })
+  })
+
+  it('deletes a selection', async () => {
+    const { signIn, write, send } = setup()
+    const auth = await signIn()
+    const created = (await (await write('POST', '/posts', { title: 'A', slug: 'a' }, auth)).json()) as { id: string }
+
+    const response = await write('POST', '/posts/bulk', { ids: [created.id], action: 'delete' }, auth)
+
+    await expect(response.json()).resolves.toEqual({ action: 'delete', requested: 1, changed: 1 })
+    expect(((await (await send('/posts', undefined, auth.cookie)).json()) as { total: number }).total).toBe(0)
+  })
+
+  it('refuses an empty selection, an unknown action, and one over the cap', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+
+    expect((await write('POST', '/posts/bulk', { ids: [], action: 'publish' }, auth)).status).toBe(400)
+    expect((await write('POST', '/posts/bulk', { ids: ['a'], action: 'archive' }, auth)).status).toBe(400)
+
+    const tooMany = Array.from({ length: 101 }, (_, index) => `post_${String(index)}`)
+    expect((await write('POST', '/posts/bulk', { ids: tooMany, action: 'delete' }, auth)).status).toBe(400)
+  })
+
+  it('needs the CSRF token, like every other write', async () => {
+    const { signIn, send } = setup()
+    const auth = await signIn()
+
+    const response = await send(
+      '/posts/bulk',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: ['post_1'], action: 'publish' }),
+      },
+      auth.cookie,
+    )
+
+    expect(response.status).toBe(403)
+  })
+})
+
+describe('sorting', () => {
+  it('passes an allowed sort and direction through to the repository', async () => {
+    const { signIn, send, lastQuery } = setup()
+    const auth = await signIn()
+
+    await send('/posts?sort=title&direction=asc', undefined, auth.cookie)
+
+    expect(lastQuery()).toMatchObject({ sort: 'title', direction: 'asc' })
+  })
+
+  it('ignores a sort key it does not know rather than failing', async () => {
+    const { signIn, send, lastQuery } = setup()
+    const auth = await signIn()
+
+    expect((await send('/posts?sort=whatever', undefined, auth.cookie)).status).toBe(200)
+    // Not passed on, so the repository falls back to its natural order.
+    expect(lastQuery()?.sort).toBeUndefined()
+  })
+
+  it('refuses a direction it cannot honour', async () => {
+    const { signIn, send } = setup()
+    const auth = await signIn()
+
+    const response = await send('/posts?direction=sideways', undefined, auth.cookie)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid_request' })
   })
 })
