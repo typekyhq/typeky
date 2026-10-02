@@ -233,6 +233,8 @@ export interface ListQuery {
 
 export interface ListPostsQuery extends ListQuery {
   category?: string
+  /** Case-insensitive match on title, slug or excerpt. */
+  search?: string
 }
 
 export interface ListMediaQuery {
@@ -240,6 +242,18 @@ export interface ListMediaQuery {
   search?: string
   limit?: number
   offset?: number
+}
+
+/**
+ * Neutralises the wildcards in a search term before it reaches `LIKE`.
+ *
+ * Without this, a search for `100%` matches every row and `a_b` matches `aXb`:
+ * the operator gets a confident wrong answer rather than an error, which is the
+ * worse failure. The escape character is the backslash, which is why it is
+ * escaped first.
+ */
+export function escapeLikeTerm(term: string): string {
+  return term.replace(/[\\%_]/g, (character) => `\\${character}`)
 }
 
 export const DEFAULT_PAGE_LIMIT = 20

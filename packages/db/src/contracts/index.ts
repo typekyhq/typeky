@@ -8,6 +8,7 @@ export {
 export {
   DEFAULT_PAGE_LIMIT,
   MAX_PAGE_LIMIT,
+  escapeLikeTerm,
   resolveWindow,
   type BlockContent,
   type ContentStatus,

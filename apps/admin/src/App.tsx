@@ -8,6 +8,8 @@ import { SignInScreen } from '@/components/sign-in-screen'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { PagesSection } from '@/routes/pages-section'
+import { PostEditorPage } from '@/routes/post-editor'
+import { PostsSection } from '@/routes/posts'
 import { SettingsPage } from '@/routes/settings'
 import { ApiClientProvider } from '@/lib/client-context'
 import { apiClient } from '@/lib/client'
@@ -30,6 +32,7 @@ import { useSession, type SessionController } from '@/lib/session'
  */
 const BUILT_SECTIONS: Record<string, ReactNode> = {
   '/pages': <PagesSection />,
+  '/posts': <PostsSection />,
   '/settings': <SettingsPage />,
 }
 
@@ -110,6 +113,9 @@ function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void 
                 element={BUILT_SECTIONS[section.to] ?? <SectionPage section={section} />}
               />
             ))}
+            {/* Not a section: it has no place in the menu, and `/posts/new` is
+                the same screen as `/posts/:id` with nothing loaded yet. */}
+            <Route path="/posts/:id" element={<PostEditorPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { ApiError, type ApiClient } from './lib/api-client'
 import { NAVIGATION } from './lib/navigation'
+import { fakeApiClient } from './lib/testing'
 
 const SESSION: Session = {
   actorId: 'admin',
@@ -19,21 +20,15 @@ function never(): Promise<never> {
 }
 
 function fakeClient(overrides: Partial<ApiClient> = {}): ApiClient {
-  return {
-    csrfToken: undefined,
-    setCsrfToken() {},
-    get: never,
-    post: never,
-    async delete() {},
+  return fakeApiClient({
     async signIn() {
       return SESSION
     },
-    async signOut() {},
     async loadSession() {
       return SESSION
     },
     ...overrides,
-  } as ApiClient
+  })
 }
 
 function renderApp(client: ApiClient, path = '/') {

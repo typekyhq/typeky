@@ -34,12 +34,18 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   admin_password_not_configured: 'No admin password is configured on this deployment.',
   database_not_configured: 'This deployment has no database configured.',
   not_found: 'That endpoint does not exist yet.',
+  slug_taken: 'That slug is already in use. Choose another one.',
   internal_error: 'The server could not complete the request.',
 }
 
 /** Turns any thrown value into something worth showing a person. */
 export function describeApiError(thrown: unknown): string {
-  if (thrown instanceof ApiError) return MESSAGES[thrown.code]
+  if (thrown instanceof ApiError) {
+    // The server's words when it sent any. A slug conflict names the post that
+    // already holds the slug, and no table of per-code wording can say that.
+    return thrown.serverMessage ?? MESSAGES[thrown.code]
+  }
+
   if (thrown instanceof Error) return thrown.message
   return 'Something went wrong.'
 }

@@ -101,4 +101,60 @@ describe('post repository', () => {
     expect(await posts.remove(ctx, post.id)).toBe(true)
     expect(await posts.remove(ctx, post.id)).toBe(false)
   })
+
+  it('searches title, slug and excerpt without regard to case', async () => {
+    const { posts } = setup()
+    await posts.upsert(ctx, { title: 'Deploying with Workers', slug: 'deploying', excerpt: 'Edge notes' })
+    await posts.upsert(ctx, { title: 'Something else', slug: 'something-else', excerpt: 'About a WORKER pool' })
+    await posts.upsert(ctx, { title: 'Unrelated', slug: 'unrelated' })
+
+    const byTitle = await posts.list(ctx, { search: 'deploying' })
+    expect(byTitle.items.map((post) => post.slug)).toEqual(['deploying'])
+
+    const byExcerpt = await posts.list(ctx, { search: 'worker' })
+    expect(byExcerpt.items.map((post) => post.slug).sort()).toEqual(['deploying', 'something-else'])
+
+    const bySlug = await posts.list(ctx, { search: 'unrelated' })
+    expect(bySlug.items.map((post) => post.slug)).toEqual(['unrelated'])
+  })
+
+  it('treats a percent sign in a search term as a character, not a wildcard', async () => {
+    const { posts } = setup()
+    await posts.upsert(ctx, { title: '100% cotton', slug: 'cotton' })
+    await posts.upsert(ctx, { title: '100 things', slug: 'things' })
+
+    const found = await posts.list(ctx, { search: '100%' })
+
+    // Without escaping this matches everything, and the operator gets a
+    // confident wrong answer rather than an error.
+    expect(found.items.map((post) => post.slug)).toEqual(['cotton'])
+  })
+
+  it('treats an underscore the same way', async () => {
+    const { posts } = setup()
+    await posts.upsert(ctx, { title: 'file_name', slug: 'underscore' })
+    await posts.upsert(ctx, { title: 'fileXname', slug: 'other' })
+
+    const found = await posts.list(ctx, { search: 'file_name' })
+
+    expect(found.items.map((post) => post.slug)).toEqual(['underscore'])
+  })
+
+  it('combines a search with a status filter and counts only what matches', async () => {
+    const { posts } = setup()
+    await posts.upsert(ctx, { title: 'Release notes', slug: 'release-notes', status: 'published' })
+    await posts.upsert(ctx, { title: 'Release plan', slug: 'release-plan' })
+
+    const found = await posts.list(ctx, { search: 'release', status: 'published' })
+
+    expect(found.total).toBe(1)
+    expect(found.items[0]?.slug).toBe('release-notes')
+  })
+
+  it('ignores a blank search rather than matching nothing', async () => {
+    const { posts } = setup()
+    await posts.upsert(ctx, { title: 'Hello', slug: 'hello' })
+
+    expect((await posts.list(ctx, { search: '   ' })).total).toBe(1)
+  })
 })

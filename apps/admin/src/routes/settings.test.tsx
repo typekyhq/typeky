@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError, type ApiClient } from '@/lib/api-client'
 import { ApiClientProvider } from '@/lib/client-context'
+import { fakeApiClient } from '@/lib/testing'
 import { SettingsPage } from './settings'
 
 const SITE: SiteResponse = {
@@ -25,25 +26,8 @@ const SITE: SiteResponse = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
-function never(): Promise<never> {
-  return new Promise(() => undefined)
-}
-
 function fakeClient(overrides: Partial<ApiClient> = {}): ApiClient {
-  return {
-    csrfToken: undefined,
-    setCsrfToken() {},
-    get: never,
-    post: never,
-    put: never,
-    async delete() {},
-    async signIn() {
-      throw new Error('not used')
-    },
-    async signOut() {},
-    async loadSession() {
-      throw new Error('not used')
-    },
+  return fakeApiClient({
     async getSite() {
       return SITE
     },
@@ -51,7 +35,7 @@ function fakeClient(overrides: Partial<ApiClient> = {}): ApiClient {
       return { ...SITE, ...write, updatedAt: '2026-02-02T00:00:00.000Z' }
     },
     ...overrides,
-  } as ApiClient
+  })
 }
 
 function renderPage(client: ApiClient) {

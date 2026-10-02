@@ -30,7 +30,7 @@ export function PagesSection() {
         </AlertDescription>
       </Alert>
 
-      <LazyBlockEditor onChange={(document) => setBlocks(document.content?.length ?? 0)} />
+      <LazyBlockEditor onChange={(blocks) => setBlocks(blocks.length)} />
 
       <p className="text-sm text-muted-foreground" data-testid="block-count">
         {blocks} top-level {blocks === 1 ? 'block' : 'blocks'}

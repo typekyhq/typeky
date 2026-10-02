@@ -1,7 +1,7 @@
 import { siteWriteSchema, type SiteResponse } from '@typeky/api'
-import { defaultContext, type Repositories, type Site } from '@typeky/db'
+import { defaultContext, type Site } from '@typeky/db'
 import type { Context } from 'hono'
-import { apiError, readJsonBody, type AdminEnv } from './errors'
+import { apiError, describeIssues, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
 
 /**
  * The site document.
@@ -15,9 +15,6 @@ import { apiError, readJsonBody, type AdminEnv } from './errors'
  * repository and the wire format a compile error, and it is where the `Date`
  * columns become ISO strings.
  */
-
-/** How a request finds its repositories; the app supplies the D1 one. */
-export type RepositoryResolver = (env: AdminEnv['Bindings']) => Repositories | null
 
 export async function readSite(c: Context<AdminEnv>, repositories: RepositoryResolver): Promise<Response> {
   const store = repositories(c.env)
@@ -62,13 +59,4 @@ function toResponse(site: Site): SiteResponse {
     nav: site.nav,
     updatedAt: site.updatedAt.toISOString(),
   }
-}
-
-/** Names the offending fields, which is all an authenticated operator needs. */
-function describeIssues(issues: ReadonlyArray<{ path: ReadonlyArray<unknown> }>): string {
-  const paths = issues
-    .map((issue) => issue.path.map((segment) => String(segment)).join('.'))
-    .filter((path) => path !== '')
-
-  return paths.length === 0 ? 'the request body is not valid' : `invalid fields: ${paths.join(', ')}`
 }

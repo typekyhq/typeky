@@ -1,27 +1,33 @@
+import type { Block } from '@typeky/core'
 import type { JSONContent } from '@tiptap/core'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { DragHandle } from '@tiptap/extension-drag-handle-react'
 import { useMemo } from 'react'
+import { fromBlockJSON, toBlockJSON } from './mapping'
 import { createEditorExtensions } from './schema'
 import { EditorToolbar } from './toolbar'
 
 /**
  * The block editor.
  *
- * Its `onChange` hands back ProseMirror JSON. Turning that into the stored Block
- * JSON is the mapping layer's job (M3-S2) and producing HTML is `blockToHtml`'s
- * (M3-S3) -- this component never touches either, which is what keeps the
- * editor's internal document model from leaking into stored content or markup.
+ * It speaks the stored format, not ProseMirror's: `initialBlocks` and `onChange`
+ * are Block JSON, and the two conversions happen here, inside the package. That
+ * is deliberate. A caller holding ProseMirror JSON would have to import the
+ * mapping layer to store anything, and in the admin that means the editor's
+ * dependencies land in the first-screen bundle however carefully the component
+ * itself is lazy-loaded.
+ *
+ * Producing HTML is `blockToHtml`'s job alone, so nothing here emits markup.
  *
  * Three ways to reach every block, in increasing order of how much a keyboard is
  * required: the toolbar, the `/` menu, and the shortcuts for moving a block.
  */
 
 export interface BlockEditorProps {
-  /** ProseMirror JSON to start from. */
-  initialContent?: JSONContent
-  /** Called with ProseMirror JSON after every change. */
-  onChange?: (document: JSONContent) => void
+  /** Stored Block JSON to open. */
+  initialBlocks?: Block[]
+  /** Called with stored Block JSON after every change. */
+  onChange?: (blocks: Block[]) => void
   /** Set false to render a read-only preview. */
   editable?: boolean
   /** Accessible name for the editable region. */
@@ -31,7 +37,7 @@ export interface BlockEditorProps {
 const EMPTY_DOCUMENT: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] }
 
 export function BlockEditor({
-  initialContent = EMPTY_DOCUMENT,
+  initialBlocks,
   onChange,
   editable = true,
   label = 'Content',
@@ -40,7 +46,7 @@ export function BlockEditor({
 
   const editor = useEditor({
     extensions,
-    content: initialContent,
+    content: initialBlocks === undefined ? EMPTY_DOCUMENT : fromBlockJSON(initialBlocks),
     editable,
     editorProps: {
       attributes: {
@@ -50,7 +56,7 @@ export function BlockEditor({
         class: 'min-h-40 px-3 py-2 focus:outline-none',
       },
     },
-    onUpdate: ({ editor: current }) => onChange?.(current.getJSON()),
+    onUpdate: ({ editor: current }) => onChange?.(toBlockJSON(current.getJSON())),
   })
 
   // `useEditor` returns null on the first render by design.

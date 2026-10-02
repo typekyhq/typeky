@@ -22,6 +22,8 @@ export const API_ERROR_CODES = [
   'admin_password_not_configured',
   'database_not_configured',
   'not_found',
+  /** The content's slug is already in use, so the URL would be ambiguous. */
+  'slug_taken',
   'internal_error',
 ] as const
 
@@ -39,6 +41,7 @@ export const API_ERROR_STATUS: Record<ApiErrorCode, number> = {
   admin_password_not_configured: 503,
   database_not_configured: 503,
   not_found: 404,
+  slug_taken: 409,
   internal_error: 500,
 }
 

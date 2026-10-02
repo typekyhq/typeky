@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { Block } from '@typeky/core'
 import { Editor, type JSONContent } from '@tiptap/core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -8,6 +9,9 @@ import { createEditorExtensions, HEADING_LEVELS } from './schema'
 import { BLOCK_ACTIONS } from './block-actions'
 
 const open: Editor[] = []
+
+/** A call to action with every attribute present, which is what a block holds. */
+const emptyCta: Block = { type: 'cta', title: '', body: '', label: '', href: '' }
 
 function editorWith(content?: JSONContent): Editor {
   const editor = new Editor({
@@ -177,15 +181,15 @@ describe('the editor component', () => {
     expect(screen.getByRole('button', { name: 'Heading 2' }).getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('reports ProseMirror JSON after a change', async () => {
+  it('reports Block JSON after a change', async () => {
     const onChange = vi.fn()
     render(<BlockEditor onChange={onChange} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Divider' }))
 
     expect(onChange).toHaveBeenCalled()
-    const document = onChange.mock.calls.at(-1)?.[0] as JSONContent
-    expect(nodeTypes(document)).toContain('horizontalRule')
+    const blocks = onChange.mock.calls.at(-1)?.[0] as Block[]
+    expect(blocks.map((block) => block.type)).toContain('divider')
   })
 
   it('hides the toolbar when it is read-only', () => {
@@ -198,16 +202,14 @@ describe('the editor component', () => {
 
 describe('block node views', () => {
   it('shows an empty state for an image and offers alt text', () => {
-    render(
-      <BlockEditor initialContent={{ type: 'doc', content: [{ type: 'image', attrs: { mediaId: '', alt: null } }] }} />,
-    )
+    render(<BlockEditor initialBlocks={[{ type: 'image', mediaId: '', alt: null }]} />)
 
     expect(screen.getByText('No image chosen yet.')).toBeTruthy()
     expect(screen.getByLabelText('Alt text')).toHaveProperty('value', '')
   })
 
   it('labels every call-to-action control', () => {
-    render(<BlockEditor initialContent={{ type: 'doc', content: [{ type: 'cta' }] }} />)
+    render(<BlockEditor initialBlocks={[emptyCta]} />)
 
     for (const label of ['Call to action title', 'Call to action body', 'Button label', 'Button link']) {
       expect(screen.getByLabelText(label), label).toBeTruthy()
@@ -216,11 +218,11 @@ describe('block node views', () => {
 
   it('writes an edited attribute back to the document', async () => {
     const onChange = vi.fn()
-    render(<BlockEditor initialContent={{ type: 'doc', content: [{ type: 'cta' }] }} onChange={onChange} />)
+    render(<BlockEditor initialBlocks={[emptyCta]} onChange={onChange} />)
 
     await userEvent.type(screen.getByLabelText('Call to action title'), 'Hello')
 
-    const document = onChange.mock.calls.at(-1)?.[0] as JSONContent
-    expect(findNode(document, 'cta')?.attrs?.title).toBe('Hello')
+    const blocks = onChange.mock.calls.at(-1)?.[0] as Block[]
+    expect(blocks.find((block) => block.type === 'cta')).toMatchObject({ title: 'Hello' })
   })
 })

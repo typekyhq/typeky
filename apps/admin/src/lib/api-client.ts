@@ -1,10 +1,16 @@
 import {
   CSRF_HEADER,
   apiErrorBodySchema,
+  getPostListResponseSchema,
+  getPostResponseSchema,
   sessionSchema,
   siteResponseSchema,
   type ApiErrorCode,
+  type ContentStatus,
   type LoginRequest,
+  type PostListResponse,
+  type PostResponse,
+  type PostWrite,
   type Session,
   type SiteResponse,
   type SiteWrite,
@@ -22,12 +28,21 @@ import {
 export class ApiError extends Error {
   readonly code: ApiErrorCode
   readonly status: number
+  /**
+   * The server's own explanation, when it sent one.
+   *
+   * Kept separate from `message` so a caller can tell "the server said why"
+   * from "the constructor fell back to the code", which is what decides whether
+   * the curated client-side wording is worth showing instead.
+   */
+  readonly serverMessage: string | undefined
 
   constructor(code: ApiErrorCode, status: number, message?: string) {
     super(message ?? code)
     this.name = 'ApiError'
     this.code = code
     this.status = status
+    this.serverMessage = message
   }
 }
 
@@ -47,6 +62,22 @@ export interface ApiClient {
 
   getSite(): Promise<SiteResponse>
   saveSite(site: SiteWrite): Promise<SiteResponse>
+
+  listPosts(query?: PostQuery): Promise<PostListResponse>
+  getPost(id: string): Promise<PostResponse>
+  createPost(post: PostWrite): Promise<PostResponse>
+  savePost(id: string, post: PostWrite): Promise<PostResponse>
+  deletePost(id: string): Promise<void>
+  setPostStatus(id: string, status: ContentStatus): Promise<PostResponse>
+}
+
+/** The filters the list screen can ask for. */
+export interface PostQuery {
+  status?: ContentStatus
+  /** Matched against title, slug and excerpt. */
+  search?: string
+  limit?: number
+  offset?: number
 }
 
 /**
@@ -185,7 +216,68 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         'the save response did not match the contract',
       )
     },
+
+    async listPosts(query = {}) {
+      return readContract(
+        getPostListResponseSchema(),
+        await send('GET', `/posts${toQueryString(query)}`),
+        'the post list did not match the contract',
+      )
+    },
+
+    async getPost(id) {
+      return readContract(
+        getPostResponseSchema(),
+        await send('GET', `/posts/${encodeURIComponent(id)}`),
+        'the post did not match the contract',
+      )
+    },
+
+    async createPost(post) {
+      return readContract(
+        getPostResponseSchema(),
+        await send('POST', '/posts', post),
+        'the save response did not match the contract',
+      )
+    },
+
+    async savePost(id, post) {
+      return readContract(
+        getPostResponseSchema(),
+        await send('PUT', `/posts/${encodeURIComponent(id)}`, post),
+        'the save response did not match the contract',
+      )
+    },
+
+    async deletePost(id) {
+      await send('DELETE', `/posts/${encodeURIComponent(id)}`)
+    },
+
+    async setPostStatus(id, status) {
+      return readContract(
+        getPostResponseSchema(),
+        await send('POST', `/posts/${encodeURIComponent(id)}/status`, { status }),
+        'the status response did not match the contract',
+      )
+    },
   }
 
   return client
+}
+
+/**
+ * Only the filters that were set reach the URL, so a request without a search
+ * term cannot be answered from a different cache entry than a request for
+ * everything.
+ */
+function toQueryString(query: PostQuery): string {
+  const params = new URLSearchParams()
+
+  if (query.status !== undefined) params.set('status', query.status)
+  if (query.search !== undefined && query.search.trim() !== '') params.set('search', query.search.trim())
+  if (query.limit !== undefined) params.set('limit', String(query.limit))
+  if (query.offset !== undefined && query.offset > 0) params.set('offset', String(query.offset))
+
+  const encoded = params.toString()
+  return encoded === '' ? '' : `?${encoded}`
 }

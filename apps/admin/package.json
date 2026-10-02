@@ -12,6 +12,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@typeky/api": "workspace:*",
+    "@typeky/core": "workspace:*",
     "@typeky/editor": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",

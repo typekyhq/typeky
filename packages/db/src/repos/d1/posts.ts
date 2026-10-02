@@ -1,6 +1,6 @@
 import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
-import { resolveWindow } from '../../contracts'
+import { escapeLikeTerm, resolveWindow } from '../../contracts'
 import type { ListPostsQuery, Post, PostRepository, PostWrite, SeoMetadata, TenantContext } from '../../contracts'
 import { asDate } from './support'
 
@@ -77,6 +77,20 @@ export function createPostRepository(db: DbPort): PostRepository {
         conditions.push('category = ?')
         params.push(query.category)
       }
+
+      // `lower()` on both sides rather than `LIKE`, which is only
+      // case-insensitive for ASCII in SQLite. `coalesce` because a null excerpt
+      // would make the whole comparison null, and a null condition is not a
+      // false one in the way the surrounding AND expects.
+      const search = query.search?.trim()
+      if (search !== undefined && search !== '') {
+        const term = `%${escapeLikeTerm(search.toLowerCase())}%`
+        conditions.push(
+          `(lower(title) LIKE ? ESCAPE '\\' OR lower(slug) LIKE ? ESCAPE '\\' OR lower(coalesce(excerpt, '')) LIKE ? ESCAPE '\\')`,
+        )
+        params.push(term, term, term)
+      }
+
       const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : ''
 
       const count = await db.first<{ total: number }>(`SELECT count(*) AS total FROM posts${where}`, params)

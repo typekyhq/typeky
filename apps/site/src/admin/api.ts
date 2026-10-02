@@ -1,12 +1,12 @@
 import { CSRF_HEADER, loginRequestSchema } from '@typeky/api'
-import type { Repositories } from '@typeky/db'
 import { Hono } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import type { MiddlewareHandler } from 'hono'
 import { repositoriesFor } from '../repositories'
 import { csrfTokenMatches, isSafeMethod } from './csrf'
-import { apiError, readJsonBody, type AdminEnv } from './errors'
+import { apiError, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
 import { verifyPassword } from './password'
+import { createPost, deletePost, readPost, readPosts, setPostStatus, updatePost } from './posts'
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_OPTIONS,
@@ -15,7 +15,7 @@ import {
   destroySession,
   readSession,
 } from './session'
-import { readSite, writeSite, type RepositoryResolver } from './site'
+import { readSite, writeSite } from './site'
 
 /**
  * The admin JSON API.
@@ -94,6 +94,18 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
 
   api.get('/site', (c) => readSite(c, repositories))
   api.put('/site', (c) => writeSite(c, repositories))
+
+  // Posts. `POST /posts` and `PUT /posts/:id` differ only in whether an id comes
+  // from the path, which is what makes "save" the same operation whether the
+  // editor is creating or replacing.
+  api.get('/posts', (c) => readPosts(c, repositories))
+  api.post('/posts', (c) => createPost(c, repositories))
+  api.get('/posts/:id', (c) => readPost(c, repositories))
+  api.put('/posts/:id', (c) => updatePost(c, repositories))
+  api.delete('/posts/:id', (c) => deletePost(c, repositories))
+  // Its own endpoint so the list can publish without the whole document and
+  // without a second round trip to fetch it.
+  api.post('/posts/:id/status', (c) => setPostStatus(c, repositories))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 
