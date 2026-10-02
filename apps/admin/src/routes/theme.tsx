@@ -57,6 +57,39 @@ function leafName(path: string): string {
   return path.split('/').at(-1) ?? path
 }
 
+/**
+ * What a file is for, in the reader's language.
+ *
+ * The key is derived from the path rather than looked up in a table here:
+ * `templates/post` is `theme.file.templates.post`. A theme the platform does not
+ * know has no such key, and then this returns nothing and the row shows the name
+ * alone -- a table would be a table that goes wrong the first time somebody ships
+ * a theme.
+ *
+ * A missing key renders as the key itself, so "is there one" has to be asked by
+ * comparing. `theme.file.templates.about` on screen would be worse than nothing.
+ */
+function fileDescription(path: string, t: (key: string) => string): string {
+  const key = `theme.file.${path.replace(/\//g, '.')}`
+  const text = t(key)
+
+  return text === key ? '' : text
+}
+
+/**
+ * The name a screen reader reads for a file.
+ *
+ * Stated rather than left to the markup: the row is several spans, and the name
+ * computed from them runs the words together -- "postCustomised" is what it read
+ * out before. Every word here is on the screen, in the same order, which is what
+ * a label matching its name asks for.
+ */
+function spokenName(item: ThemeTemplateSummary, description: string, customised: string): string {
+  return [leafName(item.path), item.overridden ? customised : '', description]
+    .filter((part) => part !== '')
+    .join(', ')
+}
+
 export function ThemeSection() {
   const t = useT()
   const client = useApiClient()
@@ -236,7 +269,7 @@ export function ThemeSection() {
         */}
         <nav
           aria-label={t('theme.treeLabel')}
-          className="rounded-lg border p-2 md:w-64 md:shrink-0"
+          className="rounded-lg border p-2 md:w-72 md:shrink-0"
           data-testid="theme-tree"
         >
           <ul className="space-y-1">
@@ -271,6 +304,7 @@ export function ThemeSection() {
                       <ul className="space-y-0.5">
                         {grouped.map((item) => {
                           const isOpen = item.path === openPath
+                          const description = fileDescription(item.path, t)
 
                           return (
                             <li key={item.path}>
@@ -284,28 +318,29 @@ export function ThemeSection() {
                                  * The visible text is contained in this, so the
                                  * name still matches what is on screen.
                                  */
-                                aria-label={
-                                  item.overridden
-                                    ? `${leafName(item.path)}, ${t('theme.customised')}`
-                                    : leafName(item.path)
-                                }
+                                aria-label={spokenName(item, description, t('theme.customised'))}
                                 onClick={() => void open(item.path)}
                                 className={cn(
-                                  'flex w-full items-center gap-2 rounded-md py-1.5 pr-2 pl-7 text-left text-sm outline-none',
+                                  'flex w-full flex-col gap-0.5 rounded-md py-1.5 pr-2 pl-7 text-left text-sm outline-none',
                                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                                   isOpen
                                     ? 'bg-accent font-medium text-accent-foreground'
                                     : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
                                 )}
                               >
-                                <span className="truncate font-mono">{leafName(item.path)}</span>
-                                {item.overridden && (
-                                  <span
-                                    className="ml-auto shrink-0 rounded-full border px-2 py-0.5 text-xs"
-                                    data-testid="customised-marker"
-                                  >
-                                    {t('theme.customised')}
-                                  </span>
+                                <span className="flex w-full items-center gap-2">
+                                  <span className="truncate font-mono">{leafName(item.path)}</span>
+                                  {item.overridden && (
+                                    <span
+                                      className="ml-auto shrink-0 rounded-full border px-2 py-0.5 text-xs"
+                                      data-testid="customised-marker"
+                                    >
+                                      {t('theme.customised')}
+                                    </span>
+                                  )}
+                                </span>
+                                {description !== '' && (
+                                  <span className="text-xs font-normal text-muted-foreground">{description}</span>
                                 )}
                               </button>
                             </li>

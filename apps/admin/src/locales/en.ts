@@ -381,6 +381,24 @@ export const en: Locale = {
   'productEditor.specs.empty': 'No specifications yet.',
   'productEditor.seoFallback': "Left empty, the product’s title and summary are used, then the site defaults.",
 
+  // What each file the bundled theme ships is for. Keyed by path, dots for
+  // slashes, so a missing one is a missing key rather than a wrong description.
+  'theme.file.layouts.base': 'The page shell every template renders into: head, header, footer and the stylesheet.',
+  'theme.file.templates.home': 'The front page, rendered from the page marked as the home page.',
+  'theme.file.templates.post': 'One blog post: title, date, cover, body and tags.',
+  'theme.file.templates.posts': 'The list of posts, ten to a page, with paging.',
+  'theme.file.templates.page': 'A standalone page, such as About or Contact.',
+  'theme.file.templates.product': 'One product: cover, gallery, body, specs and the link out.',
+  'theme.file.templates.products': 'The list of products, ten to a page.',
+  'theme.file.templates.404': 'What a visitor sees for an address that does not exist.',
+  'theme.file.snippets.header': 'The site name, logo and menu at the top of every page.',
+  'theme.file.snippets.footer': 'The bottom of every page: footer text, social links and the attribution.',
+  'theme.file.snippets.post-card': 'One card in the post list: cover, title, date, category and summary.',
+  'theme.file.snippets.product-card': 'One card in the product list: cover, title, price and summary.',
+  'theme.file.snippets.pagination': 'The newer/older links and the page count under a list.',
+  'theme.file.snippets.cookie-consent': 'The cookie notice, shown until a visitor accepts it.',
+  'theme.file.snippets.seo-meta': 'What a search engine or a chat client reads: title, description, Open Graph and structured data.',
+
   // The theme screen.
   'theme.title': 'Theme',
   'theme.loadFailed': 'Cannot load the theme',

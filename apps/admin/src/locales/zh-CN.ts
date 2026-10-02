@@ -376,6 +376,24 @@ export const zhCN: Locale = {
   'productEditor.specs.add': '添加规格',
   'productEditor.seoFallback': '留空时使用产品自己的标题与摘要，再退回到站点默认值。',
 
+  // What each file the bundled theme ships is for. Keyed by path, dots for
+  // slashes, so a missing one is a missing key rather than a wrong description.
+  'theme.file.layouts.base': '所有模板渲染进的外壳：head、页头、页脚与样式表。',
+  'theme.file.templates.home': '首页，由被标记为首页的那个页面渲染。',
+  'theme.file.templates.post': '一篇文章：标题、日期、封面、正文与标签。',
+  'theme.file.templates.posts': '文章列表，每页十篇，带翻页。',
+  'theme.file.templates.page': '独立页面，例如「关于」「联系方式」。',
+  'theme.file.templates.product': '一个产品：封面、图集、正文、规格与外链。',
+  'theme.file.templates.products': '产品列表，每页十个。',
+  'theme.file.templates.404': '访客访问不存在的地址时看到的页面。',
+  'theme.file.snippets.header': '每个页面顶部的站点名、标志与菜单。',
+  'theme.file.snippets.footer': '每个页面的底部：页脚文字、社交链接与署名。',
+  'theme.file.snippets.post-card': '文章列表里的一张卡片：封面、标题、日期、分类与摘要。',
+  'theme.file.snippets.product-card': '产品列表里的一张卡片：封面、标题、价格与摘要。',
+  'theme.file.snippets.pagination': '列表下方的「更新/更早」链接与页码。',
+  'theme.file.snippets.cookie-consent': 'Cookie 提示条，在访客接受之前一直显示。',
+  'theme.file.snippets.seo-meta': '搜索引擎与聊天客户端读到的内容：标题、描述、Open Graph 与结构化数据。',
+
   // The theme screen.
   'theme.title': '主题',
   'theme.loadFailed': '无法加载主题',

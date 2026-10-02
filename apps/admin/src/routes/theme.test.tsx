@@ -5,7 +5,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ApiClient } from '@/lib/api-client'
+import { BASELINE_NAMES } from '@typeky/theme-default'
 import { ApiClientProvider } from '@/lib/client-context'
+import { LOCALES } from '@/locales'
 import { fakeApiClient } from '@/lib/testing'
 import { ThemeSection } from './theme'
 
@@ -71,12 +73,12 @@ function withTheme(overrides: Partial<ApiClient> = {}): ApiClient {
 /**
  * Opens a file from the tree, the way a person does: click its name.
  *
- * The name is the file and, for one that has been edited, the badge beside it --
- * which is what is on the row. Anchored, so that `post` does not also match
- * `posts` and make the query ambiguous.
+ * The name is the file, then whatever else the row says -- the badge for one
+ * that has been edited, and what the file is for. Anchored with a comma so that
+ * `post` does not also match `posts`, which would make the query ambiguous.
  */
 async function openFile(name: string): Promise<void> {
-  await userEvent.click(await screen.findByRole('button', { name: new RegExp(`^${name}(, Customised)?$`) }))
+  await userEvent.click(await screen.findByRole('button', { name: new RegExp(`^${name}(,|$)`) }))
 }
 
 describe('the theme screen', () => {
@@ -100,7 +102,7 @@ describe('the theme screen', () => {
   it('marks the ones that have been customised, and counts them', async () => {
     renderSection(withTheme())
 
-    const row = (await screen.findByRole('button', { name: 'post, Customised' })).closest('li')!
+    const row = (await screen.findByRole('button', { name: /^post, Customised,/ })).closest('li')!
     expect(within(row).getByTestId('customised-marker').textContent).toBe('Customised')
     expect(screen.getByText('1 of 3 templates have been customised.')).toBeTruthy()
   })
@@ -300,7 +302,7 @@ describe('choosing a file', () => {
 
     // The tree names it the way a file manager does; the editor names it the way
     // the rest of the platform does, because that is the string a template uses.
-    expect(screen.getByRole('button', { name: 'post, Customised' }).getAttribute('aria-current')).toBe('true')
+    expect(screen.getByRole('button', { name: /^post, Customised,/ }).getAttribute('aria-current')).toBe('true')
     expect(screen.getByTestId('open-path').textContent).toBe('templates/post')
   })
 
@@ -316,7 +318,7 @@ describe('choosing a file', () => {
       expect(screen.getByTestId('open-path').textContent).toBe('layouts/base')
       expect(screen.getByTestId('surface')).toHaveProperty('value', 'SOURCE OF layouts/base')
     })
-    expect(screen.getByRole('button', { name: 'base' }).getAttribute('aria-current')).toBe('true')
+    expect(screen.getByRole('button', { name: /^base,/ }).getAttribute('aria-current')).toBe('true')
   })
 
   it('folds a folder away and back', async () => {
@@ -334,5 +336,25 @@ describe('choosing a file', () => {
     await userEvent.click(screen.getByRole('button', { name: /^Templates/ }))
 
     expect(screen.getByText('post')).toBeTruthy()
+  })
+})
+
+/**
+ * Every file the bundled theme ships, described, in every language.
+ *
+ * The descriptions are keyed by path, and a path the theme gains without a
+ * description would show up as an empty space in a tree whose whole point -- for
+ * this reader -- is telling them what `seo-meta` means. Asking the theme package
+ * for its file list is what makes this exhaustive rather than a sample.
+ */
+describe('the file descriptions', () => {
+  it.each(Object.keys(LOCALES))('%s describes every file the bundled theme ships', (language) => {
+    const table = LOCALES[language] ?? {}
+
+    const missing = BASELINE_NAMES.filter(
+      (path) => table[`theme.file.${path.replace(/\//g, '.')}`] === undefined,
+    )
+
+    expect(missing).toEqual([])
   })
 })
