@@ -1,3 +1,5 @@
+import type { Attribution } from './attribution'
+
 /**
  * What a theme template is given.
  *
@@ -36,6 +38,11 @@ export interface SiteForTemplates {
   language: string
   nav: NavItem[]
   settings: SiteSettingsForTemplates
+  /**
+   * Absent when the site is licensed to run without it, which is the whole
+   * difference the white-label purchase makes to the front end.
+   */
+  attribution?: Attribution
 }
 
 export interface Pagination {
