@@ -83,13 +83,39 @@ describe('the keys the panel asks for', () => {
 })
 
 describe('every language file', () => {
-  const english = Object.keys(LOCALES[DEFAULT_LOCALE] ?? {})
+  const english = LOCALES[DEFAULT_LOCALE] ?? {}
 
-  it.each(Object.keys(LOCALES))('%s has no key the default does not', (language) => {
-    // A key only one language has is a key nobody can find, and usually a typo.
-    const stray = Object.keys(LOCALES[language] ?? {}).filter((key) => !english.includes(key))
+  it.each(Object.keys(LOCALES))('%s has exactly the default key set', (language) => {
+    const keys = Object.keys(LOCALES[language] ?? {})
 
-    expect(stray).toEqual([])
+    // Both directions, because the two failures are different. A key only one
+    // language has is usually a typo; a key one language is *missing* falls back
+    // to English at runtime, which is right for a language somebody is still
+    // working on and wrong for one that ships. A shipped file is complete, and
+    // the fallback exists so an unfinished one works rather than so one can be
+    // published.
+    expect([...keys].sort()).toEqual(Object.keys(english).sort())
+  })
+
+  it.each(Object.keys(LOCALES))('%s keeps every placeholder the default uses', (language) => {
+    // The failure this catches is a translation that reads well and quietly drops
+    // a value: `{count}` missing from one sentence is a sentence that no longer
+    // says how many, and nothing else would notice.
+    const table = LOCALES[language] ?? {}
+
+    const wrong = Object.keys(english).filter((key) => {
+      const placeholders = (value: string | undefined): string[] =>
+        [...(value ?? '').matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? '').sort()
+
+      return placeholders(table[key]).join(',') !== placeholders(english[key]).join(',')
+    })
+
+    expect(wrong).toEqual([])
+  })
+
+  it('are actually written, which is what makes the checks above mean something', () => {
+    expect(Object.keys(LOCALES).length).toBeGreaterThan(1)
+    expect(Object.keys(english).length).toBeGreaterThan(100)
   })
 })
 

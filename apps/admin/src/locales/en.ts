@@ -17,7 +17,10 @@
  * on the screen instead of quietly rendering nothing.
  */
 
-export const en: Record<string, string> = {
+/** One language's strings. Every file must have exactly the same keys. */
+export type Locale = Record<string, string>
+
+export const en: Locale = {
   // Sections, and the placeholders for the ones still to be built.
   'nav.dashboard': 'Dashboard',
   'nav.dashboard.description': 'An overview of the site: recent content, drafts and the last publish.',

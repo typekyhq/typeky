@@ -1,4 +1,7 @@
-import { en } from './en'
+import { en, type Locale } from './en'
+import { zhCN } from './zh-CN'
+
+export type { Locale } from './en'
 
 /**
  * The language files this panel has.
@@ -7,19 +10,25 @@ import { en } from './en'
  * exists to the operator exactly when it exists as a file. That is the difference
  * between offering a translation and promising one.
  */
-export const LOCALES: Record<string, Record<string, string>> = { en }
+export const LOCALES: Record<string, Locale> = { en, 'zh-CN': zhCN }
 
 /** The one that is always there, and the one a missing key falls back to. */
 export const DEFAULT_LOCALE = 'en'
 
-/** For the settings screen: what to call each language in its own language. */
+/**
+ * For the settings screen: what to call each language.
+ *
+ * Each in its own language, because that is what a speaker looks for in a list --
+ * and English is named in English for the same reason.
+ */
 export const LOCALE_LABELS: Record<string, string> = {
   en: 'English',
+  'zh-CN': '简体中文',
 }
 
 export interface LocaleOption {
   value: string
-  /** The language's name in itself, which is what a speaker looks for. */
+  /** The language's name in itself. */
   label: string
 }
 

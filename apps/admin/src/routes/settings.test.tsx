@@ -340,8 +340,8 @@ describe('language and dates', () => {
     const select = await screen.findByLabelText('Panel language')
     const options = [...select.querySelectorAll('option')].map((option) => option.getAttribute('value'))
 
-    // One today. The list is what the panel can actually render, so it grows when
-    // a translation is added rather than when somebody wants one.
-    expect(options).toEqual(['en'])
+    // The list is what the panel can actually render, so it grows when a
+    // translation is added rather than when somebody wants one.
+    expect(options).toEqual(['en', 'zh-CN'])
   })
 })
