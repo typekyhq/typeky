@@ -9,9 +9,9 @@
 -- ===== media =====
 -- Uploaded media. R2 holds the bytes, this table holds the metadata.
 CREATE TABLE media (
-  id          TEXT PRIMARY KEY,
+  id          TEXT PRIMARY KEY NOT NULL,
   filename    TEXT NOT NULL,
-  storage_key TEXT NOT NULL,     -- R2 object key
+  storage_key TEXT NOT NULL,              -- R2 object key
   mime_type   TEXT NOT NULL,
   byte_size   INTEGER NOT NULL,
   width       INTEGER,
@@ -25,7 +25,7 @@ CREATE INDEX idx_media_created ON media(created_at DESC);
 -- The site itself. A CE deployment hosts a single site, so this holds exactly
 -- one row.
 CREATE TABLE sites (
-  id            TEXT PRIMARY KEY,                              -- fixed to 'default'
+  id            TEXT PRIMARY KEY NOT NULL,                     -- fixed to 'default'
   name          TEXT NOT NULL,
   tagline       TEXT,
   logo_media_id TEXT REFERENCES media(id) ON DELETE SET NULL,
@@ -38,7 +38,7 @@ CREATE TABLE sites (
 
 -- ===== pages =====
 CREATE TABLE pages (
-  id             TEXT PRIMARY KEY,
+  id             TEXT PRIMARY KEY NOT NULL,
   title          TEXT NOT NULL,
   slug           TEXT NOT NULL UNIQUE,
   content_blocks TEXT NOT NULL DEFAULT '[]',     -- Block JSON
@@ -56,7 +56,7 @@ CREATE UNIQUE INDEX uq_pages_home ON pages(is_home) WHERE is_home = 1;
 
 -- ===== posts =====
 CREATE TABLE posts (
-  id             TEXT PRIMARY KEY,
+  id             TEXT PRIMARY KEY NOT NULL,
   title          TEXT NOT NULL,
   slug           TEXT NOT NULL UNIQUE,
   excerpt        TEXT,
@@ -77,7 +77,7 @@ CREATE INDEX idx_posts_category ON posts(category);
 -- ===== products =====
 -- Showcase products only. Prices are display labels; CE does not take orders.
 CREATE TABLE products (
-  id             TEXT PRIMARY KEY,
+  id             TEXT PRIMARY KEY NOT NULL,
   title          TEXT NOT NULL,
   slug           TEXT NOT NULL UNIQUE,
   summary        TEXT,
@@ -103,7 +103,7 @@ CREATE INDEX idx_products_status ON products(status, sort_order);
 -- baseline. Deleting an override row restores the theme default, so no
 -- separate version table is needed.
 CREATE TABLE theme_templates (
-  id         TEXT PRIMARY KEY,
+  id         TEXT PRIMARY KEY NOT NULL,
   theme      TEXT NOT NULL DEFAULT 'default',
   path       TEXT NOT NULL,                    -- 'templates/post' | 'snippets/header' | 'layouts/base'
   source     TEXT NOT NULL,

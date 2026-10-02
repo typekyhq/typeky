@@ -39,8 +39,14 @@ function wrapText(text: string, width: number): string[] {
 function renderColumnDefinition(column: ColumnDef): string {
   const parts: string[] = [SQL_TYPE[column.type]]
 
-  if (column.primaryKey) parts.push('PRIMARY KEY')
-  else if (column.notNull) parts.push('NOT NULL')
+  if (column.primaryKey) {
+    // SQLite only implies NOT NULL for INTEGER PRIMARY KEY. Every id here is
+    // TEXT, so the constraint has to be spelled out or a NULL id would be
+    // insertable and the row would be unreachable.
+    parts.push('PRIMARY KEY', 'NOT NULL')
+  } else if (column.notNull) {
+    parts.push('NOT NULL')
+  }
 
   if (column.unique) parts.push('UNIQUE')
   if (column.defaultSql !== undefined) parts.push(`DEFAULT ${column.defaultSql}`)

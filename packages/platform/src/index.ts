@@ -1,8 +1,13 @@
 /**
- * @typeky/platform -- StoragePort definition and Cloudflare adapters (D1 / R2 / KV / Cache)
+ * @typeky/platform -- Platform ports and their adapters
  *
  * Layout and responsibilities: CONTRIBUTING.md section 6
  * Architecture red lines: CONTRIBUTING.md section 3
+ *
+ * Ports describe the data access surface. Adapters live under `cloudflare/`;
+ * test doubles under `testing/`, which is exported separately so Node-only code
+ * never reaches a Worker bundle.
  */
 
-export {}
+export { createD1DbPort, type D1LikeDatabase, type D1LikePreparedStatement } from './cloudflare/d1'
+export type { DbPort, DbStatement, SqlParam } from './ports'

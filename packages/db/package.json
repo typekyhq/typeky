@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@typeky/core": "workspace:*",
+    "@typeky/platform": "workspace:*",
     "drizzle-orm": "^0.45.3"
   }
 }

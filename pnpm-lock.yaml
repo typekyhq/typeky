@@ -199,6 +199,9 @@ importers:
       '@typeky/core':
         specifier: workspace:*
         version: link:../core
+      '@typeky/platform':
+        specifier: workspace:*
+        version: link:../platform
       drizzle-orm:
         specifier: ^0.45.3
         version: 0.45.3
