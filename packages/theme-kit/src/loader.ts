@@ -171,6 +171,15 @@ export function createTemplateLoader(options: TemplateLoaderOptions): TemplateLo
   async function read(name: string): Promise<string> {
     const key = toKey(name)
 
+    // The name check comes first, before anything is looked up or loaded.
+    //
+    // `fs.contains` runs ahead of this during a render, which is what makes the
+    // documented property -- the whitelist needs no database read -- true for
+    // pages. Doing it here as well covers the other callers, and covers a row
+    // that arrived some other way than the API: an override whose path climbs
+    // out of the theme would otherwise be served by a plain `read`.
+    if (!isKnown(key)) throw new Error(`template not found: ${name}`)
+
     // The draft wins over both, which is what makes a preview honest: the editor
     // is showing a version of this file that is not stored yet.
     if (draft !== undefined && draft.path === key) return draft.source
@@ -196,6 +205,11 @@ export function createTemplateLoader(options: TemplateLoaderOptions): TemplateLo
 
     async exists(file) {
       const key = toKey(file)
+      // The whitelist first, for the same reason read does it: an override row
+      // for a name the theme does not ship must not make that name look like a
+      // file that is there. Answering yes and then failing to read it would turn
+      // an injection into a 500 on the page that asked.
+      if (!isKnown(key)) return false
       return (await overrides()).has(key) || Object.hasOwn(baseline, key)
     },
 

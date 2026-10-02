@@ -107,12 +107,14 @@ describe('template loader', () => {
     it('is not widened by an override, because new files cannot be created', async () => {
       const { db, loader } = setup()
       // A row for a path the theme does not ship, as a migration or a bug could
-      // leave behind. It must not become readable.
+      // leave behind. It must not become readable -- and it used to be: read
+      // answered with the row's source while contains said the name was not
+      // there, so the two disagreed and only one of them was guarding anything.
       await saveOverride(db, 'templates/injected', 'boom')
 
       expect(await loader.fs.contains!('.', 'templates/injected')).toBe(false)
-      expect(await loader.fs.exists!('templates/injected')).toBe(true)
-      expect(await loader.read('templates/injected')).toBe('boom')
+      expect(await loader.fs.exists!('templates/injected')).toBe(false)
+      await expect(loader.read('templates/injected')).rejects.toThrow(/not found/)
     })
   })
 

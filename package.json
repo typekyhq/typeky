@@ -25,7 +25,8 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm check:theme-drift && pnpm build && pnpm check:boundaries",
     "theme:generate": "tsx packages/themes/default/scripts/baseline.ts generate",
-    "check:theme-drift": "tsx packages/themes/default/scripts/baseline.ts check"
+    "check:theme-drift": "tsx packages/themes/default/scripts/baseline.ts check",
+    "test:sandbox": "vitest run packages/theme-kit/src/sandbox.test.ts"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",

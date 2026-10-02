@@ -248,6 +248,47 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
   const encoder = new TextEncoder()
 
   /**
+   * The context, with anything callable removed.
+   *
+   * The contract says the context is plain JSON. This enforces it rather than
+   * trusting it, because liquidjs *calls* a function it finds in the data -- so a
+   * caller who passed one would be handing a theme the ability to run platform
+   * code. The architecture's own sketch is the reason to bother: it shows
+   * `utils.url` and `i18n.t` as functions, and somebody implementing it from that
+   * sketch would be doing exactly this.
+   *
+   * Microseconds for a page's worth of data. `cached` is per call, so a tree
+   * shared between two items is walked once and a cycle is not a hang.
+   */
+  function plainData(value: unknown, cached = new WeakMap<object, unknown>()): object | undefined {
+    if (value === null || typeof value !== 'object') {
+      // A function, a string, a number: the first is dropped, the rest are data.
+      return typeof value === 'function' ? undefined : (value as object)
+    }
+
+    const existing = cached.get(value)
+    // Everything this map stores is an array or a plain object, both of which
+    // are what it returns.
+    if (existing !== undefined) return existing as object
+
+    if (Array.isArray(value)) {
+      const list: unknown[] = []
+      cached.set(value, list)
+      for (const entry of value) list.push(plainData(entry, cached))
+      return list
+    }
+
+    const copy: Record<string, unknown> = {}
+    cached.set(value, copy)
+    for (const [key, entry] of Object.entries(value)) {
+      const cleaned = plainData(entry, cached)
+      if (cleaned !== undefined) copy[key] = cleaned
+    }
+
+    return copy
+  }
+
+  /**
    * The output-size check, applied to every way out of the engine.
    *
    * Checked after the fact. liquidjs exposes no incremental render hook through
@@ -269,11 +310,11 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
     limits,
 
     async render(source, data = {}) {
-      return guard(await engine.parseAndRender(source, data))
+      return guard(await engine.parseAndRender(source, plainData(data)))
     },
 
     async renderFile(name, data = {}) {
-      return guard(await engine.renderFile(name, data))
+      return guard(await engine.renderFile(name, plainData(data)))
     },
 
     validate(source) {
