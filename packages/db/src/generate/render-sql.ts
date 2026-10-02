@@ -36,7 +36,7 @@ function wrapText(text: string, width: number): string[] {
   return lines
 }
 
-function renderColumnDefinition(column: ColumnDef): string {
+export function renderColumnDefinition(column: ColumnDef): string {
   const parts: string[] = [SQL_TYPE[column.type]]
 
   if (column.primaryKey) {
@@ -65,14 +65,21 @@ function renderIndexColumn(ref: IndexColumnRef): string {
   return `${ref.column}${ref.desc ? ' DESC' : ''}`
 }
 
-function renderIndex(table: TableDef, index: IndexDef): string {
+export function renderIndex(table: TableDef, index: IndexDef): string {
   const columns = index.columns.map(renderIndexColumn).join(', ')
   const where = index.where ? ` WHERE ${index.where}` : ''
   const unique = index.unique ? 'UNIQUE ' : ''
   return `CREATE ${unique}INDEX ${index.name} ON ${table.name}(${columns})${where};`
 }
 
-function renderTable(table: TableDef): string[] {
+/**
+ * One `CREATE TABLE` and the indexes that belong to it.
+ *
+ * Exported because an appended migration creates a table in exactly the same
+ * words as the bootstrap migration does: two renderers for one table is two
+ * schemas that drift.
+ */
+export function renderCreateTable(table: TableDef): string[] {
   const lines: string[] = [`-- ===== ${table.name} =====`]
 
   if (table.note) {
@@ -110,13 +117,12 @@ function renderTable(table: TableDef): string[] {
 }
 
 const HEADER = [
-  '-- Generated from packages/core/src/model/schema.ts -- do not edit by hand.',
-  '-- Regenerate with `pnpm db:generate`; `pnpm check:schema-drift` fails when',
-  '-- this file and the model disagree.',
+  '-- The whole schema, rendered from packages/core/src/model/schema.ts.',
   '--',
-  '-- Bootstrap migration. Apply it with `wrangler d1 migrations apply`.',
-  '-- Once it has been applied to a deployed database, treat it as frozen: add the',
-  '-- next numbered migration by hand instead of rewriting this one.',
+  '-- This is not a migration file. It is used to build a database that matches the',
+  '-- model -- the repository tests do exactly that -- and the first migration',
+  '-- (`0001_init.sql`) was written from it once and frozen. Changes since then are',
+  '-- appended as numbered migrations by `pnpm db:generate`.',
 ].join('\n')
 
 /**
@@ -124,6 +130,6 @@ const HEADER = [
  * order, which guarantees every referenced table is declared first.
  */
 export function renderMigrationSql(model: LogicalModel): string {
-  const blocks = model.tables.map((table) => renderTable(table).join('\n'))
+  const blocks = model.tables.map((table) => renderCreateTable(table).join('\n'))
   return `${HEADER}\n\n${blocks.join('\n\n')}\n`
 }

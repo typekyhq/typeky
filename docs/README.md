@@ -66,7 +66,7 @@ password. Restart `pnpm dev` after changing it.
 | `pnpm test:sandbox` | Just the theme sandbox suite — the things a theme must not be able to do |
 | `pnpm build` | Build the admin SPA and the site assets |
 | `pnpm db:migrate` | Apply migrations to the local database |
-| `pnpm db:reset` | Rebuild the local database from the migration — **it deletes local data** |
+| `pnpm db:reset` | Throw the local database away and rebuild it from the migrations |
 | `pnpm seed` | Load the demo site |
 | `pnpm theme:generate` | Regenerate the bundled theme module after editing a `.liquid` file |
 | `pnpm check:theme-drift` | Fail if that module and the `.liquid` files disagree |
@@ -77,15 +77,18 @@ Two of these exist because something is generated from files that people edit:
 a Worker can import. Edit the source, run the generator, commit both. CI fails if
 you forget the second half.
 
-`pnpm db:generate` rewrites that one migration in place rather than appending a new
-one, and that has a consequence worth knowing. It is right while CE has never
-shipped — one initialization script that always describes the current schema — but
-an existing local database is then never told about a table added since it was
-created, because wrangler has recorded `0001_init.sql` as applied and skips it. The
-symptom is a screen that answers 500 with nothing on it to say why. So after a
-schema change, run `pnpm db:reset` (and `pnpm seed` if you want the demo site back).
-The generator prints a reminder when it rewrites the migration. This stops being
-necessary once migrations are append-only, which is what the first release changes.
+Migrations are appended, never rewritten. `0001_init.sql` was written once and is
+frozen; every later change to the model produces a new numbered file. Apply what is
+new with `pnpm db:migrate`. `pnpm db:generate` refuses to write a migration it
+cannot express — a change that needs a table rebuild is reported instead, because
+dropping and recreating a table loses its rows.
+
+The reason the first rule matters is worth knowing, because its failure mode is
+quiet: `wrangler` records which migrations a database has run **by file name**.
+Rewriting a migration therefore means an existing database is never told about the
+change, so the schema it has and the schema the code expects drift apart. The
+symptom is a request that answers 500 with nothing on the screen to say why. That
+happened once, to the three tables behind the Categories screen.
 
 ## Editing a theme
 

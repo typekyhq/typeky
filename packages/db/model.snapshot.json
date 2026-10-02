@@ -1,0 +1,685 @@
+{
+  "formatVersion": 1,
+  "tables": [
+    {
+      "name": "media",
+      "note": "Uploaded media. R2 holds the bytes, this table holds the metadata.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "filename",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "storage_key",
+          "type": "text",
+          "notNull": true,
+          "note": "R2 object key"
+        },
+        {
+          "name": "mime_type",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "byte_size",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "width",
+          "type": "integer"
+        },
+        {
+          "name": "height",
+          "type": "integer"
+        },
+        {
+          "name": "alt_text",
+          "type": "text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_media_created",
+          "columns": [
+            {
+              "column": "created_at",
+              "desc": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sites",
+      "note": "The site itself. A CE deployment hosts a single site, so this holds exactly one row.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "note": "fixed to 'default'"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "tagline",
+          "type": "text"
+        },
+        {
+          "name": "logo_media_id",
+          "type": "uuid",
+          "references": {
+            "table": "media",
+            "column": "id",
+            "onDelete": "set null"
+          }
+        },
+        {
+          "name": "theme",
+          "type": "text",
+          "notNull": true,
+          "defaultSql": "'default'"
+        },
+        {
+          "name": "settings",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'{}'",
+          "note": "accent colour, social links, SEO defaults, footer copy"
+        },
+        {
+          "name": "nav",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "navigation items: [{ label, href, order }]"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ]
+    },
+    {
+      "name": "pages",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "name": "content_blocks",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "Block JSON"
+        },
+        {
+          "name": "seo_metadata",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'{}'"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "defaultSql": "'draft'",
+          "note": "draft | published"
+        },
+        {
+          "name": "is_home",
+          "type": "boolean",
+          "notNull": true,
+          "defaultSql": "0",
+          "note": "at most one row may be 1"
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "0"
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "1",
+          "note": "bumped on publish, drives precise cache invalidation"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_pages_status",
+          "columns": [
+            "status",
+            "sort_order"
+          ]
+        },
+        {
+          "name": "uq_pages_home",
+          "columns": [
+            "is_home"
+          ],
+          "unique": true,
+          "where": "is_home = 1"
+        }
+      ]
+    },
+    {
+      "name": "posts",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "name": "excerpt",
+          "type": "text"
+        },
+        {
+          "name": "cover_media_id",
+          "type": "uuid",
+          "references": {
+            "table": "media",
+            "column": "id",
+            "onDelete": "set null"
+          }
+        },
+        {
+          "name": "content_blocks",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "Block JSON"
+        },
+        {
+          "name": "tags",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "string array; MVP has no separate tag table"
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "note": "single category"
+        },
+        {
+          "name": "seo_metadata",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'{}'"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "defaultSql": "'draft'",
+          "note": "draft | published"
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "1",
+          "note": "bumped on publish, drives precise cache invalidation"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_posts_published",
+          "columns": [
+            "status",
+            {
+              "column": "published_at",
+              "desc": true
+            }
+          ]
+        },
+        {
+          "name": "idx_posts_category",
+          "columns": [
+            "category"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "note": "Showcase products only. Prices are display labels; CE does not take orders.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "name": "summary",
+          "type": "text"
+        },
+        {
+          "name": "content_blocks",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "Block JSON"
+        },
+        {
+          "name": "cover_media_id",
+          "type": "uuid",
+          "references": {
+            "table": "media",
+            "column": "id",
+            "onDelete": "set null"
+          }
+        },
+        {
+          "name": "gallery",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "array of media ids"
+        },
+        {
+          "name": "specs",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "[{ label, value }]"
+        },
+        {
+          "name": "price_label",
+          "type": "text",
+          "note": "display text such as \"199 USD\""
+        },
+        {
+          "name": "cta_label",
+          "type": "text"
+        },
+        {
+          "name": "cta_url",
+          "type": "text"
+        },
+        {
+          "name": "seo_metadata",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'{}'"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "defaultSql": "'draft'",
+          "note": "draft | published"
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "0"
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "1",
+          "note": "bumped on publish, drives precise cache invalidation"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamp"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_products_status",
+          "columns": [
+            "status",
+            "sort_order"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "theme_templates",
+      "note": "Site-level template overrides. Lookup order is override, then bundled baseline. Deleting an override row restores the theme default, so no separate version table is needed.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "theme",
+          "type": "text",
+          "notNull": true,
+          "defaultSql": "'default'"
+        },
+        {
+          "name": "path",
+          "type": "text",
+          "notNull": true,
+          "note": "'templates/post' | 'snippets/header' | 'layouts/base'"
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "1",
+          "note": "bumped on every save, drives precise cache invalidation"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "theme",
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "vocabularies",
+      "note": "A named set of terms. Bound to content types rather than to one of them.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "description",
+          "type": "text"
+        },
+        {
+          "name": "content_types",
+          "type": "json",
+          "notNull": true,
+          "defaultSql": "'[]'",
+          "note": "which content types may use it: 'post' | 'product'"
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "name"
+          ]
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_vocabularies_sort",
+          "columns": [
+            "sort_order"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "terms",
+      "note": "One term. `parent_id` is a self-reference, which is what makes it a tree.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "vocabulary_id",
+          "type": "uuid",
+          "notNull": true,
+          "references": {
+            "table": "vocabularies",
+            "column": "id",
+            "onDelete": "cascade"
+          }
+        },
+        {
+          "name": "parent_id",
+          "type": "uuid",
+          "references": {
+            "table": "terms",
+            "column": "id",
+            "onDelete": "cascade"
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "description",
+          "type": "text"
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "notNull": true,
+          "defaultSql": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "vocabulary_id",
+            "slug"
+          ]
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_terms_vocabulary",
+          "columns": [
+            "vocabulary_id",
+            "sort_order"
+          ]
+        },
+        {
+          "name": "idx_terms_parent",
+          "columns": [
+            "parent_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content_terms",
+      "note": "Which terms a post or a product carries.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true
+        },
+        {
+          "name": "content_type",
+          "type": "text",
+          "notNull": true,
+          "note": "'post' | 'product'"
+        },
+        {
+          "name": "content_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "term_id",
+          "type": "uuid",
+          "notNull": true,
+          "references": {
+            "table": "terms",
+            "column": "id",
+            "onDelete": "cascade"
+          }
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_content_terms_content",
+          "columns": [
+            "content_type",
+            "content_id"
+          ]
+        },
+        {
+          "name": "idx_content_terms_term",
+          "columns": [
+            "term_id"
+          ]
+        },
+        {
+          "name": "uq_content_terms",
+          "columns": [
+            "content_type",
+            "content_id",
+            "term_id"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}
