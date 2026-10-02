@@ -13,9 +13,6 @@ import { constantTimeStringEquals, toBase64Url } from './encoding'
  * The mechanism is unchanged: the client sends the token in a header, and the
  * server compares it on every request that can change state.
  */
-
-export const CSRF_HEADER = 'x-csrf-token'
-
 /** 32 random bytes, matching the session id. */
 export function newCsrfToken(): string {
   return toBase64Url(Uint8Array.from(randomBytes(32)))

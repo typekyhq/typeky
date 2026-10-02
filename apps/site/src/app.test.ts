@@ -96,6 +96,39 @@ describe('site worker', () => {
     })
   })
 
+  describe('failures', () => {
+    it('answers an api failure as JSON, so the admin SPA is never handed markup', async () => {
+      silenceErrors()
+      // A binding that throws reaches onError the same way a bug in a handler
+      // would; the point is only that the API layer answers in its own format.
+      const brokenCache = {
+        get: async () => {
+          throw new Error('kv unavailable')
+        },
+      } as unknown as KVNamespace
+
+      const response = await send('/api/admin/pages', makeTestEnv({ CACHE: brokenCache }), {
+        // A cookie has to be present, or the session lookup short-circuits before
+        // it ever asks the binding.
+        headers: { cookie: '__Host-typeky_session=whatever' },
+      })
+
+      expect(response.status).toBe(500)
+      expect(response.headers.get('content-type')).toContain('application/json')
+      await expect(response.json()).resolves.toEqual({ error: 'internal_error' })
+    })
+
+    it('keeps the html error page for site paths', async () => {
+      silenceErrors()
+
+      const response = await send('/about', makeTestEnv({ ASSETS: fakeAssets({}, true) }))
+
+      // The placeholder path does not touch ASSETS, so nothing fails here: the
+      // assertion is that a site path never turns into JSON.
+      expect(response.headers.get('content-type')).toContain('text/html')
+    })
+  })
+
   describe('site pages', () => {
     it('serves the placeholder until the render pipeline lands', async () => {
       const response = await send('/')

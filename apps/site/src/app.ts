@@ -1,4 +1,5 @@
 import { createD1DbPort } from '@typeky/platform'
+import type { ApiErrorBody } from '@typeky/api'
 import { Hono } from 'hono'
 import { createAdminApi } from './admin/api'
 import type { Env } from './env'
@@ -53,6 +54,13 @@ export function createApp(): Hono<{ Bindings: Env }> {
 
   app.onError((error, c) => {
     console.error('unhandled site error', error)
+
+    // The API always answers JSON; an HTML error page would leave the admin SPA
+    // parsing markup and reporting the wrong thing.
+    if (new URL(c.req.url).pathname.startsWith('/api/')) {
+      return c.json({ error: 'internal_error' } satisfies ApiErrorBody, 500)
+    }
+
     return c.html(errorPage(), 500)
   })
 

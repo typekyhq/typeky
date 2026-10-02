@@ -1,10 +1,10 @@
-import { API_ERROR_STATUS, type ApiErrorBody, type ApiErrorCode } from '@typeky/api'
+import { API_ERROR_STATUS, CSRF_HEADER, loginRequestSchema, type ApiErrorBody, type ApiErrorCode, type LoginRequest } from '@typeky/api'
 import { Hono } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import type { Context, MiddlewareHandler } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type { Env } from '../env'
-import { CSRF_HEADER, csrfTokenMatches, isSafeMethod } from './csrf'
+import { csrfTokenMatches, isSafeMethod } from './csrf'
 import { verifyPassword } from './password'
 import {
   SESSION_COOKIE,
@@ -64,7 +64,6 @@ export function createAdminApi(): Hono<AdminEnv> {
     const passwordMatches = await verifyPassword(credentials.password, hash)
     const usernameMatches = credentials.username === (c.env.ADMIN_USERNAME ?? DEFAULT_ACTOR_ID)
     if (!usernameMatches || !passwordMatches) return apiError(c, 'invalid_credentials')
-
     const { id, session } = await createSession(c.env.CACHE, DEFAULT_ACTOR_ID)
     setCookie(c, SESSION_COOKIE, id, { ...SESSION_COOKIE_OPTIONS, maxAge: SESSION_TTL_SECONDS })
 
@@ -122,17 +121,19 @@ export const requireCsrf: MiddlewareHandler<AdminEnv> = async (c, next) => {
   await next()
 }
 
-async function readCredentials(request: Request): Promise<{ username: string; password: string } | null> {
+/**
+ * Validated with the same schema the SPA infers its types from, so the contract
+ * cannot drift between the two sides.
+ */
+async function readCredentials(request: Request): Promise<LoginRequest | null> {
+  let body: unknown
+
   try {
-    const body: unknown = await request.json()
-    if (typeof body !== 'object' || body === null) return null
-
-    const { username, password } = body as Record<string, unknown>
-    if (typeof username !== 'string' || typeof password !== 'string') return null
-    if (username === '' || password === '') return null
-
-    return { username, password }
+    body = await request.json()
   } catch {
     return null
   }
+
+  const parsed = loginRequestSchema.safeParse(body)
+  return parsed.success ? parsed.data : null
 }

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../app'
 import type { Env } from '../env'
 import { fakeAssets, fakeKv, makeTestEnv, type FakeKv } from '../testing/env'
-import { CSRF_HEADER } from './csrf'
+import { CSRF_HEADER } from '@typeky/api'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
 import { SESSION_COOKIE } from './session'
 

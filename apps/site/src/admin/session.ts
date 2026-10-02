@@ -1,3 +1,4 @@
+import { sessionSchema, type Session } from '@typeky/api'
 import { randomBytes } from 'node:crypto'
 import { newCsrfToken } from './csrf'
 import { toBase64Url } from './encoding'
@@ -9,7 +10,13 @@ import { toBase64Url } from './encoding'
  * self-contained record that can be rebuilt by logging in again, which is
  * exactly the shape KV is good at. Anything that needs a strong consistency
  * guarantee does not belong here.
+ *
+ * The record shape comes from `@typeky/api`, and so does the validation applied
+ * to it on the way back out -- a stored record that does not match the contract
+ * is treated as no session rather than trusted.
  */
+
+export type { Session }
 
 /** The `__Host-` prefix requires Secure, Path=/ and no Domain attribute. */
 export const SESSION_COOKIE = '__Host-typeky_session'
@@ -35,13 +42,6 @@ export const SESSION_COOKIE_OPTIONS = {
  * every authenticated request. A fixed lifetime is cheaper and predictable.
  */
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
-
-export interface Session {
-  actorId: string
-  /** Bound to this session, so a token from another session is not accepted. */
-  csrfToken: string
-  createdAt: string
-}
 
 const KEY_PREFIX = 'session:'
 
@@ -72,14 +72,10 @@ export async function readSession(cache: KVNamespace, id: string | undefined): P
   if (raw === null) return null
 
   try {
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== 'object' || parsed === null) return null
-
-    const { actorId, csrfToken, createdAt } = parsed as Record<string, unknown>
-    if (typeof actorId !== 'string' || typeof csrfToken !== 'string' || typeof createdAt !== 'string') {
-      return null
-    }
-    return { actorId, csrfToken, createdAt }
+    const parsed = sessionSchema.safeParse(JSON.parse(raw))
+    // A record that does not match the contract is refused rather than trusted:
+    // an authenticated request without a token to check against must not succeed.
+    return parsed.success ? parsed.data : null
   } catch {
     // A value that cannot be parsed is treated as no session rather than an
     // error: the correct response is to ask the operator to sign in again.
