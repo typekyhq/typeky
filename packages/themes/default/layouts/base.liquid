@@ -3,10 +3,21 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% comment %}
+      Tells the browser both schemes are supported, so form controls and
+      scrollbars follow the system setting instead of staying light on a dark page.
+      The stylesheet has the matching `prefers-color-scheme` block.
+    {% endcomment %}
+    <meta name="color-scheme" content="light dark">
     {% render 'snippets/seo-meta', seo: seo, page: page, site: site, content: content %}
     <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
   </head>
   <body>
+    {% comment %}
+      First in the document, because its whole point is to be the first thing a
+      keyboard user can reach. Hidden until it has focus.
+    {% endcomment %}
+    <a class="visually-hidden" href="#main">Skip to content</a>
     {% render 'snippets/header', site: site %}
     <main id="main">
       {% block %}{% endblock %}

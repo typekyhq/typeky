@@ -1,8 +1,8 @@
-import { blockToHtml, type Block } from '@typeky/core'
 import { createLiquidRuntime, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
 import type { DbPort } from '@typeky/platform'
 import { sampleContext } from './sample'
+import { themeRuntimeOptions } from './theme-runtime'
 
 /**
  * Rendering a template with sample data, storing nothing.
@@ -63,11 +63,10 @@ export async function renderPreview(input: PreviewInput): Promise<string> {
   })
 
   const runtime = createLiquidRuntime({
-    fs: loader.fs,
+    ...themeRuntimeOptions(loader.fs),
     // No cache: each preview is a different source under the same name, and a
     // cached one would show the previous preview's output.
     cache: false,
-    renderBlocks: (blocks) => (Array.isArray(blocks) ? blockToHtml(blocks as Block[]) : ''),
   })
 
     return runtime.engine.renderFile(input.path, sampleContext(input.path))

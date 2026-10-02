@@ -130,6 +130,8 @@ export interface LiquidRuntimeOptions {
   limits?: Partial<RenderLimits>
   /** Defaults to `/theme/`, where theme assets are served from. */
   assetBasePath?: string
+  /** Asset name to content hash, so `asset_url` can version what it links. */
+  assetVersions?: Record<string, string>
   /** Absolute prefix for site paths. Empty leaves links relative. */
   baseUrl?: string
   /** Defaults to `USD`. */
@@ -234,6 +236,7 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
 
   const platformFilters = createPlatformFilters({
     assetBasePath: options.assetBasePath ?? '/theme/',
+    ...(options.assetVersions === undefined ? {} : { assetVersions: options.assetVersions }),
     baseUrl: options.baseUrl,
     currency: options.currency ?? 'USD',
     locale: options.locale ?? 'en-US',

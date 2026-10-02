@@ -1,4 +1,3 @@
-import { blockToHtml } from '@typeky/core'
 import type { DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
@@ -6,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { buildRenderContext } from './context'
 import { renderPreview } from './preview'
 import { sampleContext } from './sample'
+import { themeRuntimeOptions } from './theme-runtime'
 
 /**
  * The preview, against the thing it claims to be.
@@ -65,9 +65,8 @@ const EMPTY: DbPort = {
 async function renderAsSaved(path: string, source: string, db: DbPort): Promise<string> {
   const loader = createTemplateLoader({ db, theme: 'default', baseline: BASELINE })
   const runtime = createLiquidRuntime({
-    fs: loader.fs,
+    ...themeRuntimeOptions(loader.fs),
     cache: false,
-    renderBlocks: (blocks) => (Array.isArray(blocks) ? blockToHtml(blocks as never) : ''),
   })
   void source
 

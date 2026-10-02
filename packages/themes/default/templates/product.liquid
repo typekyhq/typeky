@@ -35,11 +35,14 @@
     {% comment %}
       The button leaves the site -- there is no checkout here, on purpose. `rel`
       keeps the destination from reaching back through the window it opened.
-      An "opens in a new tab" hint belongs with the stylesheet that can hide it;
-      written here it would be visible to everyone until then.
+
+      The hint is for a screen reader, which cannot see a new tab appear. It is
+      hidden by the stylesheet, which is why it arrived with one and not before:
+      written earlier it was visible to everybody, as a sentence no sighted
+      reader wants.
     {% endcomment %}
     <p class="cta">
-      <a href="{{ content.cta_url }}" rel="noopener noreferrer" target="_blank">{{ content.cta_label | default: 'Learn more' }}</a>
+      <a href="{{ content.cta_url }}" rel="noopener noreferrer" target="_blank">{{ content.cta_label | default: 'Learn more' }}<span class="visually-hidden"> (opens in a new tab)</span></a>
     </p>
   {% endif %}
 </article>

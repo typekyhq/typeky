@@ -20,6 +20,20 @@ describe('asset_url', () => {
 
     expect(await render("{{ 'app.js' | asset_url }}")).toBe('/assets/app.js')
   })
+
+  it('adds the content hash when one is known', async () => {
+    const { render } = createLiquidRuntime({ assetVersions: { 'theme.css': 'abc12345' } })
+
+    // The URL changes when the bytes do, which is what lets the route answer
+    // with an immutable cache header instead of a short expiry.
+    expect(await render("{{ 'theme.css' | asset_url }}")).toBe('/theme/theme.css?v=abc12345')
+  })
+
+  it('leaves an unknown asset unversioned rather than guessing', async () => {
+    const { render } = createLiquidRuntime({ assetVersions: { 'theme.css': 'abc12345' } })
+
+    expect(await render("{{ 'print.css' | asset_url }}")).toBe('/theme/print.css')
+  })
 })
 
 describe('money', () => {

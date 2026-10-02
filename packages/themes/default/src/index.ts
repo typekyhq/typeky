@@ -4,9 +4,10 @@
  * Layout and responsibilities: CONTRIBUTING.md section 6
  * Architecture red lines: CONTRIBUTING.md section 3
  *
- * The Liquid files next to this module are the baseline. `src/baseline.ts` is
- * generated from them because a Worker has no filesystem; edit the `.liquid`
- * files and run `pnpm theme:generate`.
+ * The Liquid files and the assets next to this module are the baseline.
+ * `src/baseline.ts` and `src/assets.ts` are generated from them because a Worker
+ * has no filesystem; edit the sources and run `pnpm theme:generate`.
  */
 
 export { BASELINE, BASELINE_NAMES } from './baseline'
+export { ASSETS, ASSET_NAMES, ASSET_VERSIONS, type ThemeAsset } from './assets'

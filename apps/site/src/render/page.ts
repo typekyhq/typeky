@@ -1,9 +1,10 @@
-import { blockToHtml, type PageKind, type Pagination, type RenderContext } from '@typeky/core'
+import type { PageKind, Pagination, RenderContext } from '@typeky/core'
 import { defaultContext, type Page, type Post, type Product, type Repositories, type Site } from '@typeky/db'
 import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
 import { buildRenderContext, type ItemInput } from './context'
+import { themeRuntimeOptions } from './theme-runtime'
 
 /**
  * The render pipeline.
@@ -378,11 +379,10 @@ async function renderWith(
   const loader = createTemplateLoader({ db, theme: site.theme, baseline: BASELINE })
 
   const runtime = createLiquidRuntime({
-    fs: loader.fs,
+    ...themeRuntimeOptions(loader.fs),
     // Keyed by the loader's revision, which is derived from the override rows --
     // so a cache filled before a save cannot answer after one, in any isolate.
     cache: createRevisionCache({ revision: () => loader.revision }),
-    renderBlocks: (blocks) => (Array.isArray(blocks) ? blockToHtml(blocks as never) : ''),
   })
 
   const context: RenderContext = buildRenderContext(input)

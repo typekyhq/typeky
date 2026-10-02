@@ -26,6 +26,16 @@ export interface PlatformFilterOptions {
   /** Asset path prefix. Normalised to start and end with a slash. */
   assetBasePath: string
   /**
+   * Short content hash per asset name, appended as a query string.
+   *
+   * Without it the URL of a stylesheet never changes, so a deploy that fixes a
+   * layout is invisible to anyone who already has the old one -- and the browser
+   * is behaving correctly when it serves it. With it the URL changes with the
+   * bytes, so the response can be cached forever and the question of staleness
+   * does not arise. An asset with no entry here is left unversioned.
+   */
+  assetVersions?: Record<string, string>
+  /**
    * Absolute prefix for site paths, for example `https://example.com`.
    *
    * Empty leaves them relative, which is what a preview wants: the preview runs
@@ -60,8 +70,12 @@ export function createPlatformFilters(
   })
 
   // Themes write asset paths the Shopify way, with or without a leading slash.
-  const assetUrl: FilterHandler = (value) =>
-    `${assetBasePath}${String(value ?? '').replace(/^\/+/, '')}`
+  const assetUrl: FilterHandler = (value) => {
+    const name = String(value ?? '').replace(/^\/+/, '')
+    const version = options.assetVersions?.[name]
+
+    return `${assetBasePath}${name}${version === undefined ? '' : `?v=${version}`}`
+  }
 
   const money: FilterHandler = (value) => {
     const cents = Number(value)

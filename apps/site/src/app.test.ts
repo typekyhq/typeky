@@ -156,6 +156,17 @@ describe('site worker', () => {
       expect(response.headers.get('content-type')).toContain('text/plain')
     })
 
+    it('answers the theme stylesheet before the asset rule can 404 it', async () => {
+      // `/theme/theme.css` has exactly the extension `looksLikeAsset` exists to
+      // reject, so the route has to be registered ahead of the catch-all. Without
+      // that the page renders and loads no stylesheet at all, which is the kind
+      // of failure that reads as a CSS bug.
+      const response = await send('/theme/theme.css')
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toContain('text/css')
+    })
+
     it('keeps its own pages out of search results', async () => {
       const response = await send('/nope')
 

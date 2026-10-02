@@ -1,23 +1,41 @@
+import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * Turns the theme's Liquid files into the baseline module the Worker imports.
+ * Turns the theme's Liquid files and assets into the modules the Worker imports.
  *
- * The alternative -- reading `.liquid` files at runtime -- would mean the Worker
+ * The alternative -- reading files at runtime -- would mean the Worker
  * filesystem, which does not exist, or a bundler-specific import that only one
- * bundler understands. Compiling at build time keeps the templates as templates
+ * bundler understands. Compiling at build time keeps the sources as sources
  * (editable, diffable, and the thing a theme author actually writes) while the
- * Worker gets a plain object.
+ * Worker gets plain objects.
  *
- * Run `pnpm theme:generate` after editing a template. `pnpm check:theme-drift`
- * is what stops the generated module from going stale in a commit: it fails when
- * the files and the module disagree, the same way the schema check does.
+ * Run `pnpm theme:generate` after editing a template or an asset.
+ * `pnpm check:theme-drift` is what stops a generated module from going stale in a
+ * commit: it fails when the files and the modules disagree, the same way the
+ * schema check does.
  */
 
 const ROOT = join(import.meta.dirname, '..')
-const DIRECTORIES = ['layouts', 'templates', 'snippets'] as const
-const OUTPUT = join(ROOT, 'src', 'baseline.ts')
+const TEMPLATE_DIRECTORIES = ['layouts', 'templates', 'snippets'] as const
+const ASSET_DIRECTORY = 'assets'
+
+/**
+ * The media types an asset may have.
+ *
+ * Text only, and deliberately: an asset is embedded in the Worker bundle as a
+ * string, so a PNG put here would be mangled rather than served. Images belong in
+ * the media library, where they get an id and a URL. Refusing an unknown
+ * extension at build time is better than corrupting bytes at build time.
+ */
+const ASSET_TYPES: Record<string, string> = {
+  css: 'text/css; charset=utf-8',
+  js: 'text/javascript; charset=utf-8',
+  svg: 'image/svg+xml',
+  txt: 'text/plain; charset=utf-8',
+  json: 'application/json; charset=utf-8',
+}
 
 /**
  * The key a template is stored under.
@@ -30,10 +48,10 @@ function toKey(path: string): string {
   return path.endsWith('.liquid') ? path.slice(0, -'.liquid'.length) : path
 }
 
-function collect(): Record<string, string> {
+function collectTemplates(): Record<string, string> {
   const templates: Record<string, string> = {}
 
-  for (const directory of DIRECTORIES) {
+  for (const directory of TEMPLATE_DIRECTORIES) {
     for (const file of readdirSync(join(ROOT, directory)).sort()) {
       if (!file.endsWith('.liquid')) continue
       templates[toKey(`${directory}/${file}`)] = readFileSync(join(ROOT, directory, file), 'utf8')
@@ -43,7 +61,46 @@ function collect(): Record<string, string> {
   return templates
 }
 
-function render(templates: Record<string, string>): string {
+interface Asset {
+  source: string
+  contentType: string
+  etag: string
+  version: string
+}
+
+function collectAssets(): Record<string, Asset> {
+  const assets: Record<string, Asset> = {}
+
+  for (const file of readdirSync(join(ROOT, ASSET_DIRECTORY)).sort()) {
+    const extension = file.split('.').at(-1)?.toLowerCase() ?? ''
+    const contentType = ASSET_TYPES[extension]
+
+    if (contentType === undefined) {
+      console.error(`theme:assets -- ${ASSET_DIRECTORY}/${file} has no known media type.`)
+      console.error(`  Known extensions: ${Object.keys(ASSET_TYPES).join(', ')}.`)
+      console.error('  Images belong in the media library, not in the theme bundle.')
+      process.exit(1)
+    }
+
+    const source = readFileSync(join(ROOT, ASSET_DIRECTORY, file), 'utf8')
+    const digest = createHash('sha256').update(source).digest('hex')
+
+    assets[file] = {
+      source,
+      contentType,
+      // A strong validator: identical bytes, identical tag, so a deploy that does
+      // not touch a file does not invalidate it.
+      etag: `"${digest.slice(0, 32)}"`,
+      // The short form that goes in a URL. Same digest, so the two can never
+      // disagree about which bytes a version names.
+      version: digest.slice(0, 8),
+    }
+  }
+
+  return assets
+}
+
+function renderTemplates(templates: Record<string, string>): string {
   const entries = Object.entries(templates)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, source]) => `  ${JSON.stringify(key)}: ${JSON.stringify(source)},`)
@@ -69,28 +126,103 @@ function render(templates: Record<string, string>): string {
   ].join('\n')
 }
 
-const expected = render(collect())
+function renderAssets(assets: Record<string, Asset>): string {
+  const entries = Object.entries(assets)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([name, asset]) =>
+        [
+          `  ${JSON.stringify(name)}: {`,
+          `    source: ${JSON.stringify(asset.source)},`,
+          `    contentType: ${JSON.stringify(asset.contentType)},`,
+          `    etag: ${JSON.stringify(asset.etag)},`,
+          `    version: ${JSON.stringify(asset.version)},`,
+          '  },',
+        ].join('\n'),
+    )
+    .join('\n')
+
+  return [
+    '/**',
+    ' * Generated by `pnpm theme:generate`. Do not edit.',
+    ' *',
+    ' * The theme\'s static files, embedded as text. A Worker has no filesystem and',
+    ' * the bundle is the deploy unit, so the bytes travel with the code that',
+    ' * serves them; the ETag is a hash of the bytes, computed here rather than on',
+    ' * every request.',
+    ' *',
+    ' * Text only. A binary asset is rejected by the generator rather than stored as',
+    ' * a mangled string; images are media, and media has its own store.',
+    ' */',
+    '',
+    'export interface ThemeAsset {',
+    '  /** The file, as text. */',
+    '  source: string',
+    '  /** Media type, so the route does not guess from a file name. */',
+    '  contentType: string',
+    '  /** Strong validator over the source. */',
+    '  etag: string',
+    '  /** The same digest in short form, for `asset_url` to put in a URL. */',
+    '  version: string',
+    '}',
+    '',
+    'export const ASSETS: Record<string, ThemeAsset> = {',
+    entries,
+    '}',
+    '',
+    '/** The asset names, as a theme may reference them through `asset_url`. */',
+    'export const ASSET_NAMES: string[] = Object.keys(ASSETS)',
+    '',
+    '/**',
+    ' * Name to version, for the runtime\'s `asset_url`.',
+    ' *',
+    ' * Passing this to the renderer is what makes a stylesheet URL change when the',
+    ' * stylesheet does, so the response can be immutable instead of merely new.',
+    ' */',
+    'export const ASSET_VERSIONS: Record<string, string> = Object.fromEntries(',
+    '  Object.entries(ASSETS).map(([name, asset]) => [name, asset.version]),',
+    ')',
+    '',
+  ].join('\n')
+}
+
+const OUTPUTS: { path: string; content: string }[] = [
+  { path: join(ROOT, 'src', 'baseline.ts'), content: renderTemplates(collectTemplates()) },
+  { path: join(ROOT, 'src', 'assets.ts'), content: renderAssets(collectAssets()) },
+]
+
 const command = process.argv[2] ?? 'check'
 
 if (command === 'generate') {
-  writeFileSync(OUTPUT, expected)
-  console.log(`theme:generate -- wrote ${OUTPUT.replace(`${ROOT}/`, '')}`)
+  for (const output of OUTPUTS) {
+    writeFileSync(output.path, output.content)
+    console.log(`theme:generate -- wrote ${output.path.replace(`${ROOT}/`, '')}`)
+  }
 } else {
-  let actual = ''
+  let stale = false
 
-  try {
-    actual = readFileSync(OUTPUT, 'utf8')
-  } catch {
-    console.error('theme:check -- src/baseline.ts is missing. Run `pnpm theme:generate`.')
-    process.exit(1)
+  for (const output of OUTPUTS) {
+    const name = output.path.replace(`${ROOT}/`, '')
+    let actual = ''
+
+    try {
+      actual = readFileSync(output.path, 'utf8')
+    } catch {
+      console.error(`theme:check -- ${name} is missing. Run \`pnpm theme:generate\`.`)
+      process.exit(1)
+    }
+
+    if (actual !== output.content) {
+      console.error(`theme:check -- ${name} is out of date.`)
+      stale = true
+    }
   }
 
-  if (actual !== expected) {
-    console.error('theme:check -- src/baseline.ts is out of date.')
-    console.error('  The .liquid files and the generated module disagree.')
+  if (stale) {
+    console.error('  The files on disk and the generated modules disagree.')
     console.error('  Run `pnpm theme:generate` and commit the result.')
     process.exit(1)
   }
 
-  console.log('theme:check -- the baseline and the generated module agree')
+  console.log('theme:check -- the theme sources and the generated modules agree')
 }

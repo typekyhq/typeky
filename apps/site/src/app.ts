@@ -10,6 +10,7 @@ import { errorPage, notFoundPage } from './pages'
 import { renderPage } from './render/page'
 import { renderRobots, renderSitemap } from './render/sitemap'
 import { repositoriesFor } from './repositories'
+import { serveThemeAsset } from './theme-assets'
 
 /**
  * The site Worker.
@@ -52,6 +53,12 @@ export function createApp(): Hono<{ Bindings: Env }> {
   // URL has no file extension and would otherwise be treated as a page.
   app.get('/media/:id', (c) => serveMedia(c.env, c.req.param('id'), c.req.raw))
 
+  // The theme's own files. Before the catch-all for the same reason as media,
+  // and before `looksLikeAsset` can see them: `.css` and `.js` are exactly the
+  // extensions that rule was written for, so a stylesheet would otherwise be
+  // answered with a plain 404 and the page would render unstyled.
+  app.get('/theme/:name', (c) => serveThemeAsset(c.req.param('name'), c.req.raw))
+
   // `robots.txt` and `sitemap.xml` before the catch-all too: both have a file
   // extension, so the catch-all would answer them with a plain 404 and a crawler
   // would take that for an answer.
@@ -74,7 +81,15 @@ export function createApp(): Hono<{ Bindings: Env }> {
 
   app.get('*', async (c) => {
     const path = new URL(c.req.url).pathname
-    if (looksLikeAsset(path)) return c.text('Not Found', 404)
+    // A path that looks like a file is not a page, so it gets a plain 404 rather
+    // than HTML. `no-store`, because a browser that caches this answer keeps
+    // asking for a file that a later deploy may well have added.
+    if (looksLikeAsset(path)) {
+      return c.body('Not Found', 404, {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': 'no-store',
+      })
+    }
 
     const result = await renderPage(path, {
       repositories: repositoriesFor(c.env),
