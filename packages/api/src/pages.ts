@@ -25,6 +25,20 @@ function build() {
     title: z.string().check(z.minLength(1), z.maxLength(200)),
     slug: contentSlugSchema,
     blocks: z.optional(blocks),
+    /**
+     * False makes this page its own document: `customSource` is rendered with the
+     * site's context instead of the theme's page template. True, or absent, is
+     * every page that came before this field existed.
+     */
+    useLayout: z.optional(z.boolean()),
+    /**
+     * The Liquid source of a page that is its own document.
+     *
+     * Checked here only for length. Whether it parses is the server's answer, and
+     * deliberately so: the same engine that renders it at request time is the one
+     * that has to accept it, and a schema cannot run that engine.
+     */
+    customSource: z.optional(z.nullable(z.string().check(z.maxLength(256 * 1024)))),
     seo: z.optional(seoMetadataSchema),
     status: z.optional(contentStatusSchema),
     /** Lower sorts first. Ties fall back to creation order. */
@@ -35,6 +49,8 @@ function build() {
     id: z.string(),
     title: z.string(),
     slug: z.string(),
+    /** So a list can mark the pages that are their own document. */
+    useLayout: z.boolean(),
     status: contentStatusSchema,
     isHome: z.boolean(),
     sortOrder: z.number(),
@@ -48,6 +64,8 @@ function build() {
     title: z.string(),
     slug: z.string(),
     blocks,
+    useLayout: z.boolean(),
+    customSource: z.nullable(z.string()),
     seo: seoMetadataSchema,
     status: contentStatusSchema,
     isHome: z.boolean(),

@@ -11,6 +11,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Field } from '@/components/field'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
+import { TemplateEditorSurface } from '@/components/template-editor-surface'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SeoPanel } from '@/components/seo-panel'
 import { ErrorState, LoadingState } from '@/components/states'
@@ -47,13 +48,24 @@ interface PageForm {
    */
   seo: SeoMetadata
   blocks: Block[]
+  /** False makes this page its own document, rendered from `customSource`. */
+  useLayout: boolean
+  customSource: string
 }
 
-const EMPTY_FORM: PageForm = { title: '', slug: '', sortOrder: '0', seo: {}, blocks: [] }
+const EMPTY_FORM: PageForm = {
+  title: '',
+  slug: '',
+  sortOrder: '0',
+  seo: {},
+  blocks: [],
+  useLayout: true,
+  customSource: '',
+}
 
 const TABS: FormTab[] = [
   { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'sortOrder', 'coverMediaId'] },
-  { id: 'body', labelKey: 'editor.body', owns: ['blocks'] },
+  { id: 'body', labelKey: 'editor.body', owns: ['blocks', 'customSource', 'useLayout'] },
   { id: 'seo', labelKey: 'seo.summary', owns: ['seo'] },
 ]
 
@@ -72,6 +84,15 @@ export function PageEditorPage() {
   const [form, setForm] = useState<PageForm>(EMPTY_FORM)
   const [page, setPage] = useState<PageResponse | null>(null)
   const [issues, setIssues] = useState<Record<string, string>>({})
+  /**
+   * A custom source the server would not accept.
+   *
+   * Kept beside the editor rather than shown as a toast: the message names a line,
+   * and a line is only good for anything where the line is.
+   */
+  const [sourceProblem, setSourceProblem] = useState<{ message: string; line: number | null } | null>(
+    null,
+  )
   const [tab, setTab] = useState(FIRST_TAB)
   const [slugError, setSlugError] = useState('')
   const [saving, setSaving] = useState<ContentStatus | null>(null)
@@ -137,6 +158,7 @@ export function PageEditorPage() {
 
     setIssues({})
     setSlugError('')
+    setSourceProblem(null)
     setSaving(status)
 
     try {
@@ -157,6 +179,9 @@ export function PageEditorPage() {
       if (thrown instanceof ApiError && thrown.code === 'slug_taken') {
         setSlugError(thrown.serverMessage ?? t('editor.slugTaken'))
         toast.error(t('editor.slugTaken'))
+      } else if (thrown instanceof ApiError && !form.useLayout && thrown.serverMessage !== undefined) {
+        setSourceProblem({ message: thrown.serverMessage, line: thrown.line ?? null })
+        setTab('body')
       } else {
         toast.error(describeApiError(thrown, t))
       }
@@ -307,6 +332,25 @@ export function PageEditorPage() {
               hint={t('pageEditor.sortOrder.hint')}
               onChange={(value) => update((current) => ({ ...current, sortOrder: value }))}
             />
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="font-normal">
+                <input
+                  type="checkbox"
+                  className="size-4"
+                  checked={form.useLayout}
+                  onChange={(event) => {
+                    // A problem from the previous attempt belongs to the source the
+                    // operator has since changed their mind about.
+                    setSourceProblem(null)
+                    update((current) => ({ ...current, useLayout: event.target.checked }))
+                  }}
+                />
+                {t('pageEditor.useLayout')}
+              </Label>
+              <p className="max-w-prose text-xs text-muted-foreground">
+                {t('pageEditor.useLayout.hint')}
+              </p>
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
@@ -324,19 +368,47 @@ export function PageEditorPage() {
       </TabsContent>
 
       <TabsContent value="body" forceMount hidden={tab !== 'body'}>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('editor.body')}</CardTitle>
-            <CardDescription>{t('editor.body.hint')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LazyBlockEditor
-              key={editorKey}
-              initialBlocks={form.blocks}
-              onChange={(blocks) => update((current) => ({ ...current, blocks }))}
-            />
-          </CardContent>
-        </Card>
+        {form.useLayout ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('editor.body')}</CardTitle>
+              <CardDescription>{t('editor.body.hint')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LazyBlockEditor
+                key={editorKey}
+                initialBlocks={form.blocks}
+                onChange={(blocks) => update((current) => ({ ...current, blocks }))}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('pageEditor.customSource')}</CardTitle>
+              <CardDescription>{t('pageEditor.customSource.hint')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {sourceProblem !== null && (
+                <p className="text-sm text-destructive" data-testid="source-problem">
+                  {sourceProblem.line === null
+                    ? sourceProblem.message
+                    : t('pageEditor.sourceProblem', {
+                        message: sourceProblem.message,
+                        line: sourceProblem.line,
+                      })}
+                </p>
+              )}
+              <TemplateEditorSurface
+                key={editorKey}
+                initialSource={form.customSource}
+                onChange={(value) => update((current) => ({ ...current, customSource: value }))}
+                errorLine={sourceProblem?.line ?? null}
+                autoFocus
+              />
+            </CardContent>
+          </Card>
+        )}
       </TabsContent>
 
       </Tabs>
@@ -352,6 +424,8 @@ function toForm(page: PageResponse): PageForm {
     sortOrder: String(page.sortOrder),
     seo: page.seo,
     blocks: page.blocks,
+    useLayout: page.useLayout,
+    customSource: page.customSource ?? '',
   }
 }
 
@@ -367,6 +441,8 @@ function toWrite(form: PageForm, status: ContentStatus): PageWrite {
     sortOrder: Number.isInteger(sortOrder) && sortOrder >= 0 ? sortOrder : 0,
     seo: form.seo,
     blocks: form.blocks,
+    useLayout: form.useLayout,
+    customSource: form.customSource,
   }
 }
 

@@ -50,3 +50,22 @@ export async function renderDocument(
 
   return injectAttribution(html, context.site.attribution)
 }
+
+/**
+ * The same, for a page whose source is its own document.
+ *
+ * `render` rather than `renderFile`: such a page has no name in the theme, and
+ * `{% layout %}` is precisely what it is opting out of. Everything else is the
+ * same -- the same engine, the same context, the same attribution floor -- because
+ * "a page is a document you can print" is a property of the platform, not of the
+ * theme.
+ */
+export async function renderPageSource(
+  runtime: LiquidRuntime,
+  source: string,
+  context: RenderContext,
+): Promise<string> {
+  const html = await runtime.render(source, context)
+
+  return injectAttribution(html, context.site.attribution)
+}

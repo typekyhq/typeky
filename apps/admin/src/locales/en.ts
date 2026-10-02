@@ -342,6 +342,16 @@ export const en: Locale = {
   'postEditor.loading': 'Loading the post',
   'postEditor.new': 'New post',
   'postEditor.edit': 'Edit post',
+  // Pages that are their own document.
+  'pageEditor.useLayout': 'Use the theme layout',
+  'pageEditor.useLayout.hint':
+    'Turn this off and the page becomes its own document: your template is rendered instead of the theme’s, with the same site variables and Liquid available. The header, footer and SEO tags become yours to write.',
+  'pageEditor.customSource': 'Page template',
+  'pageEditor.customSource.hint':
+    'Rendered with the site’s own context. Saved only if it parses, and the page stops going through the theme’s layout.',
+  'pageEditor.sourceProblem': '{message} (line {line})',
+  'pages.customMarker': 'Own template',
+
   'taxonomy.pick': 'Filed under',
   'taxonomy.pick.none': 'No vocabulary applies to this content type yet.',
   'taxonomy.pick.none.hint':

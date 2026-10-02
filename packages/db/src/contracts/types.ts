@@ -74,6 +74,13 @@ export interface Page {
   title: string
   slug: string
   blocks: BlockContent
+  /**
+   * False means the page is its own document, rendered from `customSource`
+   * rather than through the theme's layout.
+   */
+  useLayout: boolean
+  /** Liquid source of a page that is its own document. Unused when `useLayout`. */
+  customSource: string | null
   seo: SeoMetadata
   status: ContentStatus
   isHome: boolean
@@ -171,6 +178,8 @@ export interface PageWrite {
   title: string
   slug: string
   blocks?: BlockContent
+  useLayout?: boolean
+  customSource?: string | null
   seo?: SeoMetadata
   status?: ContentStatus
   sortOrder?: number

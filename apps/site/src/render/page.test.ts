@@ -32,6 +32,8 @@ function page(overrides: Partial<Page> & { title: string; slug: string }): Page 
   return {
     id: overrides.slug,
     blocks: [],
+    useLayout: true,
+    customSource: null,
     seo: {},
     status: 'published',
     isHome: false,
@@ -268,6 +270,60 @@ describe('rendering content pages', () => {
     expect(result.html).toContain('One')
     // The card is a summary: a list does not need every post's body.
     expect(result.html).not.toContain('"type":"paragraph"')
+  })
+})
+
+describe('a page that is its own document', () => {
+  const document: Page = page({
+    title: 'Landing',
+    slug: 'landing',
+    isHome: false,
+    useLayout: false,
+    customSource: '<!doctype html><html><body><h1>{{ content.title }}</h1><p>{{ site.name }}</p></body></html>',
+  })
+
+  it('renders its own source instead of the theme', async () => {
+    const { render } = setUp({ pages: [document] })
+
+    const result = await render('/landing')
+
+    expect(result.status).toBe(200)
+    // The source is the document: Liquid ran against the site's context...
+    expect(result.html).toContain('<h1>Landing</h1>')
+    expect(result.html).toContain('Sample Site')
+    // ...and the theme did not wrap it, which is the point of the switch.
+    expect(result.html).not.toContain('site-header')
+    expect(result.html).not.toContain('site-footer')
+  })
+
+  it('is still a page the platform publishes: the attribution goes in', async () => {
+    const { render } = setUp({ pages: [document] })
+
+    // A custom page is not a way to remove the badge. The floor is the platform's,
+    // not the theme's, so it does not matter that the layout was skipped.
+    expect((await render('/landing')).html).toContain('data-typeky-attribution')
+  })
+
+  it('can be the home page', async () => {
+    const { render } = setUp({ pages: [{ ...document, isHome: true }] })
+
+    const result = await render('/')
+
+    expect(result.html).toContain('<h1>Landing</h1>')
+    expect(result.html).not.toContain('site-header')
+  })
+
+  it('falls back to the theme when the flag is set but the source is not', async () => {
+    const { render } = setUp({
+      pages: [page({ title: 'Empty', slug: 'empty', useLayout: false, customSource: '   ' })],
+    })
+
+    // The admin refuses to save this, so it is a floor under a rule rather than a
+    // state the UI can produce -- and a rendered page beats a blank one.
+    const result = await render('/empty')
+
+    expect(result.status).toBe(200)
+    expect(result.html).toContain('site-header')
   })
 })
 

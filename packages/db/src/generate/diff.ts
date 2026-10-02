@@ -167,12 +167,24 @@ export function diffModels(previous: LogicalModel, next: LogicalModel): ModelDif
  * Deterministic, because the same model has to produce the same file name every
  * time: the name is what wrangler records as applied, and a generator that could
  * name it differently on two machines is a migration that gets applied twice.
+ *
+ * Column changes are grouped by table, so adding two columns to `pages` reads as
+ * `pages_use_layout_custom_source` rather than naming the table once per column.
  */
 export function migrationSlug(diff: ModelDiff): string {
   const tokens: string[] = []
 
   const add = (token: string): void => {
     if (!tokens.includes(token)) tokens.push(token)
+  }
+
+  const added = new Map<string, string[]>()
+  const dropped = new Map<string, string[]>()
+
+  const collect = (into: Map<string, string[]>, table: string, column: string): void => {
+    const list = into.get(table)
+    if (list === undefined) into.set(table, [column])
+    else list.push(column)
   }
 
   for (const change of diff.changes) {
@@ -184,10 +196,10 @@ export function migrationSlug(diff: ModelDiff): string {
         add(`drop_${change.table}`)
         break
       case 'add_column':
-        add(`${change.table}_${change.column.name}`)
+        collect(added, change.table, change.column.name)
         break
       case 'drop_column':
-        add(`drop_${change.table}_${change.column}`)
+        collect(dropped, change.table, change.column)
         break
       // Index changes travel with the column or table that caused them, so naming
       // them too would only make the name longer than it has to be.
@@ -196,6 +208,9 @@ export function migrationSlug(diff: ModelDiff): string {
         break
     }
   }
+
+  for (const [table, columns] of added) add(`${table}_${columns.join('_')}`)
+  for (const [table, columns] of dropped) add(`drop_${table}_${columns.join('_')}`)
 
   return tokens.join('_').slice(0, 60) || 'schema'
 }

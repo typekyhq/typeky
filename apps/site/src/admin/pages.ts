@@ -6,6 +6,7 @@ import {
   type PageSummary,
 } from '@typeky/api'
 import { defaultContext, type Page, type Repositories } from '@typeky/db'
+import { createLiquidRuntime } from '@typeky/theme-kit'
 import type { Context } from 'hono'
 import {
   apiError,
@@ -24,8 +25,19 @@ import { readListQuery, runBulk } from './listing'
  * a page has a sort order, and exactly one of them may be the home page. That
  * second one is an action rather than a field -- see the note in the contract,
  * and the partial unique index that backs it.
+ *
+ * A page may also be its own document, in which case its source is rendered with
+ * the site's context instead of the theme's page template.
  */
 
+/**
+ * One engine for validating a custom page's source before it is stored.
+ *
+ * Module scope because parsing needs no filesystem and no data, and the same
+ * choice the theme handler makes. `cache: false` because a validating engine never
+ * renders the same source twice.
+ */
+const validator = createLiquidRuntime({ cache: false })
 
 export async function readPages(
   c: Context<AdminEnv>,
@@ -95,12 +107,45 @@ async function writePage(
   const owner = await slugOwner(store, body.slug, id)
   if (owner !== null) return slugTaken(c, body.slug, owner)
 
+  const useLayout = body.useLayout ?? true
+  const customSource = body.customSource ?? ''
+
+  // A page that is its own document has to have one. Refusing an empty source is
+  // the guard that keeps `useLayout: false` from meaning "publish a blank page at
+  // a real URL", which the flag on its own would be.
+  if (!useLayout && customSource.trim() === '') {
+    return apiError(
+      c,
+      'invalid_request',
+      'a page that is its own document needs its template source',
+    )
+  }
+
+  // Parsed by the engine that will render it, before it is stored: a source that
+  // does not parse is a 500 at request time, and finding that out now, with a
+  // line, is the whole point of checking before a save.
+  //
+  // Only when it is what the page renders from. A source kept aside while the
+  // theme layout is in charge cannot break a page, and refusing a save over text
+  // nobody is looking at would be a worse answer than storing it.
+  if (!useLayout) {
+    const problem = validator.validate(customSource)
+    if (problem !== null) {
+      return apiError(c, 'invalid_request', problem.message, problem.line ?? undefined)
+    }
+  }
+
   try {
     const page = await store.pages.upsert(defaultContext(), {
       ...(id === undefined ? {} : { id }),
       title: body.title,
       slug: body.slug,
       blocks: body.blocks ?? [],
+      // Both are stored whichever way the switch is set: toggling it by accident
+      // should not throw away the other mode's work. The stored text is the
+      // author's, verbatim -- only whitespace-only counts as empty.
+      useLayout,
+      customSource: customSource.trim() === '' ? null : customSource,
       seo: body.seo ?? {},
       status: body.status,
       sortOrder: body.sortOrder,
@@ -218,6 +263,7 @@ function toSummary(page: Page): PageSummary {
     id: page.id,
     title: page.title,
     slug: page.slug,
+    useLayout: page.useLayout,
     status: page.status,
     isHome: page.isHome,
     sortOrder: page.sortOrder,
@@ -233,6 +279,8 @@ function toResponse(page: Page): PageResponse {
     title: page.title,
     slug: page.slug,
     blocks: page.blocks,
+    useLayout: page.useLayout,
+    customSource: page.customSource,
     seo: page.seo,
     status: page.status,
     isHome: page.isHome,

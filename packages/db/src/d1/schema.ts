@@ -41,6 +41,8 @@ export const pages = sqliteTable('pages', {
   title: text('title').notNull(),
   slug: text('slug').notNull().unique(),
   contentBlocks: text('content_blocks').notNull().default('[]'),
+  useLayout: integer('use_layout').notNull().default(1),
+  customSource: text('custom_source'),
   seoMetadata: text('seo_metadata').notNull().default('{}'),
   status: text('status').notNull().default('draft'),
   isHome: integer('is_home').notNull().default(0),

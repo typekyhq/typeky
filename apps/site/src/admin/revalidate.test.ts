@@ -44,6 +44,8 @@ function homePage(): Page {
     title: 'Home',
     slug: 'home',
     blocks: [],
+    useLayout: true,
+    customSource: null,
     seo: {},
     status: 'published',
     isHome: true,

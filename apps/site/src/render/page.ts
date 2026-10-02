@@ -13,7 +13,7 @@ import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
 import { buildRenderContext, type ItemInput, type TemplateTerm } from './context'
-import { renderDocument, themeRuntimeOptions } from './theme-runtime'
+import { renderDocument, renderPageSource, themeRuntimeOptions } from './theme-runtime'
 
 /**
  * The render pipeline.
@@ -126,6 +126,13 @@ export async function renderPage(
     }
   }
 
+  // A page that is its own document skips the theme's template, not the theme
+  // itself: the same engine, the same context, so `{% render 'snippets/...' %}` and
+  // `asset_url` still mean what they mean everywhere else.
+  if (assembled.document !== undefined) {
+    return { status: 200, html: await renderCustom(db, site, assembled.document, assembled.input) }
+  }
+
   return {
     status: 200,
     html: await renderWith(db, site, templateFor(assembled.kind), assembled.input),
@@ -155,20 +162,20 @@ async function assemble(
   route: Route,
   store: Repositories,
   common: Common,
-): Promise<{ kind: PageKind; input: ContextInput } | null> {
+): Promise<{ kind: PageKind; input: ContextInput; document?: string } | null> {
   const ctx = defaultContext()
 
   switch (route.kind) {
     case 'home': {
       const page = await store.pages.home(ctx)
       if (page === null || page.status !== 'published') return null
-      return { kind: 'home', input: { ...common, item: pageInput(page, 'home') } }
+      return { kind: 'home', input: { ...common, item: pageInput(page, 'home') }, ...documentOf(page) }
     }
 
     case 'page': {
       const page = await store.pages.bySlug(ctx, route.slug)
       if (page === null || page.status !== 'published') return null
-      return { kind: 'page', input: { ...common, item: pageInput(page, 'page') } }
+      return { kind: 'page', input: { ...common, item: pageInput(page, 'page') }, ...documentOf(page) }
     }
 
     case 'post': {
@@ -442,22 +449,60 @@ function templateFor(kind: PageKind): string {
 
 /* ---------------------------------------------------------------- render -- */
 
+/**
+ * The runtime every render of this site shares.
+ *
+ * One builder rather than one per entry point: the page that is its own document
+ * and the page that is the theme's both need the same loader, the same asset
+ * versions and the same cache, and two of those drifting apart is the bug this
+ * file already carries a comment about.
+ */
+function runtimeFor(db: DbPort, site: Site) {
+  const loader = createTemplateLoader({ db, theme: site.theme, baseline: BASELINE })
+
+  return createLiquidRuntime({
+    ...themeRuntimeOptions(loader.fs),
+    // Keyed by the loader's revision, which is derived from the override rows --
+    // so a cache filled before a save cannot answer after one, in any isolate.
+    cache: createRevisionCache({ revision: () => loader.revision }),
+  })
+}
+
 async function renderWith(
   db: DbPort,
   site: Site,
   template: string,
   input: ContextInput,
 ): Promise<string> {
-  const loader = createTemplateLoader({ db, theme: site.theme, baseline: BASELINE })
+  return renderDocument(runtimeFor(db, site), template, buildRenderContext(input))
+}
 
-  const runtime = createLiquidRuntime({
-    ...themeRuntimeOptions(loader.fs),
-    // Keyed by the loader's revision, which is derived from the override rows --
-    // so a cache filled before a save cannot answer after one, in any isolate.
-    cache: createRevisionCache({ revision: () => loader.revision }),
-  })
+async function renderCustom(
+  db: DbPort,
+  site: Site,
+  source: string,
+  input: ContextInput,
+): Promise<string> {
+  return renderPageSource(runtimeFor(db, site), source, buildRenderContext(input))
+}
 
-  return renderDocument(runtime, template, buildRenderContext(input))
+/**
+ * The page's own source, when it has one.
+ *
+ * The flag alone is not enough: a page marked as its own document with no source
+ * falls back to the theme, because an empty body with an attribution badge is not
+ * a page. The admin refuses to save that combination, so this is the floor under a
+ * rule rather than the rule itself.
+ */
+function documentOf(page: Page): { document: string } | Record<string, never> {
+  // `!== false` rather than a truthiness test: anything that is not an explicit
+  // "no layout" -- a row written before this field existed, a fixture that has not
+  // caught up -- is a page the theme renders, which is what every page was before
+  // this field existed. Being strict here would turn a shape surprise into a 500.
+  if (page.useLayout !== false) return {}
+
+  const source = (page.customSource ?? '').trim()
+  return source === '' ? {} : { document: source }
 }
 
 /**

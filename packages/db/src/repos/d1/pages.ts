@@ -1,4 +1,4 @@
-import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
+import { type Block, decodeJson, decodeTimestamp, encodeBoolean, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
 import { resolveWindow } from '../../contracts'
 import type {
@@ -26,6 +26,8 @@ const COLUMNS = [
   'title',
   'slug',
   'content_blocks',
+  'use_layout',
+  'custom_source',
   'seo_metadata',
   'status',
   'is_home',
@@ -41,6 +43,8 @@ interface PageRow {
   title: string
   slug: string
   content_blocks: string
+  use_layout: number
+  custom_source: string | null
   seo_metadata: string
   status: string
   is_home: number
@@ -57,6 +61,8 @@ function toPage(row: PageRow): Page {
     title: row.title,
     slug: row.slug,
     blocks: decodeJson<Block[]>(row.content_blocks),
+    useLayout: asBoolean(row.use_layout),
+    customSource: row.custom_source,
     seo: decodeJson<SeoMetadata>(row.seo_metadata),
     status: row.status === 'published' ? 'published' : 'draft',
     isHome: asBoolean(row.is_home),
@@ -132,6 +138,8 @@ export function createPageRepository(db: DbPort): PageRepository {
         input.title,
         input.slug,
         encodeJson(input.blocks ?? []),
+        encodeBoolean(input.useLayout ?? existing?.useLayout ?? true),
+        input.customSource ?? null,
         encodeJson(input.seo ?? {}),
         status,
         sortOrder,
@@ -143,13 +151,13 @@ export function createPageRepository(db: DbPort): PageRepository {
         // is_home is written as 0 and changed only through setHome, so an upsert
         // can never trip the single-home-page unique index.
         await db.run(
-          `INSERT INTO pages (id, title, slug, content_blocks, seo_metadata, status, is_home, sort_order, revision, published_at, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+          `INSERT INTO pages (id, title, slug, content_blocks, use_layout, custom_source, seo_metadata, status, is_home, sort_order, revision, published_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
           [id, ...values, timestamp, timestamp],
         )
       } else {
         await db.run(
-          `UPDATE pages SET title = ?, slug = ?, content_blocks = ?, seo_metadata = ?, status = ?, sort_order = ?, revision = ?, published_at = ?, updated_at = ?
+          `UPDATE pages SET title = ?, slug = ?, content_blocks = ?, use_layout = ?, custom_source = ?, seo_metadata = ?, status = ?, sort_order = ?, revision = ?, published_at = ?, updated_at = ?
            WHERE id = ?`,
           [...values, timestamp, id],
         )

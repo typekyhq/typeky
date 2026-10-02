@@ -334,6 +334,15 @@ export const zhCN: Locale = {
   'postEditor.loading': '正在加载文章',
   'postEditor.new': '新建文章',
   'postEditor.edit': '编辑文章',
+  // 自成一份文档的页面。
+  'pageEditor.useLayout': '使用主题布局',
+  'pageEditor.useLayout.hint':
+    '关掉之后这一页自成一份文档：用你自己的模板渲染，而不是主题的模板；站点变量与 Liquid 一样可用。页头、页脚与 SEO 标签从此由你自己写。',
+  'pageEditor.customSource': '页面模板',
+  'pageEditor.customSource.hint': '用站点自己的上下文渲染。只有能通过语法检查才会保存；这一页不再走主题布局。',
+  'pageEditor.sourceProblem': '{message}（第 {line} 行）',
+  'pages.customMarker': '自定义模板',
+
   'taxonomy.pick': '归档到',
   'taxonomy.pick.none': '还没有分类法适用于这种内容类型。',
   'taxonomy.pick.none.hint': '到「分类」里新建一个并勾选这种内容类型，它的术语就会出现在这里。',

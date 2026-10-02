@@ -16,11 +16,36 @@ vi.mock('@/components/lazy-block-editor', () => ({
   ),
 }))
 
+/**
+ * The source editor is replaced with a textarea.
+ *
+ * CodeMirror measures its own layout, which jsdom has none of, and what these
+ * tests are about is the form around it: which panel is on screen and what a save
+ * sends.
+ */
+vi.mock('@/components/template-editor-surface', () => ({
+  TemplateEditorSurface: ({
+    initialSource,
+    onChange,
+  }: {
+    initialSource: string
+    onChange: (value: string) => void
+  }) => (
+    <textarea
+      data-testid="source-editor"
+      defaultValue={initialSource}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}))
+
 const PAGE: PageResponse = {
   id: 'page_about',
   title: 'About',
   slug: 'about',
   blocks: [{ type: 'paragraph', content: [{ type: 'text', text: 'Body' }] }],
+  useLayout: true,
+  customSource: null,
   seo: {},
   status: 'draft',
   isHome: false,
@@ -150,5 +175,59 @@ describe('the home page action', () => {
       expect(screen.queryByRole('button', { name: 'Set as home' })).toBeNull()
     })
     expect(screen.getByTestId('page-meta').textContent).toContain('Home page')
+  })
+})
+
+describe('a page that is its own document', () => {
+  const CUSTOM: PageResponse = {
+    ...PAGE,
+    useLayout: false,
+    customSource: '<h1>{{ content.title }}</h1>',
+  }
+
+  function withPage(page: PageResponse, overrides: Partial<ApiClient> = {}) {
+    return fakeApiClient({
+      async getPage() {
+        return page
+      },
+      ...overrides,
+    })
+  }
+
+  it('opens on the source instead of the block editor', async () => {
+    renderEditor(withPage(CUSTOM))
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Body' }))
+
+    const source = (await screen.findByTestId('source-editor')) as HTMLTextAreaElement
+    expect(source.value).toBe('<h1>{{ content.title }}</h1>')
+    expect(screen.queryByTestId('block-editor')).toBeNull()
+  })
+
+  it('sends what the box holds, and the flag that says so', async () => {
+    const savePage = vi.fn(async (_id: string, write: unknown) => ({ ...CUSTOM, ...(write as object) }))
+    renderEditor(withPage(CUSTOM, { savePage }))
+
+    const source = (await screen.findByTestId('source-editor')) as HTMLTextAreaElement
+    await userEvent.clear(source)
+    await userEvent.type(source, '<h1>Hello</h1>')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+
+    await waitFor(() => {
+      expect(savePage).toHaveBeenCalledWith(
+        'page_about',
+        expect.objectContaining({ useLayout: false, customSource: '<h1>Hello</h1>' }),
+      )
+    })
+  })
+
+  it('switches back to the blocks when the layout comes back on', async () => {
+    renderEditor(withPage(CUSTOM))
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Body' }))
+    await userEvent.click(screen.getByLabelText('Use the theme layout'))
+
+    expect(await screen.findByTestId('block-editor')).toBeTruthy()
+    expect(screen.queryByTestId('source-editor')).toBeNull()
   })
 })

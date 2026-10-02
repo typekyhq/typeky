@@ -64,6 +64,8 @@ function fakePagesRepository() {
         title: input.title,
         slug: input.slug,
         blocks: input.blocks ?? [],
+        useLayout: input.useLayout ?? existing?.useLayout ?? true,
+        customSource: input.customSource ?? null,
         seo: input.seo ?? {},
         status,
         // Never from the write: the flag only moves through setHome.
@@ -170,6 +172,13 @@ function setup(options: { repositories?: RepositoryResolver } = {}) {
 }
 
 const ABOUT = { title: 'About', slug: 'about' }
+
+const CUSTOM = {
+  title: 'Landing',
+  slug: 'landing',
+  useLayout: false,
+  customSource: '<!doctype html><html><body><h1>{{ content.title }}</h1></body></html>',
+}
 
 describe('reading pages', () => {
   it('needs a session', async () => {
@@ -313,5 +322,73 @@ describe('deleting pages', () => {
 
     expect(deleted.status).toBe(204)
     expect((await send(`/pages/${created.id}`, undefined, auth.cookie)).status).toBe(404)
+  })
+})
+
+describe('a page that is its own document', () => {
+  it('stores the source and the flag', async () => {
+    const { signIn, write, rows } = setup()
+    const auth = await signIn()
+
+    const response = await write('POST', '/pages', CUSTOM, auth)
+    const body = (await response.json()) as { id: string; useLayout: boolean; customSource: string }
+
+    expect(response.status).toBe(201)
+    expect(body.useLayout).toBe(false)
+    expect(body.customSource).toBe(CUSTOM.customSource)
+    expect(rows.get(body.id)?.customSource).toBe(CUSTOM.customSource)
+  })
+
+  it('refuses the flag without a source, rather than publish a blank page', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+
+    const response = await write('POST', '/pages', { ...CUSTOM, customSource: '   ' }, auth)
+
+    expect(response.status).toBe(400)
+    expect(((await response.json()) as { message: string }).message).toContain('needs its template source')
+  })
+
+  it('refuses a source the engine cannot parse, and says where', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+
+    const response = await write('POST', '/pages', { ...CUSTOM, customSource: '<h1>{% if %}</h1>' }, auth)
+    const body = (await response.json()) as { error: string; line?: number }
+
+    // The engine that renders it is the one that checks it, which is why the check
+    // is the server's rather than the schema's.
+    expect(response.status).toBe(400)
+    expect(body.error).toBe('invalid_request')
+    expect(body.line).toBeGreaterThan(0)
+  })
+
+  it('keeps the source when the theme layout comes back', async () => {
+    const { signIn, write, rows } = setup()
+    const auth = await signIn()
+
+    const created = (await (await write('POST', '/pages', CUSTOM, auth)).json()) as { id: string }
+    await write('PUT', `/pages/${created.id}`, { ...CUSTOM, useLayout: true }, auth)
+
+    // Toggling the switch by accident must not throw away the other mode's work,
+    // which is why neither field is cleared by the other.
+    expect(rows.get(created.id)?.useLayout).toBe(true)
+    expect(rows.get(created.id)?.customSource).toBe(CUSTOM.customSource)
+  })
+
+  it('does not parse a source the page is not rendered from', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+
+    // Broken text kept aside while the theme layout is in charge: refusing this
+    // would be refusing a save over something nobody is looking at.
+    const response = await write(
+      'POST',
+      '/pages',
+      { ...CUSTOM, useLayout: true, customSource: '<h1>{% if %}</h1>' },
+      auth,
+    )
+
+    expect(response.status).toBe(201)
   })
 })

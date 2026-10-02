@@ -65,6 +65,18 @@ const pages: TableDef = {
     { name: 'title', type: 'text', notNull: true },
     { name: 'slug', type: 'text', notNull: true, unique: true },
     { name: 'content_blocks', type: 'json', notNull: true, defaultSql: "'[]'", note: 'Block JSON' },
+    {
+      name: 'use_layout',
+      type: 'boolean',
+      notNull: true,
+      defaultSql: '1',
+      note: 'false means the page is its own document, rendered from custom_source',
+    },
+    {
+      name: 'custom_source',
+      type: 'text',
+      note: 'Liquid source of a page that is its own document; unused when use_layout is 1',
+    },
     { name: 'seo_metadata', type: 'json', notNull: true, defaultSql: "'{}'" },
     { name: 'status', type: 'text', notNull: true, defaultSql: "'draft'", note: 'draft | published' },
     { name: 'is_home', type: 'boolean', notNull: true, defaultSql: '0', note: 'at most one row may be 1' },

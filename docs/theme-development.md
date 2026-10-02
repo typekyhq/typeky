@@ -77,6 +77,11 @@ request
 Lookup is two levels and one rule: **an override if there is one, otherwise the
 bundled file**. Editing a template never changes how names resolve.
 
+One exception, and it is the site owner's choice rather than yours: a page can be
+marked as **its own document**, in which case its own source is rendered instead of
+`templates/page.liquid` — same engine, same context, no layout. Such a page is
+deliberately not yours to theme.
+
 ## The data a template gets
 
 One object, and these are all of its fields. Everything in it is plain JSON —

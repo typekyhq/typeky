@@ -39,7 +39,9 @@ export function renderDiffSql(diff: ModelDiff, model: LogicalModel): string {
         lines.push(`ALTER TABLE ${change.table} DROP COLUMN ${change.column};`)
         break
       case 'add_column':
-        lines.push(`ALTER TABLE ${change.table} ADD COLUMN ${renderColumnDefinition(change.column)};`)
+        lines.push(
+          `ALTER TABLE ${change.table} ADD COLUMN ${change.column.name} ${renderColumnDefinition(change.column)};`,
+        )
         break
       case 'create_table':
         lines.push(...renderCreateTable(change.table))

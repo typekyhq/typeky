@@ -288,6 +288,11 @@ export function PagesSection() {
                           {t('pages.homeMarker')}
                         </p>
                       )}
+                      {!page.useLayout && (
+                        <p className="text-xs text-muted-foreground" data-testid="custom-marker">
+                          {t('pages.customMarker')}
+                        </p>
+                      )}
                     </td>
                     <td className="py-3 pr-3 text-muted-foreground">{page.slug}</td>
                     <td className="py-3 pr-3">
