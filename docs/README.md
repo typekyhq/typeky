@@ -11,6 +11,7 @@ on it is in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 | Document | What it covers |
 | :---- | :---- |
+| [Deploying Typeky](quick-start.md) | Putting it on your own Cloudflare account: the resources to create, the secrets, the deploy, your own domain, and the least-privilege token |
 | [Theme development](theme-development.md) | Editing templates in the admin panel, and writing a theme: the Liquid surface, the data a template gets, and the four rules that are not obvious |
 | [CHANGELOG](../CHANGELOG.md) | What each milestone delivered |
 | [SECURITY](../SECURITY.md) | Reporting a vulnerability |

@@ -53,16 +53,32 @@ TypeScript · Cloudflare Workers · [Hono](https://hono.dev) · [LiquidJS](https
 
 ## Quick start
 
-> ⚠️ Not usable yet. The steps below are the intended flow; this section will be replaced with a verified, copy-pasteable guide once the renderer is done.
+Typeky runs on your own Cloudflare account. The whole deployment is ten minutes
+and the free plan is enough; the copy-pasteable version, with the least-privilege
+token list and the things that go wrong, is in
+[**Deploying Typeky**](docs/quick-start.md).
 
 ```bash
-git clone <repo>
+git clone https://github.com/typekyhq/typeky.git
+cd typeky
 pnpm install
+
 pnpm --filter @typeky/site exec wrangler d1 create typeky
 pnpm --filter @typeky/site exec wrangler r2 bucket create typeky-media
 pnpm --filter @typeky/site exec wrangler kv namespace create CACHE
-pnpm --filter @typeky/site deploy
+# paste the two ids into apps/site/wrangler.jsonc
+
+pnpm db:migrate:remote
+pnpm deploy              # deploy before the secret: see the guide
+pnpm admin:password      # then store the hash with `wrangler secret put`
 ```
+
+Pages answer 503 until the site has a name: sign in at `/admin/`, open
+**Settings**, save. [The guide](docs/quick-start.md#6-the-first-five-minutes)
+explains why.
+
+To look at it without an account, [run it locally](docs/README.md#running-it-locally)
+instead — the database, the object store and the cache all run inside Wrangler.
 
 ## Local development
 
@@ -78,6 +94,7 @@ Read [CONTRIBUTING](CONTRIBUTING.md) before opening a pull request — it holds 
 
 ## Documentation
 
+- [Deploying Typeky](docs/quick-start.md) — the whole cloud setup: resources, secrets, deploy, your own domain, and a least-privilege token
 - [Documentation index](docs/README.md) — running it locally, and the day-to-day commands
 - [Theme development](docs/theme-development.md) — editing templates in the admin panel, and writing a theme: the Liquid surface, the data a template gets, and the four rules that are not obvious
 - [CONTRIBUTING](CONTRIBUTING.md) — repository layout, architecture red lines, and commit conventions
