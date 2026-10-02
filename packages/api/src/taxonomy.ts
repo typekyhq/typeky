@@ -45,6 +45,20 @@ export const vocabularyWriteSchema = z.object({
 
 export type VocabularyWrite = z.infer<typeof vocabularyWriteSchema>
 
+/**
+ * A term as a piece of content carries it.
+ *
+ * Smaller than `termSchema` on purpose: a list of posts shows the names, and
+ * `depth` and `usage` are facts about the tree rather than about this post.
+ */
+export const termRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+})
+
+export type TermRef = z.infer<typeof termRefSchema>
+
 export const termSchema = z.object({
   id: z.string(),
   vocabularyId: z.string(),

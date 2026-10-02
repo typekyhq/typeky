@@ -256,6 +256,11 @@ export function ProductsSection() {
                       >
                         {product.title}
                       </Link>
+                      {product.terms.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {product.terms.map((term) => term.name).join(' · ')}
+                        </p>
+                      )}
                       {product.summary !== null && (
                         <p className="max-w-prose text-xs text-muted-foreground">{product.summary}</p>
                       )}

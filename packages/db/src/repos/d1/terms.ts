@@ -229,6 +229,8 @@ export function createTermRepository(db: DbPort): TermRepository {
     },
 
     async forContent(_ctx: TenantContext, contentType: ContentType, contentId: string): Promise<Term[]> {
+      if (contentId === '') return []
+
       const rows = await db.all<TermRow>(
         `SELECT ${QUALIFIED_COLUMNS} FROM content_terms ct
            JOIN terms t ON t.id = ct.term_id
@@ -238,6 +240,33 @@ export function createTermRepository(db: DbPort): TermRepository {
         [contentType, contentId],
       )
       return rows.map(toTerm)
+    },
+
+    async forContentMany(
+      _ctx: TenantContext,
+      contentType: ContentType,
+      contentIds: string[],
+    ): Promise<Map<string, Term[]>> {
+      const grouped = new Map<string, Term[]>()
+      if (contentIds.length === 0) return grouped
+
+      const marks = contentIds.map(() => '?').join(', ')
+      const rows = await db.all<TermRow & { content_id: string }>(
+        `SELECT ${QUALIFIED_COLUMNS}, ct.content_id FROM content_terms ct
+           JOIN terms t ON t.id = ct.term_id
+           JOIN vocabularies v ON v.id = t.vocabulary_id
+          WHERE ct.content_type = ? AND ct.content_id IN (${marks})
+          ORDER BY ct.content_id ASC, v.sort_order ASC, v.name ASC, v.id ASC, t.sort_order ASC, t.name ASC, t.id ASC`,
+        [contentType, ...contentIds],
+      )
+
+      for (const row of rows) {
+        const list = grouped.get(row.content_id)
+        if (list === undefined) grouped.set(row.content_id, [toTerm(row)])
+        else list.push(toTerm(row))
+      }
+
+      return grouped
     },
 
     async assign(

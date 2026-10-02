@@ -17,7 +17,6 @@ export {
   type ContentStatus,
   type ContentType,
   type ListMediaQuery,
-  type ListPostsQuery,
   type ListQuery,
   type MediaItem,
   type MediaUsage,

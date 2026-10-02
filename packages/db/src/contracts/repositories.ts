@@ -14,7 +14,6 @@ import type {
   ContentStatus,
   ContentType,
   ListMediaQuery,
-  ListPostsQuery,
   ListQuery,
   MediaItem,
   MediaUsage,
@@ -62,7 +61,7 @@ export interface PageRepository {
 }
 
 export interface PostRepository {
-  list(ctx: TenantContext, query?: ListPostsQuery): Promise<PageResult<Post>>
+  list(ctx: TenantContext, query?: ListQuery): Promise<PageResult<Post>>
   byId(ctx: TenantContext, id: string): Promise<Post | null>
   bySlug(ctx: TenantContext, slug: string): Promise<Post | null>
   upsert(ctx: TenantContext, input: PostWrite): Promise<Post>
@@ -154,6 +153,17 @@ export interface TermRepository {
   usageCounts(ctx: TenantContext): Promise<Map<string, number>>
   /** The terms a piece of content carries, vocabulary by vocabulary. */
   forContent(ctx: TenantContext, contentType: ContentType, contentId: string): Promise<Term[]>
+  /**
+   * The same for many pieces of content at once, keyed by content id.
+   *
+   * A list screen asks for a page of rows, and asking per row would be one query
+   * per row for a fact it already has the rows for.
+   */
+  forContentMany(
+    ctx: TenantContext,
+    contentType: ContentType,
+    contentIds: string[],
+  ): Promise<Map<string, Term[]>>
   /** Replaces the terms on a piece of content with exactly this set. */
   assign(ctx: TenantContext, contentType: ContentType, contentId: string, termIds: string[]): Promise<void>
 }

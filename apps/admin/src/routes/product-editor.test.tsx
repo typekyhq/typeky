@@ -26,6 +26,7 @@ const PRODUCT: ProductResponse = {
     { label: 'Height', value: '40 cm' },
     { label: 'Bulb', value: 'E27' },
   ],
+  terms: [{ id: 'term_lamp', name: 'Lamps', slug: 'lamps' }],
   priceLabel: 'From $20',
   ctaLabel: 'Buy now',
   ctaUrl: 'https://example.com/checkout',

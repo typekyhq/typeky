@@ -260,11 +260,6 @@
           "note": "string array; MVP has no separate tag table"
         },
         {
-          "name": "category",
-          "type": "text",
-          "note": "single category"
-        },
-        {
           "name": "seo_metadata",
           "type": "json",
           "notNull": true,
@@ -308,12 +303,6 @@
               "column": "published_at",
               "desc": true
             }
-          ]
-        },
-        {
-          "name": "idx_posts_category",
-          "columns": [
-            "category"
           ]
         }
       ]

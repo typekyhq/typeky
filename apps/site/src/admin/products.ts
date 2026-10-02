@@ -5,7 +5,8 @@ import {
   type ProductResponse,
   type ProductSummary,
 } from '@typeky/api'
-import { defaultContext, type Product, type Repositories } from '@typeky/db'
+import { defaultContext, type Product, type Repositories, type Term } from '@typeky/db'
+import type { TermRef } from '@typeky/api'
 import type { Context } from 'hono'
 import {
   apiError,
@@ -38,9 +39,14 @@ export async function readProducts(
   if (!parsed.ok) return apiError(c, 'invalid_request', parsed.message)
 
   const result = await store.products.list(defaultContext(), parsed.query)
+  const terms = await store.terms.forContentMany(
+    defaultContext(),
+    'product',
+    result.items.map((product) => product.id),
+  )
 
   const body: ProductListResponse = {
-    items: result.items.map(toSummary),
+    items: result.items.map((product) => toSummary(product, terms.get(product.id) ?? [])),
     total: result.total,
     limit: result.limit,
     offset: result.offset,
@@ -59,7 +65,7 @@ export async function readProduct(
   const product = await findProduct(store, c.req.param('id'))
   if (product === null) return apiError(c, 'not_found', 'no product with that id')
 
-  return c.json(toResponse(product))
+  return c.json(await respond(store, product))
 }
 
 export function createProduct(
@@ -122,7 +128,20 @@ async function writeProduct(
       sortOrder: body.sortOrder,
     })
 
-    return c.json(toResponse(product), id === undefined ? 201 : 200)
+    // After the row, because a new product has no id until it is written. A term
+    // the repository refuses leaves the product saved without it, and the message
+    // says so rather than leaving the operator to guess which half happened.
+    try {
+      await store.terms.assign(defaultContext(), 'product', product.id, body.termIds ?? [])
+    } catch (error) {
+      return apiError(
+        c,
+        'invalid_request',
+        `the product was saved, but its terms were not: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
+
+    return c.json(await respond(store, product), id === undefined ? 201 : 200)
   } catch (error) {
     if (isUniqueViolation(error)) return slugTaken(c, body.slug, null)
     throw error
@@ -161,7 +180,7 @@ export async function setProductStatus(
     sortOrder: product.sortOrder,
   })
 
-  return c.json(toResponse(saved))
+  return c.json(await respond(store, saved))
 }
 
 export async function deleteProduct(
@@ -207,12 +226,23 @@ function slugTaken(c: Context<AdminEnv>, slug: string, owner: Product | null): R
 }
 
 
-function toSummary(product: Product): ProductSummary {
+/** What a template or an editor needs about a term, and nothing else. */
+function toTermRef(term: Term): TermRef {
+  return { id: term.id, name: term.name, slug: term.slug }
+}
+
+/** A saved product with the terms it now carries, which is what a write answers. */
+async function respond(store: Repositories, product: Product): Promise<ProductResponse> {
+  return toResponse(product, await store.terms.forContent(defaultContext(), 'product', product.id))
+}
+
+function toSummary(product: Product, terms: Term[]): ProductSummary {
   return {
     id: product.id,
     title: product.title,
     slug: product.slug,
     summary: product.summary,
+    terms: terms.map(toTermRef),
     priceLabel: product.priceLabel,
     status: product.status,
     sortOrder: product.sortOrder,
@@ -222,7 +252,7 @@ function toSummary(product: Product): ProductSummary {
   }
 }
 
-function toResponse(product: Product): ProductResponse {
+function toResponse(product: Product, terms: Term[]): ProductResponse {
   return {
     id: product.id,
     title: product.title,
@@ -235,6 +265,7 @@ function toResponse(product: Product): ProductResponse {
     priceLabel: product.priceLabel,
     ctaLabel: product.ctaLabel,
     ctaUrl: product.ctaUrl,
+    terms: terms.map(toTermRef),
     seo: product.seo,
     status: product.status,
     sortOrder: product.sortOrder,

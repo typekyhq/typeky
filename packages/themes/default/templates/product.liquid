@@ -2,6 +2,15 @@
 <article class="product">
   <header class="product-header">
     <h1>{{ content.title }}</h1>
+    {% comment %}
+      The terms this product is filed under, beside the price. A product can carry
+      more than one, so this iterates rather than printing a single value.
+    {% endcomment %}
+    {% if content.terms.size > 0 %}
+      <p class="meta">
+        {% for term in content.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
+      </p>
+    {% endif %}
     {% if content.price_label %}<p class="price">{{ content.price_label }}</p>{% endif %}
   </header>
 

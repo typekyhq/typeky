@@ -6,7 +6,8 @@ import {
   type PostResponse,
   type PostSummary,
 } from '@typeky/api'
-import { defaultContext, type Post, type Repositories } from '@typeky/db'
+import { defaultContext, type Post, type Repositories, type Term } from '@typeky/db'
+import type { TermRef } from '@typeky/api'
 import type { Context } from 'hono'
 import {
   apiError,
@@ -43,9 +44,16 @@ export async function readPosts(
   if (!parsed.ok) return apiError(c, 'invalid_request', parsed.message)
 
   const result = await store.posts.list(defaultContext(), parsed.query)
+  // One query for the page rather than one per row: the list shows a title's
+  // terms, and asking row by row is a query per title.
+  const terms = await store.terms.forContentMany(
+    defaultContext(),
+    'post',
+    result.items.map((post) => post.id),
+  )
 
   const body: PostListResponse = {
-    items: result.items.map(toSummary),
+    items: result.items.map((post) => toSummary(post, terms.get(post.id) ?? [])),
     total: result.total,
     limit: result.limit,
     offset: result.offset,
@@ -64,7 +72,7 @@ export async function readPost(
   const post = await findPost(store, c.req.param('id'))
   if (post === null) return apiError(c, 'not_found', 'no post with that id')
 
-  return c.json(toResponse(post))
+  return c.json(await respond(store, post))
 }
 
 export function createPost(c: Context<AdminEnv>, repositories: RepositoryResolver): Promise<Response> {
@@ -116,12 +124,24 @@ async function writePost(
       coverMediaId: body.coverMediaId ?? null,
       blocks: body.blocks ?? [],
       tags: body.tags ?? [],
-      category: body.category ?? null,
       seo: body.seo ?? {},
       status: body.status ?? DEFAULT_POST_STATUS,
     })
 
-    return c.json(toResponse(post), id === undefined ? 201 : 200)
+    // After the row, because a new post has no id until it is written. If a term
+    // is refused the post stays saved without it, and the message says exactly
+    // that rather than leaving the operator to work out which half happened.
+    try {
+      await store.terms.assign(defaultContext(), 'post', post.id, body.termIds ?? [])
+    } catch (error) {
+      return apiError(
+        c,
+        'invalid_request',
+        `the post was saved, but its terms were not: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
+
+    return c.json(await respond(store, post), id === undefined ? 201 : 200)
   } catch (error) {
     // The check above and the write are separate statements, so two operators
     // saving the same slug at the same moment both pass the check. The unique
@@ -162,12 +182,11 @@ export async function setPostStatus(
     coverMediaId: post.coverMediaId,
     blocks: post.blocks,
     tags: post.tags,
-    category: post.category,
     seo: post.seo,
     status: parsed.data.status,
   })
 
-  return c.json(toResponse(saved))
+  return c.json(await respond(store, saved))
 }
 
 export async function deletePost(
@@ -187,6 +206,16 @@ export async function deletePost(
 }
 
 /* -------------------------------------------------------------- helpers -- */
+
+/** What a template or an editor needs about a term, and nothing else. */
+function toTermRef(term: Term): TermRef {
+  return { id: term.id, name: term.name, slug: term.slug }
+}
+
+/** A saved post with the terms it now carries, which is what a write answers. */
+async function respond(store: Repositories, post: Post): Promise<PostResponse> {
+  return toResponse(post, await store.terms.forContent(defaultContext(), 'post', post.id))
+}
 
 async function findPost(store: Repositories, id: string | undefined): Promise<Post | null> {
   if (id === undefined || id === '') return null
@@ -220,13 +249,13 @@ function slugTaken(c: Context<AdminEnv>, slug: string, owner: Post | null): Resp
 }
 
 
-function toSummary(post: Post): PostSummary {
+function toSummary(post: Post, terms: Term[]): PostSummary {
   return {
     id: post.id,
     title: post.title,
     slug: post.slug,
     excerpt: post.excerpt,
-    category: post.category,
+    terms: terms.map(toTermRef),
     tags: post.tags,
     status: post.status,
     revision: post.revision,
@@ -235,7 +264,7 @@ function toSummary(post: Post): PostSummary {
   }
 }
 
-function toResponse(post: Post): PostResponse {
+function toResponse(post: Post, terms: Term[]): PostResponse {
   return {
     id: post.id,
     title: post.title,
@@ -244,7 +273,7 @@ function toResponse(post: Post): PostResponse {
     coverMediaId: post.coverMediaId,
     blocks: post.blocks,
     tags: post.tags,
-    category: post.category,
+    terms: terms.map(toTermRef),
     seo: post.seo,
     status: post.status,
     revision: post.revision,

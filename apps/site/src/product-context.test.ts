@@ -29,6 +29,7 @@ const PRODUCT = getProductResponseSchema().parse({
   blocks: [],
   coverMediaId: 'media_cover',
   gallery: ['media_one', 'media_two'],
+  terms: [{ id: 'term_lamp', name: 'Lamps', slug: 'lamps' }],
   specs: [
     { label: 'Height', value: '40 cm' },
     { label: 'Bulb', value: 'E27' },

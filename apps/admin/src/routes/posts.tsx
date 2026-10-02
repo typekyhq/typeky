@@ -264,8 +264,10 @@ export function PostsSection() {
                       >
                         {post.title}
                       </Link>
-                      {post.category !== null && (
-                        <p className="text-xs text-muted-foreground">{post.category}</p>
+                      {post.terms.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {post.terms.map((term) => term.name).join(' · ')}
+                        </p>
                       )}
                     </td>
                     <td className="py-3 pr-3 text-muted-foreground">{post.slug}</td>

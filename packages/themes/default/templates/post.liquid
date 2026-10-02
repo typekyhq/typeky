@@ -6,7 +6,7 @@
       {% if content.published_at %}
         <time datetime="{{ content.published_at }}">{{ content.published_at | date: site.date_format, 'UTC' }}</time>
       {% endif %}
-      {% if content.category %}<span class="category">{{ content.category }}</span>{% endif %}
+      {% for term in content.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
     </p>
   </header>
 

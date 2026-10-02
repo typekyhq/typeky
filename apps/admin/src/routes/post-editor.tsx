@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Field } from '@/components/field'
+import { TermPicker } from '@/components/term-picker'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SeoPanel } from '@/components/seo-panel'
@@ -46,7 +47,8 @@ interface PostForm {
   title: string
   slug: string
   excerpt: string
-  category: string
+  /** The terms this post is filed under, by id. */
+  termIds: string[]
   /** Comma-separated in the form; split into the stored list on save. */
   tags: string
   coverMediaId: string
@@ -65,7 +67,7 @@ const EMPTY_FORM: PostForm = {
   title: '',
   slug: '',
   excerpt: '',
-  category: '',
+  termIds: [],
   tags: '',
   coverMediaId: '',
   seo: {},
@@ -73,7 +75,7 @@ const EMPTY_FORM: PostForm = {
 }
 
 const TABS: FormTab[] = [
-  { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'excerpt', 'category', 'tags', 'coverMediaId'] },
+  { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'excerpt', 'termIds', 'tags', 'coverMediaId'] },
   { id: 'body', labelKey: 'editor.body', owns: ['blocks'] },
   { id: 'seo', labelKey: 'seo.summary', owns: ['seo'] },
 ]
@@ -317,12 +319,10 @@ export function PostEditorPage() {
                 update((current) => ({ ...current, slug: value }))
               }}
             />
-            <Field
-              id="category"
-              label={t('postEditor.category')}
-              value={form.category}
-              error={issues.category}
-              onChange={(value) => update((current) => ({ ...current, category: value }))}
+            <TermPicker
+              contentType="post"
+              selected={form.termIds}
+              onChange={(termIds) => update((current) => ({ ...current, termIds }))}
             />
             <Field
               id="tags"
@@ -401,7 +401,7 @@ function toForm(post: PostResponse): PostForm {
     title: post.title,
     slug: post.slug,
     excerpt: post.excerpt ?? '',
-    category: post.category ?? '',
+    termIds: post.terms.map((term) => term.id),
     tags: post.tags.join(', '),
     coverMediaId: post.coverMediaId ?? '',
     seo: post.seo,
@@ -411,7 +411,6 @@ function toForm(post: PostResponse): PostForm {
 
 function toWrite(form: PostForm, status: ContentStatus): PostWrite {
   const excerpt = form.excerpt.trim()
-  const category = form.category.trim()
 
   return {
     title: form.title.trim(),
@@ -419,7 +418,8 @@ function toWrite(form: PostForm, status: ContentStatus): PostWrite {
     // Empty means cleared, and the repository stores that as null rather than as
     // an empty string that would render as a blank line somewhere.
     excerpt: excerpt === '' ? null : excerpt,
-    category: category === '' ? null : category,
+    // Omitted means none, which is what a cleared picker means.
+    termIds: form.termIds,
     coverMediaId: form.coverMediaId.trim() === '' ? null : form.coverMediaId.trim(),
     seo: form.seo,
     tags: form.tags

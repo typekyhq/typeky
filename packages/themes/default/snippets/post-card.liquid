@@ -16,7 +16,7 @@
     {% if post.published_at %}
       <time datetime="{{ post.published_at }}">{{ post.published_at | date: site.date_format, 'UTC' }}</time>
     {% endif %}
-    {% if post.category %}<span class="category">{{ post.category }}</span>{% endif %}
+    {% for term in post.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
   </p>
 
   {% if post.excerpt %}<p class="excerpt">{{ post.excerpt }}</p>{% endif %}

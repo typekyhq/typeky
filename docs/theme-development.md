@@ -119,7 +119,7 @@ all happened — a template displays, it does not calculate.
 | `content.url` | all | |
 | `content.blocks` | all | Raw Block JSON — render it, see below |
 | `content.excerpt` | posts | |
-| `content.category` | posts | |
+| `content.terms` | posts, products | `{ name, slug, vocabulary }`; **absent** when there are none |
 | `content.tags` | posts | |
 | `content.price_label` | products | Text, printed as written |
 | `content.gallery` | products | Media ids resolved to URLs |

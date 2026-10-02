@@ -92,7 +92,6 @@ export interface Post {
   coverMediaId: string | null
   blocks: BlockContent
   tags: string[]
-  category: string | null
   seo: SeoMetadata
   status: ContentStatus
   revision: number
@@ -185,7 +184,6 @@ export interface PostWrite {
   coverMediaId?: string | null
   blocks?: BlockContent
   tags?: string[]
-  category?: string | null
   seo?: SeoMetadata
   status?: ContentStatus
 }
@@ -317,10 +315,6 @@ export const CONTENT_SORTS: readonly ContentSort[] = [
 ]
 
 export const SORT_DIRECTIONS: readonly SortDirection[] = ['asc', 'desc']
-
-export interface ListPostsQuery extends ListQuery {
-  category?: string
-}
 
 export interface ListMediaQuery {
   /** Case-insensitive match on filename or alt text. */

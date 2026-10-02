@@ -137,6 +137,7 @@ export {
 export {
   TAXONOMY_CONTENT_TYPES,
   taxonomyResponseSchema,
+  termRefSchema,
   termSchema,
   termWriteSchema,
   vocabularySchema,
@@ -144,6 +145,7 @@ export {
   type TaxonomyContentType,
   type TaxonomyResponse,
   type Term,
+  type TermRef,
   type TermWrite,
   type Vocabulary,
   type VocabularyWrite,

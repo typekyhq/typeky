@@ -1,6 +1,7 @@
 import * as z from 'zod/mini'
 import { getBlocksSchema } from './blocks'
 import { contentSlugSchema, contentStatusSchema, seoMetadataSchema } from './content'
+import { termRefSchema } from './taxonomy'
 
 /**
  * The product resource.
@@ -43,6 +44,8 @@ function build() {
     seo: z.optional(seoMetadataSchema),
     status: z.optional(contentStatusSchema),
     sortOrder: z.optional(z.number().check(z.int(), z.minimum(0), z.maximum(9999))),
+    /** The terms this product carries, by id. Omitted means none. */
+    termIds: z.optional(z.array(z.string()).check(z.maxLength(50))),
   })
 
   const summary = z.object({
@@ -50,6 +53,7 @@ function build() {
     title: z.string(),
     slug: z.string(),
     summary: z.nullable(z.string()),
+    terms: z.array(termRefSchema),
     priceLabel: z.nullable(z.string()),
     status: contentStatusSchema,
     sortOrder: z.number(),
@@ -70,6 +74,7 @@ function build() {
     priceLabel: z.nullable(z.string()),
     ctaLabel: z.nullable(z.string()),
     ctaUrl: z.nullable(z.string()),
+    terms: z.array(termRefSchema),
     seo: seoMetadataSchema,
     status: contentStatusSchema,
     sortOrder: z.number(),

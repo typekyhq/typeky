@@ -1,5 +1,5 @@
 import type { DbPort } from '@typeky/platform'
-import type { Page, Post, Product, Repositories, Site } from '@typeky/db'
+import type { Page, Post, Product, Repositories, Site, Term } from '@typeky/db'
 import { describe, expect, it } from 'vitest'
 import { renderPage, resolveRoute } from './page'
 
@@ -51,7 +51,6 @@ function post(overrides: Partial<Post> & { title: string; slug: string }): Post 
     coverMediaId: null,
     blocks: [],
     tags: [],
-    category: null,
     seo: {},
     status: 'published',
     revision: 1,
@@ -70,11 +69,14 @@ function setUp(
     site?: Site | null
     /** Stored template overrides, as the loader would read them. */
     overrides?: { path: string; source: string }[]
+    /** Terms by content id, as `terms.forContent` would answer them. */
+    terms?: Record<string, Term[]>
     whiteLabel?: boolean
   } = {},
 ) {
   const pages = options.pages ?? []
   const posts = options.posts ?? []
+  const termsById = options.terms
   const site = options.site === undefined ? SITE : options.site
 
   const store = {
@@ -92,6 +94,21 @@ function setUp(
       async list() { return { items: [], total: 0, limit: 10, offset: 0 } },
     },
     media: { async byId() { return null } },
+    // The taxonomy: a page prints the terms its content carries, and asks for the
+    // vocabulary names only when it has any to print.
+    vocabularies: {
+      async list() {
+        return [{ id: 'vocab_1', name: 'Categories' }]
+      },
+    },
+    terms: {
+      async forContent(_ctx: unknown, _type: unknown, id: string) {
+        return (termsById ?? {})[id] ?? []
+      },
+      async forContentMany(_ctx: unknown, _type: unknown, ids: string[]) {
+        return new Map(ids.map((id) => [id, (termsById ?? {})[id] ?? []]))
+      },
+    },
   } as unknown as Repositories
 
   const db: DbPort = {
@@ -206,6 +223,40 @@ describe('rendering content pages', () => {
     const second = await render('/posts/2')
     expect(second.status).toBe(200)
     expect(second.html).toContain('/posts')
+  })
+
+  it('prints the terms a post is filed under', async () => {
+    const { render } = setUp({
+      posts: [post({ title: 'Filed', slug: 'filed' })],
+      terms: {
+        filed: [
+          {
+            id: 'term_1',
+            vocabularyId: 'vocab_1',
+            parentId: null,
+            name: 'News',
+            slug: 'news',
+            description: null,
+            sortOrder: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      },
+    })
+
+    const result = await render('/posts/filed')
+
+    expect(result.status).toBe(200)
+    expect(result.html).toContain('<span class="term">News</span>')
+  })
+
+  it('omits the field entirely when a post carries no terms', async () => {
+    const { render } = setUp({ posts: [post({ title: 'Bare', slug: 'bare' })] })
+
+    // Absent rather than an empty array: Liquid treats an empty array as truthy,
+    // so `{% if content.terms %}` would be true for a post with none.
+    expect((await render('/posts/bare')).html).not.toContain('class="term"')
   })
 
   it('lists only what the repository returns as published', async () => {

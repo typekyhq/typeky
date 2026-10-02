@@ -23,6 +23,32 @@ vi.mock('@/components/lazy-block-editor', () => ({
   ),
 }))
 
+const VOCABULARY = {
+  id: 'vocab_1',
+  name: 'Categories',
+  description: null,
+  contentTypes: ['post' as const],
+  sortOrder: 0,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
+
+const NEWS = {
+  id: 'term_news',
+  vocabularyId: 'vocab_1',
+  parentId: null,
+  name: 'News',
+  slug: 'news',
+  description: null,
+  sortOrder: 0,
+  depth: 0,
+  usage: 1,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
+
+const GUIDES = { ...NEWS, id: 'term_guides', name: 'Guides', slug: 'guides', sortOrder: 1, usage: 0 }
+
 const POST: PostResponse = {
   id: 'post_1',
   title: 'Release notes',
@@ -31,7 +57,7 @@ const POST: PostResponse = {
   coverMediaId: 'media_cover',
   blocks: [{ type: 'paragraph', content: [{ type: 'text', text: 'Body' }] }],
   tags: ['release', 'notes'],
-  category: 'News',
+  terms: [{ id: 'term_news', name: 'News', slug: 'news' }],
   seo: { description: 'What changed this month' },
   status: 'draft',
   revision: 2,
@@ -65,10 +91,14 @@ async function openTab(name: string): Promise<void> {
 }
 
 describe('opening a post', () => {
-  it('fills the form from the server', async () => {    renderEditor(
+  it('fills the form from the server', async () => {
+    renderEditor(
       fakeApiClient({
         async getPost() {
           return POST
+        },
+        async readTaxonomy() {
+          return { vocabularies: [VOCABULARY], terms: [NEWS, GUIDES] }
         },
       }),
     )
@@ -76,9 +106,12 @@ describe('opening a post', () => {
     expect(await screen.findByLabelText('Title')).toHaveProperty('value', 'Release notes')
     expect(screen.getByLabelText('Slug')).toHaveProperty('value', 'release-notes')
     expect(screen.getByLabelText('Excerpt')).toHaveProperty('value', 'What changed')
-    expect(screen.getByLabelText('Category')).toHaveProperty('value', 'News')
     expect(screen.getByLabelText('Tags')).toHaveProperty('value', 'release, notes')
     expect(screen.getByTestId('block-editor').textContent).toBe('1 blocks')
+
+    // The post is filed under News, and the other term is offered but not ticked.
+    expect((await screen.findByLabelText('News') as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByLabelText('Guides') as HTMLInputElement).checked).toBe(false)
   })
 
   it('says so when the post cannot be loaded', async () => {
@@ -157,7 +190,8 @@ describe('saving', () => {
           status: 'published',
           // Cleared fields are null, not empty strings.
           excerpt: null,
-          category: null,
+          // Nothing was filed, and the write replaces the whole set.
+          termIds: [],
         }),
       )
     })

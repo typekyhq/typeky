@@ -1,9 +1,8 @@
 import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
-import { resolveWindow } from '../../contracts'
+import { resolveWindow, type ListQuery } from '../../contracts'
 import type {
   ContentStatus,
-  ListPostsQuery,
   Post,
   PostRepository,
   PostWrite,
@@ -20,7 +19,6 @@ const COLUMNS = [
   'cover_media_id',
   'content_blocks',
   'tags',
-  'category',
   'seo_metadata',
   'status',
   'revision',
@@ -37,7 +35,6 @@ interface PostRow {
   cover_media_id: string | null
   content_blocks: string
   tags: string
-  category: string | null
   seo_metadata: string
   status: string
   revision: number
@@ -55,7 +52,6 @@ function toPost(row: PostRow): Post {
     coverMediaId: row.cover_media_id,
     blocks: decodeJson<Block[]>(row.content_blocks),
     tags: decodeJson<string[]>(row.tags),
-    category: row.category,
     seo: decodeJson<SeoMetadata>(row.seo_metadata),
     status: row.status === 'published' ? 'published' : 'draft',
     revision: row.revision,
@@ -80,7 +76,7 @@ export function createPostRepository(db: DbPort): PostRepository {
   }
 
   return {
-    async list(_ctx: TenantContext, query: ListPostsQuery = {}) {
+    async list(_ctx: TenantContext, query: ListQuery = {}) {
       const { limit, offset } = resolveWindow(query)
 
       const params: SqlParam[] = []
@@ -89,11 +85,6 @@ export function createPostRepository(db: DbPort): PostRepository {
         conditions.push('status = ?')
         params.push(query.status)
       }
-      if (query.category !== undefined) {
-        conditions.push('category = ?')
-        params.push(query.category)
-      }
-
       // `lower()` on both sides rather than `LIKE`, which is only
       // case-insensitive for ASCII in SQLite. `coalesce` because a null excerpt
       // would make the whole comparison null, and a null condition is not a
@@ -146,13 +137,12 @@ export function createPostRepository(db: DbPort): PostRepository {
       const coverMediaId = input.coverMediaId ?? null
       const blocks = encodeJson(input.blocks ?? [])
       const tags = encodeJson(input.tags ?? [])
-      const category = input.category ?? null
       const seo = encodeJson(input.seo ?? {})
 
       if (existing === null) {
         await db.run(
-          `INSERT INTO posts (id, title, slug, excerpt, cover_media_id, content_blocks, tags, category, seo_metadata, status, revision, published_at, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO posts (id, title, slug, excerpt, cover_media_id, content_blocks, tags, seo_metadata, status, revision, published_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             title,
@@ -161,7 +151,6 @@ export function createPostRepository(db: DbPort): PostRepository {
             coverMediaId,
             blocks,
             tags,
-            category,
             seo,
             status,
             revision,
@@ -172,7 +161,7 @@ export function createPostRepository(db: DbPort): PostRepository {
         )
       } else {
         await db.run(
-          `UPDATE posts SET title = ?, slug = ?, excerpt = ?, cover_media_id = ?, content_blocks = ?, tags = ?, category = ?, seo_metadata = ?, status = ?, revision = ?, published_at = ?, updated_at = ?
+          `UPDATE posts SET title = ?, slug = ?, excerpt = ?, cover_media_id = ?, content_blocks = ?, tags = ?, seo_metadata = ?, status = ?, revision = ?, published_at = ?, updated_at = ?
            WHERE id = ?`,
           [
             title,
@@ -181,7 +170,6 @@ export function createPostRepository(db: DbPort): PostRepository {
             coverMediaId,
             blocks,
             tags,
-            category,
             seo,
             status,
             revision,

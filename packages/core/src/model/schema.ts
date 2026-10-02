@@ -106,7 +106,6 @@ const posts: TableDef = {
       defaultSql: "'[]'",
       note: 'string array; MVP has no separate tag table',
     },
-    { name: 'category', type: 'text', note: 'single category' },
     { name: 'seo_metadata', type: 'json', notNull: true, defaultSql: "'{}'" },
     { name: 'status', type: 'text', notNull: true, defaultSql: "'draft'", note: 'draft | published' },
     {
@@ -122,7 +121,6 @@ const posts: TableDef = {
   ],
   indexes: [
     { name: 'idx_posts_published', columns: ['status', { column: 'published_at', desc: true }] },
-    { name: 'idx_posts_category', columns: ['category'] },
   ],
 }
 

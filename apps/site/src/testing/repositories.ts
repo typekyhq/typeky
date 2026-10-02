@@ -33,5 +33,15 @@ export function stubRepositories(partial: StubRepositories): Repositories {
     pages: { home: async () => null, list: nothing, ...partial.pages },
     posts: { list: nothing, ...partial.posts },
     products: { list: nothing, ...partial.products },
+    // Every content read and write now asks about terms: a write attaches the set
+    // it was given, a read answers with the ones it has. "None" is what a test
+    // means unless it says otherwise, and a test that cares overrides this rather
+    // than inheriting an answer it never asked for.
+    terms: {
+      forContent: async () => [],
+      forContentMany: async () => new Map(),
+      assign: async () => undefined,
+      ...partial.terms,
+    },
   } as unknown as Repositories
 }

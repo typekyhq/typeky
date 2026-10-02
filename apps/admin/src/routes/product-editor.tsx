@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Field } from '@/components/field'
+import { TermPicker } from '@/components/term-picker'
 import { LazyBlockEditor } from '@/components/lazy-block-editor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MediaField, MediaPicker } from '@/components/media-picker'
@@ -52,6 +53,8 @@ interface ProductForm {
   coverMediaId: string
   /** A string in the form, because a number input is empty before it is typed in. */
   sortOrder: string
+  /** The terms this product is filed under, by id. */
+  termIds: string[]
   /**
    * Carried through untouched: the write replaces the whole document, so a field
    * the form does not edit still has to be sent back or it is cleared.
@@ -71,6 +74,7 @@ const EMPTY_FORM: ProductForm = {
   ctaUrl: '',
   coverMediaId: '',
   sortOrder: '0',
+  termIds: [],
   seo: {},
   gallery: [],
   specs: [],
@@ -78,7 +82,7 @@ const EMPTY_FORM: ProductForm = {
 }
 
 const TABS: FormTab[] = [
-  { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'priceLabel', 'summary', 'coverMediaId', 'sortOrder'] },
+  { id: 'details', labelKey: 'editor.details', owns: ['title', 'slug', 'priceLabel', 'summary', 'coverMediaId', 'sortOrder', 'termIds'] },
   { id: 'body', labelKey: 'editor.body', owns: ['blocks'] },
   { id: 'cta', labelKey: 'productEditor.cta', owns: ['ctaLabel', 'ctaUrl'] },
   { id: 'images', labelKey: 'productEditor.images', owns: ['gallery'] },
@@ -336,6 +340,13 @@ export function ProductEditorPage() {
                   {issues.summary}
                 </p>
               )}
+            </div>
+            <div className="sm:col-span-2">
+              <TermPicker
+                contentType="product"
+                selected={form.termIds}
+                onChange={(termIds) => update((current) => ({ ...current, termIds }))}
+              />
             </div>
           </CardContent>
         </Card>
@@ -625,6 +636,7 @@ function toForm(product: ProductResponse): ProductForm {
     ctaUrl: product.ctaUrl ?? '',
     coverMediaId: product.coverMediaId ?? '',
     sortOrder: String(product.sortOrder),
+    termIds: product.terms.map((term) => term.id),
     seo: product.seo,
     gallery: product.gallery,
     specs: product.specs,
@@ -653,6 +665,8 @@ function toWrite(form: ProductForm, status: ContentStatus): ProductWrite {
       .map((spec) => ({ label: spec.label.trim(), value: spec.value.trim() }))
       .filter((spec) => spec.label !== '' && spec.value !== ''),
     blocks: form.blocks,
+    // Omitted means none, which is what a cleared picker means.
+    termIds: form.termIds,
     status,
   }
 }

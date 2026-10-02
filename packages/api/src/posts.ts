@@ -1,6 +1,7 @@
 import * as z from 'zod/mini'
 import { getBlocksSchema } from './blocks'
 import { contentSlugSchema, contentStatusSchema, seoMetadataSchema } from './content'
+import { termRefSchema } from './taxonomy'
 
 /**
  * The post resource.
@@ -24,7 +25,14 @@ function build() {
     coverMediaId: z.optional(z.nullable(z.string())),
     blocks: z.optional(blocks),
     tags: z.optional(z.array(z.string().check(z.minLength(1), z.maxLength(60))).check(z.maxLength(20))),
-    category: z.optional(z.nullable(z.string().check(z.maxLength(60)))),
+    /**
+     * The terms this post carries, by id.
+     *
+     * Omitted means none, like every other field a write leaves out -- the
+     * editor always sends the whole set, so "empty" and "not mentioned" are the
+     * same instruction.
+     */
+    termIds: z.optional(z.array(z.string()).check(z.maxLength(50))),
     seo: z.optional(seoMetadataSchema),
     status: z.optional(contentStatusSchema),
   })
@@ -34,7 +42,7 @@ function build() {
     title: z.string(),
     slug: z.string(),
     excerpt: z.nullable(z.string()),
-    category: z.nullable(z.string()),
+    terms: z.array(termRefSchema),
     tags: z.array(z.string()),
     status: contentStatusSchema,
     revision: z.number(),
@@ -51,7 +59,7 @@ function build() {
     coverMediaId: z.nullable(z.string()),
     blocks,
     tags: z.array(z.string()),
-    category: z.nullable(z.string()),
+    terms: z.array(termRefSchema),
     seo: seoMetadataSchema,
     status: contentStatusSchema,
     revision: z.number(),

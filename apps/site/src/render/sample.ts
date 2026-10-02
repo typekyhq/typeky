@@ -131,7 +131,7 @@ export function sampleContext(templateName: string): ReturnType<typeof buildRend
         blocks: SAMPLE_BLOCKS,
         seo: {},
         excerpt: 'A short summary, as it would appear in a list.',
-        category: 'News',
+        terms: [{ name: 'News', slug: 'news', vocabulary: 'Categories' }],
         tags: ['sample', 'theme'],
         publishedAt: new Date('2026-01-01T00:00:00.000Z'),
       },

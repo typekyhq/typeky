@@ -1,9 +1,18 @@
 import type { PageKind, Pagination, RenderContext } from '@typeky/core'
-import { defaultContext, type Page, type Post, type Product, type Repositories, type Site } from '@typeky/db'
+import {
+  defaultContext,
+  type ContentType,
+  type Page,
+  type Post,
+  type Product,
+  type Repositories,
+  type Site,
+  type Term,
+} from '@typeky/db'
 import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
-import { buildRenderContext, type ItemInput } from './context'
+import { buildRenderContext, type ItemInput, type TemplateTerm } from './context'
 import { renderDocument, themeRuntimeOptions } from './theme-runtime'
 
 /**
@@ -165,13 +174,15 @@ async function assemble(
     case 'post': {
       const post = await store.posts.bySlug(ctx, route.slug)
       if (post === null || post.status !== 'published') return null
-      return { kind: 'post', input: { ...common, item: postInput(post) } }
+      const terms = await termReader(store, ctx, 'post').one(post.id)
+      return { kind: 'post', input: { ...common, item: postInput(post, terms) } }
     }
 
     case 'product': {
       const product = await store.products.bySlug(ctx, route.slug)
       if (product === null || product.status !== 'published') return null
-      return { kind: 'product', input: { ...common, item: productInput(product) } }
+      const terms = await termReader(store, ctx, 'product').one(product.id)
+      return { kind: 'product', input: { ...common, item: productInput(product, terms) } }
     }
 
     case 'posts': {
@@ -180,6 +191,8 @@ async function assemble(
         limit: PAGE_SIZE,
         offset: (route.page - 1) * PAGE_SIZE,
       })
+
+      const terms = await termReader(store, ctx, 'post').many(listing.items.map((post) => post.id))
 
       return {
         kind: 'posts',
@@ -192,7 +205,9 @@ async function assemble(
             slug: 'posts',
             blocks: [],
             seo: {},
-            listItems: listing.items.map((post) => summaryOf(postInput(post), common.resolveMedia)),
+            listItems: listing.items.map((post) =>
+            summaryOf(postInput(post, terms.get(post.id) ?? []), common.resolveMedia),
+          ),
           },
         },
       }
@@ -205,6 +220,10 @@ async function assemble(
         offset: (route.page - 1) * PAGE_SIZE,
       })
 
+      const terms = await termReader(store, ctx, 'product').many(
+        listing.items.map((product) => product.id),
+      )
+
       return {
         kind: 'products',
         input: {
@@ -216,7 +235,9 @@ async function assemble(
             slug: 'products',
             blocks: [],
             seo: {},
-            listItems: listing.items.map((product) => summaryOf(productInput(product), common.resolveMedia)),
+            listItems: listing.items.map((product) =>
+            summaryOf(productInput(product, terms.get(product.id) ?? []), common.resolveMedia),
+          ),
           },
         },
       }
@@ -252,7 +273,48 @@ function pageInput(page: Page, kind: PageKind): ItemInput {
   }
 }
 
-function postInput(post: Post): ItemInput {
+/**
+ * Reads the terms a page's content carries, shaped for a template.
+ *
+ * The vocabulary names are fetched at most once per render and only if some term
+ * is actually printed: a site with no taxonomy pays nothing, and one that has one
+ * pays a single query rather than one per term. That is what the closure is for --
+ * `forContentMany` answers the rows, and this answers what a template reads.
+ */
+function termReader(store: Repositories, ctx: ReturnType<typeof defaultContext>, contentType: ContentType) {
+  let vocabularyNames: Promise<Map<string, string>> | undefined
+
+  const names = async (): Promise<Map<string, string>> => {
+    vocabularyNames ??= store.vocabularies
+      .list(ctx)
+      .then((list) => new Map(list.map((vocabulary) => [vocabulary.id, vocabulary.name])))
+    return vocabularyNames
+  }
+
+  const shape = async (terms: Term[]): Promise<TemplateTerm[]> => {
+    if (terms.length === 0) return []
+    const byId = await names()
+    return terms.map((term) => ({
+      name: term.name,
+      slug: term.slug,
+      vocabulary: byId.get(term.vocabularyId) ?? '',
+    }))
+  }
+
+  return {
+    async one(contentId: string): Promise<TemplateTerm[]> {
+      return shape(await store.terms.forContent(ctx, contentType, contentId))
+    },
+    async many(contentIds: string[]): Promise<Map<string, TemplateTerm[]>> {
+      const grouped = await store.terms.forContentMany(ctx, contentType, contentIds)
+      const out = new Map<string, TemplateTerm[]>()
+      for (const [contentId, terms] of grouped) out.set(contentId, await shape(terms))
+      return out
+    },
+  }
+}
+
+function postInput(post: Post, terms: TemplateTerm[]): ItemInput {
   return {
     kind: 'post',
     title: post.title,
@@ -260,7 +322,7 @@ function postInput(post: Post): ItemInput {
     blocks: post.blocks,
     seo: post.seo as Record<string, unknown>,
     excerpt: post.excerpt,
-    category: post.category,
+    terms,
     tags: post.tags,
     coverMediaId: post.coverMediaId,
     publishedAt: post.publishedAt,
@@ -268,7 +330,7 @@ function postInput(post: Post): ItemInput {
   }
 }
 
-function productInput(product: Product): ItemInput {
+function productInput(product: Product, terms: TemplateTerm[]): ItemInput {
   return {
     kind: 'product',
     title: product.title,
@@ -276,6 +338,7 @@ function productInput(product: Product): ItemInput {
     blocks: product.blocks,
     seo: product.seo as Record<string, unknown>,
     excerpt: product.summary,
+    terms,
     coverMediaId: product.coverMediaId,
     gallery: product.gallery,
     specs: product.specs,
@@ -304,7 +367,7 @@ function summaryOf(
     slug: item.slug,
     url: contentUrlFor(item),
     ...(item.excerpt === null || item.excerpt === undefined ? {} : { excerpt: item.excerpt }),
-    ...(item.category === null || item.category === undefined ? {} : { category: item.category }),
+    ...(item.terms === undefined || item.terms.length === 0 ? {} : { terms: item.terms }),
     ...(item.priceLabel === null || item.priceLabel === undefined ? {} : { price_label: item.priceLabel }),
     ...(item.publishedAt === null || item.publishedAt === undefined
       ? {}

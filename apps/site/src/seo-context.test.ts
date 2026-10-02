@@ -37,7 +37,7 @@ function post(seo: unknown) {
     coverMediaId: null,
     blocks: [],
     tags: [],
-    category: null,
+    terms: [],
     seo,
     status: 'published',
     revision: 1,

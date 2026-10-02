@@ -33,6 +33,21 @@ export interface SiteInput {
   whiteLabel?: boolean
 }
 
+/** A term as a template sees it: the thing a page prints, not the whole row. */
+export interface TemplateTerm {
+  name: string
+  slug: string
+  /**
+   * The vocabulary it belongs to.
+   *
+   * There on purpose: a site may keep more than one, and "Frontend" printed
+   * without saying whether it is a category or a topic is a label a reader cannot
+   * place. Ancestors are deliberately not here -- a breadcrumb belongs to the
+   * archive route, which does not exist yet.
+   */
+  vocabulary: string
+}
+
 export interface ItemInput {
   kind: PageKind
   title: string
@@ -48,7 +63,14 @@ export interface ItemInput {
    */
   listItems?: Record<string, unknown>[]
   excerpt?: string | null
-  category?: string | null
+  /**
+   * The terms this content carries, already shaped for a template.
+   *
+   * Absent when there are none rather than an empty array: Liquid treats an empty
+   * array as truthy, so `{% if content.terms %}` would be true for a post with no
+   * terms if this were `[]`.
+   */
+  terms?: TemplateTerm[]
   tags?: string[]
   /** A media id; resolved to `cover_url` for the template. */
   coverMediaId?: string | null
@@ -227,7 +249,7 @@ function contentFor(
     blocks: item.blocks,
     ...(cover === undefined ? {} : { cover_url: cover }),
     ...(item.excerpt === null || item.excerpt === undefined ? {} : { excerpt: item.excerpt }),
-    ...(item.category === null || item.category === undefined ? {} : { category: item.category }),
+    ...(item.terms === undefined || item.terms.length === 0 ? {} : { terms: item.terms }),
     ...(item.tags === undefined ? {} : { tags: item.tags }),
     ...(item.priceLabel === null || item.priceLabel === undefined ? {} : { price_label: item.priceLabel }),
     ...(item.gallery === undefined ? {} : { gallery: item.gallery.map((id) => resolve(id) ?? id) }),

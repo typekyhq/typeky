@@ -62,7 +62,6 @@ export const posts = sqliteTable('posts', {
   coverMediaId: text('cover_media_id').references(() => media.id, { onDelete: 'set null' }),
   contentBlocks: text('content_blocks').notNull().default('[]'),
   tags: text('tags').notNull().default('[]'),
-  category: text('category'),
   seoMetadata: text('seo_metadata').notNull().default('{}'),
   status: text('status').notNull().default('draft'),
   revision: integer('revision').notNull().default(1),
@@ -71,7 +70,6 @@ export const posts = sqliteTable('posts', {
   updatedAt: text('updated_at').notNull(),
 }, (t) => [
   index('idx_posts_published').on(t.status, sql`${t.publishedAt} DESC`),
-  index('idx_posts_category').on(t.category),
 ])
 
 export const products = sqliteTable('products', {

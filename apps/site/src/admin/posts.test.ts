@@ -45,7 +45,6 @@ function fakePostsRepository() {
       const matches = [...rows.values()].filter(
         (post) =>
           (query.status === undefined || post.status === query.status) &&
-          (query.category === undefined || post.category === query.category) &&
           (search === undefined ||
             [post.title, post.slug, post.excerpt ?? ''].some((field) =>
               field.toLowerCase().includes(search),
@@ -73,7 +72,6 @@ function fakePostsRepository() {
         coverMediaId: input.coverMediaId ?? null,
         blocks: input.blocks ?? [],
         tags: input.tags ?? [],
-        category: input.category ?? null,
         seo: input.seo ?? {},
         status,
         revision: (existing?.revision ?? 0) + 1,
@@ -344,7 +342,7 @@ describe('publishing from the list', () => {
       await write(
         'POST',
         '/posts',
-        { ...DRAFT, excerpt: 'Kept', tags: ['one'], category: 'News', blocks: [{ type: 'divider' }] },
+        { ...DRAFT, excerpt: 'Kept', tags: ['one'], blocks: [{ type: 'divider' }] },
         auth,
       )
     ).json()) as { id: string }
@@ -357,7 +355,6 @@ describe('publishing from the list', () => {
       status: 'published',
       excerpt: 'Kept',
       tags: ['one'],
-      category: 'News',
       blocks: [{ type: 'divider' }],
       revision: 2,
     })

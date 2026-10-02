@@ -21,12 +21,11 @@ describe('post repository', () => {
     expect(post.publishedAt).toBeNull()
     expect(post.excerpt).toBeNull()
     expect(post.coverMediaId).toBeNull()
-    expect(post.category).toBeNull()
     expect(post.tags).toEqual([])
     expect(post.blocks).toEqual([])
   })
 
-  it('round-trips tags, category, excerpt and blocks', async () => {
+  it('round-trips tags, excerpt and blocks', async () => {
     const { posts } = setup()
 
     const created = await posts.upsert(ctx, {
@@ -34,14 +33,12 @@ describe('post repository', () => {
       slug: 'hello',
       excerpt: 'The first post',
       tags: ['getting-started', 'news'],
-      category: 'News',
       blocks: [{ type: 'paragraph', content: [{ type: 'text', text: 'Body' }] }],
       seo: { description: 'A first post' },
     })
 
     const read = await posts.byId(ctx, created.id)
     expect(read?.tags).toEqual(['getting-started', 'news'])
-    expect(read?.category).toBe('News')
     expect(read?.excerpt).toBe('The first post')
     expect(read?.blocks).toEqual([{ type: 'paragraph', content: [{ type: 'text', text: 'Body' }] }])
     expect(read?.seo).toEqual({ description: 'A first post' })
@@ -82,16 +79,18 @@ describe('post repository', () => {
     expect(listed.items.map((post) => post.slug)).toEqual(['newer', 'older', 'draft'])
   })
 
-  it('filters by status and category together', async () => {
+  it('filters by status', async () => {
     const { posts } = setup()
-    await posts.upsert(ctx, { title: 'A', slug: 'a', status: 'published', category: 'News' })
-    await posts.upsert(ctx, { title: 'B', slug: 'b', status: 'published', category: 'Guides' })
-    await posts.upsert(ctx, { title: 'C', slug: 'c', category: 'News' })
+    await posts.upsert(ctx, { title: 'A', slug: 'a', status: 'published' })
+    await posts.upsert(ctx, { title: 'B', slug: 'b' })
+    await posts.upsert(ctx, { title: 'C', slug: 'c', status: 'published' })
 
-    const news = await posts.list(ctx, { status: 'published', category: 'News' })
+    const published = await posts.list(ctx, { status: 'published' })
 
-    expect(news.total).toBe(1)
-    expect(news.items[0]?.slug).toBe('a')
+    expect(published.total).toBe(2)
+    // Sorted rather than compared in order: both were written in the same
+    // millisecond, so which comes first is the id tie-break, not the filter.
+    expect(published.items.map((post) => post.slug).sort()).toEqual(['a', 'c'])
   })
 
   it('reports whether a delete removed anything', async () => {

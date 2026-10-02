@@ -20,6 +20,12 @@ const MEDIA_COVER = '01930000-0000-7000-8000-0000000000a2'
 const PAGE_HOME = '01930000-0000-7000-8000-0000000000b1'
 const POST_HELLO = '01930000-0000-7000-8000-0000000000c1'
 const PRODUCT_STARTER = '01930000-0000-7000-8000-0000000000d1'
+const VOCABULARY_CATEGORIES = '01930000-0000-7000-8000-0000000000e1'
+const TERM_NEWS = '01930000-0000-7000-8000-0000000000f1'
+const TERM_GUIDES = '01930000-0000-7000-8000-0000000000f2'
+const TERM_HOWTO = '01930000-0000-7000-8000-0000000000f3'
+const POST_TERM = '01930000-0000-7000-8000-000000000101'
+const PRODUCT_TERM = '01930000-0000-7000-8000-000000000102'
 
 /**
  * Demo bodies, in the real Block JSON shape (architecture section 3.11).
@@ -131,7 +137,6 @@ const rows: Record<string, Array<Record<string, unknown>>> = {
       cover_media_id: MEDIA_COVER,
       content_blocks: postBlocks,
       tags: ['getting-started'],
-      category: 'News',
       seo_metadata: { title: 'Hello Typeky', description: 'The first post on a freshly seeded site.' },
       status: 'published',
       revision: 1,
@@ -164,6 +169,58 @@ const rows: Record<string, Array<Record<string, unknown>>> = {
       created_at: SEEDED_AT,
       updated_at: SEEDED_AT,
     },
+  ],
+  // A vocabulary that applies to both content types, with a nested term, so a
+  // seeded site shows what a taxonomy is for rather than an empty picker.
+  vocabularies: [
+    {
+      id: VOCABULARY_CATEGORIES,
+      name: 'Categories',
+      description: 'What posts and products are filed under.',
+      content_types: ['post', 'product'],
+      sort_order: 0,
+      created_at: SEEDED_AT,
+      updated_at: SEEDED_AT,
+    },
+  ],
+  terms: [
+    {
+      id: TERM_NEWS,
+      vocabulary_id: VOCABULARY_CATEGORIES,
+      parent_id: null,
+      name: 'News',
+      slug: 'news',
+      description: null,
+      sort_order: 0,
+      created_at: SEEDED_AT,
+      updated_at: SEEDED_AT,
+    },
+    {
+      id: TERM_GUIDES,
+      vocabulary_id: VOCABULARY_CATEGORIES,
+      parent_id: null,
+      name: 'Guides',
+      slug: 'guides',
+      description: null,
+      sort_order: 1,
+      created_at: SEEDED_AT,
+      updated_at: SEEDED_AT,
+    },
+    {
+      id: TERM_HOWTO,
+      vocabulary_id: VOCABULARY_CATEGORIES,
+      parent_id: TERM_GUIDES,
+      name: 'How-to',
+      slug: 'how-to',
+      description: null,
+      sort_order: 0,
+      created_at: SEEDED_AT,
+      updated_at: SEEDED_AT,
+    },
+  ],
+  content_terms: [
+    { id: POST_TERM, content_type: 'post', content_id: POST_HELLO, term_id: TERM_NEWS },
+    { id: PRODUCT_TERM, content_type: 'product', content_id: PRODUCT_STARTER, term_id: TERM_GUIDES },
   ],
 }
 

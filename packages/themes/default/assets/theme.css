@@ -363,7 +363,7 @@ main {
   font-size: 0.9375rem;
 }
 
-.meta .category {
+.meta .term {
   padding: 0.05em 0.5em;
   border: 1px solid var(--line);
   border-radius: 999px;
