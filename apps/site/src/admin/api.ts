@@ -52,6 +52,7 @@ import {
   destroySession,
   readSession,
 } from './session'
+import { readLicense } from './license'
 import { readSite, writeSite } from './site'
 
 /**
@@ -164,6 +165,8 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.use('*', requireSession)
   // ...and anything that can change state also needs the token.
   api.use('*', requireCsrf)
+
+  api.get('/license', (c) => readLicense(c))
 
   api.get('/site', (c) => readSite(c, repositories))
   api.put('/site', (c) => writeSite(c, repositories))

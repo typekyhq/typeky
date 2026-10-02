@@ -230,6 +230,14 @@ main {
   font-size: 0.875rem;
 }
 
+/* The platform's own badge: quieter than the site's own text, because it is a
+ * statement about the software and not about the site. The link keeps the
+ * default underline so it reads as a link, which is what it is. */
+.site-footer .attribution {
+  margin-block: 0.75rem 0;
+  font-size: 0.8125rem;
+}
+
 /* --------------------------------------------------------------- content -- */
 
 /* Blocks arrive as plain semantic HTML, so the styles are element selectors

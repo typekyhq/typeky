@@ -1,5 +1,5 @@
-import { blockToHtml, type Block } from '@typeky/core'
-import type { LiquidRuntimeOptions } from '@typeky/theme-kit'
+import { blockToHtml, injectAttribution, type Block, type RenderContext } from '@typeky/core'
+import type { LiquidRuntime, LiquidRuntimeOptions } from '@typeky/theme-kit'
 import { ASSET_VERSIONS } from '@typeky/theme-default'
 
 /**
@@ -28,4 +28,25 @@ export function themeRuntimeOptions(
     assetVersions: ASSET_VERSIONS,
     renderBlocks: (blocks) => (Array.isArray(blocks) ? blockToHtml(blocks as Block[]) : ''),
   }
+}
+
+/**
+ * Renders a template into the document that actually goes out.
+ *
+ * The second half of the same story as `themeRuntimeOptions`, and the same lesson
+ * learned twice: the preview once passed the asset versions and the site did not,
+ * and then the preview injected the attribution and the site's own test path did
+ * not. Both are cases of "one render" being written down in two places.
+ *
+ * The attribution goes in here rather than in the theme because a deployment can
+ * edit its templates, and the footer is the first thing anybody edits.
+ */
+export async function renderDocument(
+  runtime: LiquidRuntime,
+  template: string,
+  context: RenderContext,
+): Promise<string> {
+  const html = await runtime.renderFile(template, context)
+
+  return injectAttribution(html, context.site.attribution)
 }

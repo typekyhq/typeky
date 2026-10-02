@@ -5,6 +5,7 @@ import { createAdminApi } from './admin/api'
 import { blobsFor } from './blobs'
 import { edgeCacheFor, servePage } from './cache'
 import type { Env } from './env'
+import { licenseState } from './license'
 import { serveMedia } from './media'
 import { errorPage, notFoundPage } from './pages'
 import { renderPage } from './render/page'
@@ -92,6 +93,19 @@ export function createApp(): Hono<{ Bindings: Env }> {
       })
     }
 
+    // Resolved per request, because the answer is part of what the page says: a
+    // licensed site and a free one render different HTML.
+    //
+    // Note what this does *not* do: it cannot change a page that is already in the
+    // edge cache, because the cache key is the URL and the licence is not part of
+    // it. Buying a licence therefore takes effect within `s-maxage` rather than at
+    // the instant the secret is set -- five minutes, or immediately after the next
+    // publish, which purges. Putting the licence in the key would make that
+    // instantaneous and would also mean every cached URL had to be remembered with
+    // the licence state it was stored under, which is a worse trade for a switch
+    // that is thrown once.
+    const license = await licenseState(c.env, url.host)
+
     // The cache answers first, so a hit costs no database query at all. That is
     // the whole reason it exists; a cache that still had to look something up to
     // decide what to serve would not be worth the complexity.
@@ -106,6 +120,7 @@ export function createApp(): Hono<{ Bindings: Env }> {
           // The origin the request arrived on, so a canonical URL points at the
           // site that was actually asked for rather than at a configured one.
           baseUrl: url.origin,
+          whiteLabel: license.whiteLabel,
         }),
       // In the background: the response should not wait for a cache write.
       background: (task) => c.executionCtx.waitUntil(task),

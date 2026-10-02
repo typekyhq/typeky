@@ -36,4 +36,14 @@ export interface Env {
    * `wrangler secret put`. Never in the repository.
    */
   ADMIN_PASSWORD_HASH?: string
+
+  /**
+   * A white-label licence, issued by the script outside the repository.
+   *
+   * A `wrangler secret` rather than a var, because it is sold rather than
+   * published: the licence is bound to a domain, but there is no reason to put
+   * one in a config file that gets committed. Absent means the site shows the
+   * attribution, which is what a deployment that has not bought one should do.
+   */
+  LICENSE_KEY?: string
 }

@@ -15,6 +15,7 @@ import {
   themeTemplateResponseSchema,
   themePreviewResponseSchema,
   sessionSchema,
+  licenseResponseSchema,
   siteResponseSchema,
   type ApiErrorCode,
   type BulkAction,
@@ -35,6 +36,7 @@ import {
   type ProductResponse,
   type ProductWrite,
   type Session,
+  type LicenseResponse,
   type SiteResponse,
   type SiteWrite,
   type SortDirection,
@@ -92,6 +94,9 @@ export interface ApiClient {
 
   getSite(): Promise<SiteResponse>
   saveSite(site: SiteWrite): Promise<SiteResponse>
+
+  /** The deployment's licence state. Read-only: a licence is issued elsewhere. */
+  getLicense(): Promise<LicenseResponse>
 
   listPosts(query?: ContentQuery): Promise<PostListResponse>
   getPost(id: string): Promise<PostResponse>
@@ -288,6 +293,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
     async getSite() {
       return readContract(siteResponseSchema, await send('GET', '/site'), 'the site response did not match the contract')
+    },
+
+    async getLicense() {
+      return readContract(
+        licenseResponseSchema,
+        await send('GET', '/license'),
+        'the license response did not match the contract',
+      )
     },
 
     async saveSite(site) {

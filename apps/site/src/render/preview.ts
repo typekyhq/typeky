@@ -2,7 +2,7 @@ import { createLiquidRuntime, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
 import type { DbPort } from '@typeky/platform'
 import { sampleContext } from './sample'
-import { themeRuntimeOptions } from './theme-runtime'
+import { renderDocument, themeRuntimeOptions } from './theme-runtime'
 
 /**
  * Rendering a template with sample data, storing nothing.
@@ -69,5 +69,9 @@ export async function renderPreview(input: PreviewInput): Promise<string> {
     cache: false,
   })
 
-    return runtime.engine.renderFile(input.path, sampleContext(input.path))
+    // `renderDocument` rather than the engine directly: the engine call would skip
+  // the runtime's output limits and its stripping of anything callable from the
+  // context, so the preview would be rendered by a more permissive path than the
+  // site it claims to reproduce.
+  return renderDocument(runtime, input.path, sampleContext(input.path))
   }

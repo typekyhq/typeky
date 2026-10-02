@@ -7,6 +7,7 @@ import {
 } from '@typeky/api'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { LicenseCard } from '@/components/license-card'
 import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
@@ -423,6 +424,13 @@ export function SettingsPage() {
           />
         </CardContent>
       </Card>
+
+      {/*
+        Outside the form on purpose: a licence is not part of the site document,
+        and a card that looked like a field would invite somebody to look for the
+        input.
+      */}
+      <LicenseCard />
     </form>
   )
 }

@@ -100,6 +100,11 @@ export {
 } from './media'
 
 export {
+  licenseResponseSchema,
+  type LicenseResponse,
+} from './license'
+
+export {
   THEME_TEMPLATE_GROUPS,
   themePreviewResponseSchema,
   themeTemplateListResponseSchema,

@@ -37,6 +37,12 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     getSite: unexpected('getSite'),
     saveSite: unexpected('saveSite'),
 
+    // A free deployment, which is what a component test means unless it says
+    // otherwise: the badge is on screen.
+    async getLicense() {
+      return { whiteLabel: false, domain: 'example.com' }
+    },
+
     async listPosts() {
       return EMPTY_PAGE
     },

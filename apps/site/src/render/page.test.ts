@@ -62,7 +62,17 @@ function post(overrides: Partial<Post> & { title: string; slug: string }): Post 
   } as Post
 }
 
-function setUp(options: { pages?: Page[]; posts?: Post[]; products?: Product[]; site?: Site | null } = {}) {
+function setUp(
+  options: {
+    pages?: Page[]
+    posts?: Post[]
+    products?: Product[]
+    site?: Site | null
+    /** Stored template overrides, as the loader would read them. */
+    overrides?: { path: string; source: string }[]
+    whiteLabel?: boolean
+  } = {},
+) {
   const pages = options.pages ?? []
   const posts = options.posts ?? []
   const site = options.site === undefined ? SITE : options.site
@@ -85,13 +95,14 @@ function setUp(options: { pages?: Page[]; posts?: Post[]; products?: Product[]; 
   } as unknown as Repositories
 
   const db: DbPort = {
-    async all<T>() { return [] as T[] },
+    async all<T>() { return (options.overrides ?? []) as T[] },
     async first<T>() { return null as T | null },
     async run() { return 0 },
     async batch() { return undefined },
   }
 
-  return { render: (path: string) => renderPage(path, { repositories: store, db, blob: null, baseUrl: 'https://example.com' }) }
+  return { render: (path: string) =>
+      renderPage(path, { repositories: store, db, blob: null, baseUrl: 'https://example.com', whiteLabel: options.whiteLabel ?? false }) }
 }
 
 describe('the route table', () => {
@@ -236,6 +247,59 @@ describe('structured data in the page', () => {
   })
 })
 
+describe('the attribution', () => {
+  const home = page({ title: 'Home', slug: 'home', isHome: true })
+
+  it('is rendered by the theme, and only once', async () => {
+    const { render } = setUp({ pages: [home] })
+
+    const html = (await render('/')).html
+
+    // The theme's footer has it. The platform must recognise that and not add a
+    // second one.
+    expect(html.match(/data-typeky-attribution/g)).toHaveLength(1)
+    expect(html).toContain('Powered by Typeky')
+    expect(html).toContain('https://typeky.com')
+    expect(html).toContain('rel="noopener"')
+    // A backlink the page tells crawlers to ignore would be a badge pretending to
+    // be one.
+    expect(html).not.toContain('nofollow')
+  })
+
+  it('is put back when the theme has removed it', async () => {
+    // The floor. A deployment may edit its templates, and the footer is the first
+    // thing anybody edits, so "the badge is rendered" cannot depend only on the
+    // theme's cooperation.
+    const { render } = setUp({
+      pages: [home],
+      overrides: [{ path: 'snippets/footer', source: '<footer class="site-footer">A footer with no badge.</footer>' }],
+    })
+
+    const html = (await render('/')).html
+
+    expect(html).toContain('A footer with no badge.')
+    expect(html).toContain('data-typeky-attribution')
+  })
+
+  it('is absent, and not merely empty, when a licence covers the domain', async () => {
+    const { render } = setUp({ pages: [home], whiteLabel: true })
+
+    const html = (await render('/')).html
+
+    expect(html).not.toContain('data-typeky-attribution')
+    expect(html).not.toContain('Powered by Typeky')
+  })
+
+  it('is absent on a 404 too, once it is licensed', async () => {
+    // Every page of the site is covered, not only the ones with a footer.
+    const { render } = setUp({ pages: [home], whiteLabel: true })
+
+    const html = (await render('/nope')).html
+
+    expect(html).not.toContain('data-typeky-attribution')
+  })
+})
+
 describe('a site that is not set up', () => {
   it('says so rather than rendering an empty theme', async () => {
     const { render } = setUp({ site: null })
@@ -249,7 +313,7 @@ describe('a site that is not set up', () => {
   })
 
   it('says something different when there is no database at all', async () => {
-    const result = await renderPage('/', { repositories: null, db: null, blob: null, baseUrl: 'https://example.com' })
+    const result = await renderPage('/', { repositories: null, db: null, blob: null, baseUrl: 'https://example.com', whiteLabel: false })
 
     expect(result.status).toBe(503)
     expect(result.html).toContain('no database configured')

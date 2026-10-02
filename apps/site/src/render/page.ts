@@ -4,7 +4,7 @@ import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
 import { buildRenderContext, type ItemInput } from './context'
-import { themeRuntimeOptions } from './theme-runtime'
+import { renderDocument, themeRuntimeOptions } from './theme-runtime'
 
 /**
  * The render pipeline.
@@ -72,6 +72,13 @@ export interface RenderDependencies {
   blob: BlobPort | null
   /** Absolute origin, for canonical URLs and media links. */
   baseUrl: string
+  /**
+   * Whether a licence removes the attribution.
+   *
+   * Resolved by the caller because it depends on the hostname the request arrived
+   * on, and this function is meant to be callable without an environment.
+   */
+  whiteLabel: boolean
 }
 
 export async function renderPage(
@@ -92,7 +99,7 @@ export async function renderPage(
 
   const resolveMedia = mediaResolver(dependencies.baseUrl)
   const common = {
-    site: siteInput(site),
+    site: siteInput(site, dependencies.whiteLabel),
     baseUrl: dependencies.baseUrl,
     resolveMedia,
     defaults: seoDefaults(site),
@@ -312,7 +319,7 @@ function contentUrlFor(item: ItemInput): string {
   return `/${item.slug}`
 }
 
-function siteInput(site: Site): ContextInput['site'] {
+function siteInput(site: Site, whiteLabel: boolean): ContextInput['site'] {
   return {
     name: site.name,
     tagline: site.tagline,
@@ -320,6 +327,7 @@ function siteInput(site: Site): ContextInput['site'] {
     // The row's settings are the platform's shape; the context is the template's.
     settings: { ...site.settings, language: 'en' },
     nav: site.nav,
+    whiteLabel,
   }
 }
 
@@ -385,8 +393,7 @@ async function renderWith(
     cache: createRevisionCache({ revision: () => loader.revision }),
   })
 
-  const context: RenderContext = buildRenderContext(input)
-  return runtime.renderFile(template, context)
+  return renderDocument(runtime, template, buildRenderContext(input))
 }
 
 /**

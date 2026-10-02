@@ -1,3 +1,4 @@
+import { attributionFor } from '@typeky/core'
 import { structuredData } from './seo'
 import type { Block, PageKind, Pagination, RenderContext } from '@typeky/core'
 
@@ -22,6 +23,14 @@ export interface SiteInput {
   logoMediaId: string | null
   settings: Record<string, unknown>
   nav: { label: string; href: string; order: number }[]
+  /**
+   * Whether a licence removes the attribution.
+   *
+   * A property of the deployment rather than of the site row, which is why it
+   * arrives here rather than in the settings: buying a white-label licence is not
+   * a content change, and it must not need a database write to take effect.
+   */
+  whiteLabel?: boolean
 }
 
 export interface ItemInput {
@@ -49,7 +58,7 @@ export interface ItemInput {
   ctaLabel?: string | null
   ctaUrl?: string | null
   publishedAt?: Date | null
-  /** Used for  in structured data. */
+  /** Used for `dateModified` in structured data. */
   updatedAt?: Date | null
   /** Extra fields a template reads, already resolved. */
   extra?: Record<string, unknown>
@@ -166,6 +175,13 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
         ...(typeof site.settings.filingNumber === 'string' ? { filing_number: site.settings.filingNumber } : {}),
         ...(typeof site.settings.cookieNotice === 'string' ? { cookie_notice: site.settings.cookieNotice } : {}),
       },
+      // Absent, not empty, when a licence removes it -- so a template's `{% if %}`
+      // is the whole check and there is no half-rendered badge to get wrong.
+      ...(() => {
+        const attribution = attributionFor({ whiteLabel: site.whiteLabel === true })
+
+        return attribution === undefined ? {} : { attribution }
+      })(),
     },
 
     page: {

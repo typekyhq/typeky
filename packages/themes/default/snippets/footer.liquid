@@ -8,4 +8,14 @@
     </ul>
   {% endif %}
   {% if site.settings.filing_number %}<p class="filing">{{ site.settings.filing_number }}</p>{% endif %}
+  {% comment %}
+    Present unless the site bought a white-label licence, in which case the platform
+    leaves it out of the context altogether. The marker attribute is what tells the
+    platform this theme rendered it; see `injectAttribution` in @typeky/core.
+  {% endcomment %}
+  {% if site.attribution %}
+    <p class="attribution">
+      <a href="{{ site.attribution.url }}" rel="noopener" data-typeky-attribution>{{ site.attribution.text }}</a>
+    </p>
+  {% endif %}
 </footer>

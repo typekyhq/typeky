@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { buildRenderContext } from './context'
 import { renderPreview } from './preview'
 import { sampleContext } from './sample'
-import { themeRuntimeOptions } from './theme-runtime'
+import { renderDocument, themeRuntimeOptions } from './theme-runtime'
 
 /**
  * The preview, against the thing it claims to be.
@@ -70,7 +70,7 @@ async function renderAsSaved(path: string, source: string, db: DbPort): Promise<
   })
   void source
 
-  return runtime.renderFile(path, sampleContext(path))
+  return renderDocument(runtime, path, sampleContext(path))
 }
 
 describe('a preview matches what saving would produce', () => {

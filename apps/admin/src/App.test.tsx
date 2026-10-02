@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import type { Session } from '@typeky/api'
+import { ATTRIBUTION } from '@typeky/core'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { ApiError, type ApiClient } from './lib/api-client'
@@ -195,7 +196,37 @@ describe('the shell', () => {
       reached.push(document.activeElement?.textContent ?? '')
     }
 
-    expect(reached).toEqual(NAVIGATION.map((section) => section.label))
+    // The sections, then the badge: it sits after them in the document and is
+    // therefore after them in the tab order, which is where a footer belongs.
+    expect(reached).toEqual([...NAVIGATION.map((section) => section.label), ATTRIBUTION.text])
+  })
+
+  it('drops the badge only when the server says a licence covers this domain', async () => {
+    renderApp(
+      fakeClient({
+        async getLicense() {
+          return { whiteLabel: true, domain: 'example.com' }
+        },
+      }),
+    )
+
+    const nav = await screen.findByRole('navigation', { name: 'Sections' })
+    await waitFor(() => {
+      expect(within(nav).queryByRole('link', { name: ATTRIBUTION.text })).toBeNull()
+    })
+  })
+
+  it('shows the badge when the licence cannot be read, which is not the same as owning one', async () => {
+    // Fails closed. A licence endpoint that is broken must not look like a licence
+    // that was bought.
+    renderApp(
+      fakeClient({
+        getLicense: () => never(),
+      }),
+    )
+
+    const nav = await screen.findByRole('navigation', { name: 'Sections' })
+    expect(within(nav).getByRole('link', { name: ATTRIBUTION.text })).not.toBeNull()
   })
 
   it('keeps the sidebar for wide screens and a trigger for narrow ones', async () => {

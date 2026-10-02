@@ -16,10 +16,11 @@ import { ProductsSection } from '@/routes/products'
 import { MediaSection } from '@/routes/media'
 import { SettingsPage } from '@/routes/settings'
 import { ThemeSection } from '@/routes/theme'
-import { ApiClientProvider } from '@/lib/client-context'
+import { ApiClientProvider, useApiClient } from '@/lib/client-context'
 import { apiClient } from '@/lib/client'
 import type { ApiClient } from '@/lib/api-client'
 import { NAVIGATION } from '@/lib/navigation'
+import { useLicense } from '@/lib/license'
 import { useSession, type SessionController } from '@/lib/session'
 
 /**
@@ -85,6 +86,9 @@ function Routed({ session }: { session: SessionController }) {
 
 function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void }) {
   const [sectionsOpen, setSectionsOpen] = useState(false)
+  // Asked once for the shell, not once per sidebar: the desktop one and the one
+  // inside the mobile sheet are two mounts of the same question.
+  const { whiteLabel } = useLicense(useApiClient())
 
   return (
     <div className="flex min-h-dvh bg-background text-foreground">
@@ -97,14 +101,14 @@ function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void 
         Skip to content
       </a>
 
-      <AppSidebar className="hidden md:flex" />
+      <AppSidebar className="hidden md:flex" whiteLabel={whiteLabel} />
 
       <Sheet open={sectionsOpen} onOpenChange={setSectionsOpen}>
         <SheetContent side="left" className="w-64 p-0">
           <SheetHeader className="border-b">
             <SheetTitle>Sections</SheetTitle>
           </SheetHeader>
-          <AppSidebar className="border-r-0" onNavigate={() => setSectionsOpen(false)} />
+          <AppSidebar className="border-r-0" onNavigate={() => setSectionsOpen(false)} whiteLabel={whiteLabel} />
         </SheetContent>
       </Sheet>
 

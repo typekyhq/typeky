@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { PoweredBy } from '@/components/powered-by'
 import { NAVIGATION } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
@@ -8,13 +9,19 @@ import { cn } from '@/lib/utils'
  * A real `<nav>` of real links, so keyboard order, middle-click and "open in new
  * tab" all behave the way a browser user expects. The active one is marked with
  * `aria-current` by the router, not by a class alone.
+ *
+ * The badge sits at the bottom, pushed there by `mt-auto`, and is the only part of
+ * this that a white-label licence changes.
  */
 export function AppSidebar({
   className,
   onNavigate,
+  whiteLabel = false,
 }: {
   className?: string
   onNavigate?: () => void
+  /** From the deployment's licence. Defaults to showing the badge. */
+  whiteLabel?: boolean
 }) {
   return (
     <nav aria-label="Sections" className={cn('flex w-56 shrink-0 flex-col gap-1 border-r p-3', className)}>
@@ -39,6 +46,10 @@ export function AppSidebar({
           {item.label}
         </NavLink>
       ))}
+
+      <div className="mt-auto px-1 pt-3">
+        <PoweredBy hidden={whiteLabel} />
+      </div>
     </nav>
   )
 }
