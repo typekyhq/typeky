@@ -203,3 +203,52 @@ describe('the logo', () => {
     })
   })
 })
+
+/**
+ * The first run of a deployment.
+ *
+ * A fresh deploy has no site row, the read answers 404, and the write is an
+ * upsert -- so the way to create the row is to fill this form in. The screen used
+ * to show an error on that 404, which left the only way to set the site up
+ * unavailable and the public pages answering 503 forever. Found while writing the
+ * deployment guide, which is the sort of thing a deployment guide is for.
+ */
+describe('a deployment that has not been set up yet', () => {
+  /** The read that a fresh deploy gets: no row. */
+  function coldStart(overrides: Partial<ApiClient> = {}): ApiClient {
+    return fakeClient({
+      getSite: vi.fn<ApiClient['getSite']>().mockRejectedValue(new ApiError('not_found', 404)),
+      ...overrides,
+    })
+  }
+
+  it('offers the form rather than an error, and says what saving will do', async () => {
+    renderPage(coldStart())
+
+    expect(await screen.findByText('This site has not been set up yet')).toBeTruthy()
+    expect(screen.getByText(/answer 503 until something is saved here/)).toBeTruthy()
+    // The state this file already covers for a different reason is not what a
+    // missing row should produce.
+    expect(screen.queryByText('Cannot load the site settings')).toBeNull()
+  })
+
+  it('creates the row when the form is saved', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(coldStart({ saveSite }))
+
+    await userEvent.type(await screen.findByLabelText('Name'), 'My site')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({ name: 'My site', theme: 'default', nav: [] })
+  })
+
+  it('stops saying so once it has been saved', async () => {
+    renderPage(coldStart({ saveSite: vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write })) }))
+
+    await userEvent.type(await screen.findByLabelText('Name'), 'My site')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(screen.queryByText('This site has not been set up yet')).toBeNull())
+  })
+})

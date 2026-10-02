@@ -10,11 +10,13 @@ import { toast } from 'sonner'
 import { LicenseCard } from '@/components/license-card'
 import { MediaField } from '@/components/media-picker'
 import { ErrorState, LoadingState } from '@/components/states'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 
@@ -42,6 +44,15 @@ export function SettingsPage() {
   const [issues, setIssues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  /**
+   * True while this deployment has no site row yet.
+   *
+   * A fresh deploy has none, and the write is an upsert, so the way to create one
+   * is to fill this form in. Reporting "not found" on the read -- which is the
+   * truthful thing the server said -- would leave the operator with no way
+   * forward at all and a site that answers 503 forever.
+   */
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -56,6 +67,18 @@ export function SettingsPage() {
       },
       (thrown: unknown) => {
         if (cancelled) return
+
+        // A fresh deployment has no site row yet, and the write is an upsert, so
+        // the way to create one is to fill this form in. Showing the server's
+        // "not found" -- truthful as it is -- would leave the operator with no way
+        // forward and a site that answers 503 forever.
+        if (thrown instanceof ApiError && thrown.code === 'not_found') {
+          setDraft(blankDocument())
+          setCreating(true)
+          setStatus('ready')
+          return
+        }
+
         setLoadError(describeApiError(thrown))
         setStatus('error')
       },
@@ -87,6 +110,8 @@ export function SettingsPage() {
     try {
       const saved = await client.saveSite(parsed.data)
       setDraft(toDraft(saved))
+      // The row exists now, so this is an ordinary settings screen from here on.
+      setCreating(false)
       toast.success(`Saved at ${new Date(saved.updatedAt).toLocaleTimeString()}`)
     } catch (thrown) {
       toast.error(describeApiError(thrown))
@@ -122,6 +147,15 @@ export function SettingsPage() {
           {saving ? 'Saving…' : 'Save changes'}
         </Button>
       </div>
+
+      {creating && (
+        <Alert>
+          <AlertTitle>This site has not been set up yet</AlertTitle>
+          <AlertDescription>
+            Its pages answer 503 until something is saved here. A name is enough; everything else can wait.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -470,6 +504,17 @@ function Field({
       {hint !== undefined && error === undefined && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   )
+}
+
+/**
+ * The document a deployment starts from.
+ *
+ * Everything optional is left out and everything required is empty, so the form
+ * opens on blank fields and the schema is the thing that says a name is needed --
+ * the same schema the Worker will apply.
+ */
+function blankDocument(): SiteWrite {
+  return { name: '', tagline: null, logoMediaId: null, theme: 'default', settings: {}, nav: [] }
 }
 
 function toDraft(site: SiteResponse): SiteWrite {
