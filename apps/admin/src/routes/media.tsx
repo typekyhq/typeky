@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
+import { useT, type Translate } from '@/lib/i18n'
 
 /**
  * The media library.
@@ -23,6 +24,7 @@ type LoadState = 'loading' | 'ready' | 'error'
 
 export function MediaSection() {
   const client = useApiClient()
+  const t = useT()
 
   const [state, setState] = useState<LoadState>('loading')
   const [error, setError] = useState('')
@@ -50,7 +52,7 @@ export function MediaSection() {
       },
       (thrown: unknown) => {
         if (cancelled) return
-        setError(describeApiError(thrown))
+        setError(describeApiError(thrown, t))
         setState('error')
       },
     )
@@ -66,11 +68,11 @@ export function MediaSection() {
     setUploading(true)
     try {
       await client.uploadMedia(file, { alt: file.name })
-      toast.success(`${file.name} uploaded.`)
+      toast.success(t('media.uploaded', { name: file.name }))
       setOffset(0)
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setUploading(false)
     }
@@ -82,32 +84,32 @@ export function MediaSection() {
     try {
       const usage: MediaUsage = await client.mediaUsages(item.id)
 
-      if (!window.confirm(describeUsage(item, usage))) return
+      if (!window.confirm(describeUsage(item, usage, t))) return
 
       await client.deleteMedia(item.id)
-      toast.success('Deleted.')
+      toast.success(t('media.deleted'))
       if (items.length === 1 && offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE))
       else reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
   }
 
   if (state === 'error') {
-    return <ErrorState title="Cannot load media" description={error} onRetry={reload} />
+    return <ErrorState title={t('media.loadFailed')} description={error} onRetry={reload} />
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Media" description="Images and video, stored in R2 and referenced by content." />
+      <PageHeader title={t('media.title')} description={t('media.description')} />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <SearchBox
           value={searchInput}
           onChange={setSearchInput}
-          placeholder="Filename or alt text"
+          placeholder={t('media.searchPlaceholder')}
           onSubmit={() => {
             setSearch(searchInput.trim())
             setOffset(0)
@@ -115,7 +117,7 @@ export function MediaSection() {
         />
 
         <div className="space-y-2">
-          <Label htmlFor="media-grid-upload">Upload</Label>
+          <Label htmlFor="media-grid-upload">{t('media.upload')}</Label>
           <Input
             id="media-grid-upload"
             type="file"
@@ -130,17 +132,17 @@ export function MediaSection() {
         </div>
       </div>
 
-      {uploading && <p className="text-sm text-muted-foreground">Uploading…</p>}
+      {uploading && <p className="text-sm text-muted-foreground">{t('media.uploading')}</p>}
 
       <Card>
         <CardContent>
           {state === 'loading' && items.length === 0 ? (
-            <LoadingState label="Loading media" />
+            <LoadingState label={t('media.loading')} />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {search === ''
-                ? 'No media yet. Upload the first one above.'
-                : `Nothing matches “${search}”.`}
+                ? t('media.empty')
+                : t('media.noMatches', { search })}
             </p>
           ) : (
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -168,7 +170,7 @@ export function MediaSection() {
                       disabled={busyId === item.id}
                       onClick={() => void remove(item)}
                     >
-                      Delete
+                      {t('common.delete')}
                     </Button>
                   </div>
                 </li>
@@ -189,14 +191,16 @@ export function MediaSection() {
  * Naming the places matters more than the total: "used in 3 posts" tells an
  * operator what will break, and "used 3 times" does not.
  */
-function describeUsage(item: MediaItem, usage: MediaUsage): string {
-  if (usage.total === 0) return `Delete “${item.filename}”? Nothing references it.`
+function describeUsage(item: MediaItem, usage: MediaUsage, t: Translate): string {
+  if (usage.total === 0) return t('media.confirmUnused', { name: item.filename })
 
+  // Each place is counted on its own: "used in 1 post, 2 pages" reads as what will
+  // change, and the plural of the noun belongs to the language.
   const places = usage.places
-    .map((place) => `${String(place.count)} ${place.kind}${place.count === 1 ? '' : 's'}`)
+    .map((place) => `${String(place.count)} ${t(`media.kind.${place.kind}`, { count: place.count })}`)
     .join(', ')
 
-  return `Delete “${item.filename}”? It is used in ${places}, and those references will be cleared.`
+  return t('media.confirmUsed', { name: item.filename, places })
 }
 
 function describeSize(bytes: number): string {

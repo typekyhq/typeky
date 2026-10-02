@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
+import { useT } from '@/lib/i18n'
 
 /**
  * The product editor.
@@ -74,6 +75,7 @@ const EMPTY_FORM: ProductForm = {
 
 export function ProductEditorPage() {
   const client = useApiClient()
+  const t = useT()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const isNew = id === undefined || id === 'new'
@@ -114,7 +116,7 @@ export function ProductEditorPage() {
       },
       (thrown: unknown) => {
         if (cancelled) return
-        setLoadError(describeApiError(thrown))
+        setLoadError(describeApiError(thrown, t))
         setState('error')
       },
     )
@@ -133,7 +135,7 @@ export function ProductEditorPage() {
     const parsed = getProductWriteSchema().safeParse(candidate)
     if (!parsed.success) {
       setIssues(collectIssues(parsed.error.issues))
-      toast.error('Some fields need attention.')
+      toast.error(t('editor.fieldsNeedAttention'))
       return
     }
 
@@ -153,14 +155,14 @@ export function ProductEditorPage() {
       setForm(toForm(saved))
       setIssues({})
 
-      toast.success(saved.status === 'published' ? 'Published.' : 'Saved as a draft.')
+      toast.success(saved.status === 'published' ? t('editor.saved') : t('editor.savedAsDraft'))
       if (wasNew) navigate(`/products/${saved.id}`, { replace: true })
     } catch (thrown) {
       if (thrown instanceof ApiError && thrown.code === 'slug_taken') {
-        setSlugError(thrown.serverMessage ?? 'That slug is already in use.')
-        toast.error('That slug is already in use.')
+        setSlugError(thrown.serverMessage ?? t('editor.slugTaken'))
+        toast.error(t('editor.slugTaken'))
       } else {
-        toast.error(describeApiError(thrown))
+        toast.error(describeApiError(thrown, t))
       }
     } finally {
       setSaving(null)
@@ -169,28 +171,28 @@ export function ProductEditorPage() {
 
   async function handleDelete() {
     if (product === null) return
-    if (!window.confirm(`Delete “${product.title}”? This cannot be undone.`)) return
+    if (!window.confirm(t('content.confirmDeleteOne', { title: product.title }))) return
 
     try {
       await client.deleteProduct(product.id)
-      toast.success('Product deleted.')
+      toast.success(t('products.deleted'))
       navigate('/products')
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     }
   }
 
   if (state === 'error') {
     return (
       <ErrorState
-        title="Cannot load this product"
+        title={t('productEditor.loadFailed')}
         description={loadError}
         onRetry={() => setAttempt((value) => value + 1)}
       />
     )
   }
 
-  if (state === 'loading') return <LoadingState label="Loading the product" />
+  if (state === 'loading') return <LoadingState label={t('productEditor.loading')} />
 
   return (
     <form
@@ -202,10 +204,10 @@ export function ProductEditorPage() {
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">{isNewProduct ? 'New product' : 'Edit product'}</h1>
+          <h1 className="text-xl font-semibold">{isNewProduct ? t('productEditor.new') : t('productEditor.edit')}</h1>
           <p className="text-sm text-muted-foreground">
             <Link to="/products" className="underline-offset-4 hover:underline">
-              Back to products
+              {t('content.backToProducts')}
             </Link>
           </p>
         </div>
@@ -213,7 +215,7 @@ export function ProductEditorPage() {
         <div className="flex flex-wrap gap-2">
           {product !== null && (
             <Button type="button" variant="destructive" disabled={saving !== null} onClick={handleDelete}>
-              Delete
+              {t('common.delete')}
             </Button>
           )}
           <Button
@@ -222,29 +224,32 @@ export function ProductEditorPage() {
             disabled={saving !== null}
             onClick={() => void handleSave('draft')}
           >
-            {saving === 'draft' ? 'Saving…' : 'Save draft'}
+            {saving === 'draft' ? t('editor.saving') : t('editor.saveDraft')}
           </Button>
           <Button type="submit" disabled={saving !== null}>
-            {saving === 'published' ? 'Saving…' : product?.status === 'published' ? 'Update' : 'Publish'}
+            {saving === 'published' ? t('editor.saving') : product?.status === 'published' ? t('editor.update') : t('editor.publish')}
           </Button>
         </div>
       </div>
 
       {product !== null && (
         <p className="text-sm text-muted-foreground" data-testid="product-meta">
-          {product.status === 'published' ? 'Published' : 'Draft'} · revision {product.revision}
+          {t('editor.metaNoTime', {
+            status: product.status === 'published' ? t('common.published') : t('common.draft'),
+            revision: product.revision,
+          })}
         </p>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Details</CardTitle>
-          <CardDescription>What the list and the product card show.</CardDescription>
+          <CardTitle>{t('editor.details')}</CardTitle>
+          <CardDescription>{t('productEditor.details.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field
             id="title"
-            label="Title"
+            label={t('editor.title')}
             value={form.title}
             error={issues.title}
             onChange={(value) =>
@@ -257,10 +262,10 @@ export function ProductEditorPage() {
           />
           <Field
             id="slug"
-            label="Slug"
+            label={t('editor.slug')}
             value={form.slug}
             error={slugError !== '' ? slugError : issues.slug}
-            hint="Lowercase words separated by hyphens. This is the URL."
+            hint={t('editor.slug.hint')}
             onChange={(value) => {
               slugTouched.current = true
               update((current) => ({ ...current, slug: value }))
@@ -268,22 +273,22 @@ export function ProductEditorPage() {
           />
           <Field
             id="priceLabel"
-            label="Price"
+            label={t('productEditor.price')}
             value={form.priceLabel}
             error={issues.priceLabel}
-            hint="Text, printed as written. There is no built-in checkout."
+            hint={t('productEditor.price.hint')}
             onChange={(value) => update((current) => ({ ...current, priceLabel: value }))}
           />
           <Field
             id="sortOrder"
-            label="Sort order"
+            label={t('editor.sortOrder')}
             value={form.sortOrder}
             error={issues.sortOrder}
-            hint="Lower sorts first."
+            hint={t('productEditor.sortOrder.hint')}
             onChange={(value) => update((current) => ({ ...current, sortOrder: value }))}
           />
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="summary">Summary</Label>
+            <Label htmlFor="summary">{t('productEditor.summary')}</Label>
             <Textarea
               id="summary"
               value={form.summary}
@@ -302,23 +307,23 @@ export function ProductEditorPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Call to action</CardTitle>
-          <CardDescription>Where a visitor goes to buy. The link points outside Typeky.</CardDescription>
+          <CardTitle>{t('productEditor.cta')}</CardTitle>
+          <CardDescription>{t('productEditor.cta.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field
             id="ctaLabel"
-            label="Button label"
+            label={t('productEditor.cta.label')}
             value={form.ctaLabel}
             error={issues.ctaLabel}
             onChange={(value) => update((current) => ({ ...current, ctaLabel: value }))}
           />
           <Field
             id="ctaUrl"
-            label="Button link"
+            label={t('productEditor.cta.link')}
             value={form.ctaUrl}
             error={issues.ctaUrl}
-            hint="An absolute URL."
+            hint={t('productEditor.cta.link.hint')}
             onChange={(value) => update((current) => ({ ...current, ctaUrl: value }))}
           />
         </CardContent>
@@ -326,20 +331,20 @@ export function ProductEditorPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Images</CardTitle>
-          <CardDescription>The cover, then the gallery. Both hold media ids.</CardDescription>
+          <CardTitle>{t('productEditor.images')}</CardTitle>
+          <CardDescription>{t('productEditor.images.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <MediaField
             id="coverMediaId"
-            label="Cover image"
+            label={t('editor.coverImage')}
             value={form.coverMediaId}
             error={issues.coverMediaId}
             onChange={(value) => update((current) => ({ ...current, coverMediaId: value }))}
           />
 
           {form.gallery.length === 0 && (
-            <p className="text-sm text-muted-foreground">No gallery images yet.</p>
+            <p className="text-sm text-muted-foreground">{t('productEditor.gallery.empty')}</p>
           )}
 
           <ol className="space-y-3">
@@ -385,17 +390,17 @@ export function ProductEditorPage() {
               variant="outline"
               onClick={() => update((current) => ({ ...current, gallery: [...current.gallery, ''] }))}
             >
-              Add image
+              {t('productEditor.gallery.addImage')}
             </Button>
             <Button type="button" variant="outline" onClick={() => setGalleryPickerOpen(true)}>
-              Add from library
+              {t('productEditor.gallery.addFromLibrary')}
             </Button>
           </div>
 
           <MediaPicker
             open={galleryPickerOpen}
             onOpenChange={setGalleryPickerOpen}
-            title="Add to the gallery"
+            title={t('productEditor.gallery.add')}
             onSelect={(item) =>
               update((current) => ({ ...current, gallery: [...current.gallery, item.id] }))
             }
@@ -405,12 +410,12 @@ export function ProductEditorPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Specifications</CardTitle>
-          <CardDescription>The table a product template renders.</CardDescription>
+          <CardTitle>{t('productEditor.specs')}</CardTitle>
+          <CardDescription>{t('productEditor.specs.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {form.specs.length === 0 && (
-            <p className="text-sm text-muted-foreground">No specifications yet.</p>
+            <p className="text-sm text-muted-foreground">{t('productEditor.specs.empty')}</p>
           )}
 
           <ol className="space-y-3">
@@ -465,7 +470,7 @@ export function ProductEditorPage() {
               update((current) => ({ ...current, specs: [...current.specs, { label: '', value: '' }] }))
             }
           >
-            Add specification
+            {t('productEditor.specs.add')}
           </Button>
         </CardContent>
       </Card>
@@ -475,13 +480,13 @@ export function ProductEditorPage() {
         value={form.seo}
         onChange={(seo) => update((current) => ({ ...current, seo }))}
         issues={issues}
-        fallback="Left empty, the product's title and summary are used, then the site defaults."
+        fallback={t('productEditor.seoFallback')}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Body</CardTitle>
-          <CardDescription>The body is stored as blocks, not as markup.</CardDescription>
+          <CardTitle>{t('editor.body')}</CardTitle>
+          <CardDescription>{t('editor.body.hint')}</CardDescription>
         </CardHeader>
         <CardContent>
           <LazyBlockEditor

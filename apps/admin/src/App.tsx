@@ -20,6 +20,7 @@ import { ApiClientProvider, useApiClient } from '@/lib/client-context'
 import { apiClient } from '@/lib/client'
 import type { ApiClient } from '@/lib/api-client'
 import { NAVIGATION } from '@/lib/navigation'
+import { useT } from '@/lib/i18n'
 import { useLicense } from '@/lib/license'
 import { PanelPreferenceProvider } from '@/lib/panel-preference'
 import { useSession, type SessionController } from '@/lib/session'
@@ -51,14 +52,13 @@ export function App({ client = apiClient }: { client?: ApiClient }) {
 
   return (
     <ApiClientProvider value={client}>
-      <PanelPreferenceProvider>
-        <Routed session={session} />
-      </PanelPreferenceProvider>
+      <Routed session={session} />
     </ApiClientProvider>
   )
 }
 
 function Routed({ session }: { session: SessionController }) {
+  const t = useT()
   const { state } = session
 
   if (state.status === 'loading') return <LoadingScreen />
@@ -72,22 +72,31 @@ function Routed({ session }: { session: SessionController }) {
   }
 
   return (
-    <Shell
-      actorId={state.session.actorId}
-      onSignOut={async () => {
-        try {
-          await session.signOut()
-        } catch {
-          // The local session is already cleared; the server just did not hear
-          // about it, and saying so beats pretending it worked.
-          toast.error('Signed out here, but the server could not be reached.')
-        }
-      }}
-    />
+    /*
+      The panel's own preference is read from the site document, which is behind
+      the session -- so the provider mounts only once somebody is signed in. Before
+      that there is no preference to read, and asking for one would be a 401 on the
+      sign-in screen.
+    */
+    <PanelPreferenceProvider>
+      <Shell
+        actorId={state.session.actorId}
+        onSignOut={async () => {
+          try {
+            await session.signOut()
+          } catch {
+            // The local session is already cleared; the server just did not hear
+            // about it, and saying so beats pretending it worked.
+            toast.error(t('shell.signedOutLocally'))
+          }
+        }}
+      />
+    </PanelPreferenceProvider>
   )
 }
 
 function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void }) {
+  const t = useT()
   const [sectionsOpen, setSectionsOpen] = useState(false)
   // Asked once for the shell, not once per sidebar: the desktop one and the one
   // inside the mobile sheet are two mounts of the same question.
@@ -101,7 +110,7 @@ function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void 
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
       >
-        Skip to content
+        {t('shell.skipToContent')}
       </a>
 
       <AppSidebar className="hidden md:flex" whiteLabel={whiteLabel} />
@@ -109,7 +118,7 @@ function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void 
       <Sheet open={sectionsOpen} onOpenChange={setSectionsOpen}>
         <SheetContent side="left" className="w-64 p-0">
           <SheetHeader className="border-b">
-            <SheetTitle>Sections</SheetTitle>
+            <SheetTitle>{t('nav.sections')}</SheetTitle>
           </SheetHeader>
           <AppSidebar className="border-r-0" onNavigate={() => setSectionsOpen(false)} whiteLabel={whiteLabel} />
         </SheetContent>
@@ -142,28 +151,34 @@ function Shell({ actorId, onSignOut }: { actorId: string; onSignOut: () => void 
 }
 
 function LoadingScreen() {
+  const t = useT()
+
   return (
     <main id="main" className="flex min-h-dvh items-center justify-center p-6">
-      <LoadingState label="Checking your session" className="w-full max-w-sm" />
+      <LoadingState label={t('shell.checkingSession')} className="w-full max-w-sm" />
     </main>
   )
 }
 
 function UnreachableScreen({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const t = useT()
+
   return (
     <main id="main" className="flex min-h-dvh items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <ErrorState title="Cannot reach the server" description={message} onRetry={onRetry} />
+        <ErrorState title={t('shell.unreachable.title')} description={message} onRetry={onRetry} />
       </div>
     </main>
   )
 }
 
 function NotFoundPage() {
+  const t = useT()
+
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Not found</h1>
-      <p className="text-sm text-muted-foreground">There is no screen at this address.</p>
+      <h1 className="text-xl font-semibold">{t('shell.notFound.title')}</h1>
+      <p className="text-sm text-muted-foreground">{t('shell.notFound.description')}</p>
     </div>
   )
 }

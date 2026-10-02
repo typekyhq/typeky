@@ -24,6 +24,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { usePanelPreference } from '@/lib/panel-preference'
+import { useT } from '@/lib/i18n'
 
 /**
  * The post list.
@@ -37,13 +38,14 @@ type LoadState = 'loading' | 'ready' | 'error'
 
 /** Ordering a post list can ask for. One control holds the key and the direction. */
 const SORTS: readonly SortChoice[] = [
-  { value: 'published:desc', key: 'published', direction: 'desc', label: 'Newest published' },
-  { value: 'updated:desc', key: 'updated', direction: 'desc', label: 'Recently updated' },
-  { value: 'created:desc', key: 'created', direction: 'desc', label: 'Recently created' },
-  { value: 'title:asc', key: 'title', direction: 'asc', label: 'Title A–Z' },
+  { value: 'published:desc', key: 'published', direction: 'desc', labelKey: 'posts.sort.newest' },
+  { value: 'updated:desc', key: 'updated', direction: 'desc', labelKey: 'posts.sort.updated' },
+  { value: 'created:desc', key: 'created', direction: 'desc', labelKey: 'posts.sort.created' },
+  { value: 'title:asc', key: 'title', direction: 'asc', labelKey: 'posts.sort.title' },
 ]
 
 export function PostsSection() {
+  const t = useT()
   const client = useApiClient()
   const panel = usePanelPreference()
   const navigate = useNavigate()
@@ -90,7 +92,7 @@ export function PostsSection() {
         },
         (thrown: unknown) => {
           if (cancelled) return
-          setLoadError(describeApiError(thrown))
+          setLoadError(describeApiError(thrown, t))
           setState('error')
         },
       )
@@ -105,17 +107,17 @@ export function PostsSection() {
   async function runBulk(action: BulkAction) {
     const ids = [...selected]
     if (ids.length === 0) return
-    if (action === 'delete' && !window.confirm(`Delete ${String(ids.length)} post${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) {
+    if (action === 'delete' && !window.confirm(t('posts.confirmDelete', { count: ids.length }))) {
       return
     }
 
     setBulkBusy(true)
     try {
-      toast.success(describeBulk(await client.bulkPosts(ids, action)))
+      toast.success(describeBulk(await client.bulkPosts(ids, action), t))
       setSelected(new Set())
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBulkBusy(false)
     }
@@ -125,41 +127,41 @@ export function PostsSection() {
     setBusyId(post.id)
     try {
       await client.setPostStatus(post.id, post.status === 'published' ? 'draft' : 'published')
-      toast.success(post.status === 'published' ? 'Moved back to draft.' : 'Published.')
+      toast.success(post.status === 'published' ? t('posts.movedToDraft') : t('posts.published'))
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
   }
 
   async function remove(post: PostSummary) {
-    if (!window.confirm(`Delete “${post.title}”? This cannot be undone.`)) return
+    if (!window.confirm(t('content.confirmDeleteOne', { title: post.title }))) return
 
     setBusyId(post.id)
     try {
       await client.deletePost(post.id)
-      toast.success('Post deleted.')
+      toast.success(t('posts.deleted'))
       // Deleting the only row of a page would otherwise land on an empty list.
       if (items.length === 1 && offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE))
       else reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
   }
 
   if (state === 'error') {
-    return <ErrorState title="Cannot load posts" description={loadError} onRetry={reload} />
+    return <ErrorState title={t('posts.loadFailed')} description={loadError} onRetry={reload} />
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Posts" description="Blog posts, newest first.">
+      <PageHeader title={t('posts.title')} description={t('posts.description')}>
         <Button type="button" onClick={() => navigate('/posts/new')}>
-          New post
+          {t('posts.new')}
         </Button>
       </PageHeader>
 
@@ -183,7 +185,7 @@ export function PostsSection() {
           <SearchBox
             value={searchInput}
             onChange={setSearchInput}
-            placeholder="Title, slug or excerpt"
+            placeholder={t('posts.searchPlaceholder')}
             onSubmit={() => {
               setSearch(searchInput.trim())
               setOffset(0)
@@ -204,16 +206,16 @@ export function PostsSection() {
       <Card>
         <CardContent>
           {state === 'loading' && items.length === 0 ? (
-            <LoadingState label="Loading posts" />
+            <LoadingState label={t('posts.loading')} />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {search === ''
-                ? 'No posts yet. The first one starts with “New post”.'
+                ? t('posts.empty')
                 : `Nothing matches “${search}”.`}
             </p>
           ) : (
             <table className="w-full border-collapse text-sm">
-              <caption className="sr-only">Posts</caption>
+              <caption className="sr-only">{t('posts.title')}</caption>
               <thead>
                 <tr className="border-b text-left">
                   <SelectionHead
@@ -224,19 +226,19 @@ export function PostsSection() {
                     }
                   />
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Title
+                    {t('content.title')}
                   </th>
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Slug
+                    {t('content.slug')}
                   </th>
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Status
+                    {t('content.status')}
                   </th>
                   <th scope="col" className="hidden py-2 pr-3 font-medium sm:table-cell">
-                    Updated
+                    {t('content.updated')}
                   </th>
                   <th scope="col" className="py-2 font-medium">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('content.actions')}</span>
                   </th>
                 </tr>
               </thead>

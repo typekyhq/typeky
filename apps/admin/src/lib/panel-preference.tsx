@@ -78,6 +78,13 @@ export function PanelPreferenceProvider({ children }: { children: ReactNode }) {
   const dateFormat = settings.dateFormat ?? DEFAULT_ADMIN_DATE_FORMAT
   const language = settings.language ?? DEFAULT_LANGUAGE
 
+  // The panel's own `lang`, which is what a screen reader reads the interface
+  // aloud in. It is the panel's language and not the site's: they are two
+  // different readers.
+  useEffect(() => {
+    document.documentElement.lang = language
+  }, [language])
+
   return (
     <PanelPreferenceContext.Provider
       value={{

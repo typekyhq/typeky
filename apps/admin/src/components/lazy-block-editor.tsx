@@ -1,6 +1,7 @@
 import type { BlockEditorProps } from '@typeky/editor'
 import { Suspense, lazy } from 'react'
 import { LoadingState } from './states'
+import { useT } from '@/lib/i18n'
 
 /**
  * The block editor, loaded only when a screen renders it.
@@ -18,8 +19,10 @@ const BlockEditor = lazy(async () => {
 })
 
 export function LazyBlockEditor(props: BlockEditorProps) {
+  const t = useT()
+
   return (
-    <Suspense fallback={<LoadingState label="Loading the editor" className="p-4" />}>
+    <Suspense fallback={<LoadingState label={t('editor.loadingEditor')} className="p-4" />}>
       <BlockEditor {...props} />
     </Suspense>
   )

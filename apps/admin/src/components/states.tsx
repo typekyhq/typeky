@@ -3,6 +3,7 @@ import { AlertTriangleIcon } from 'lucide-react'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /**
@@ -13,10 +14,12 @@ import { cn } from '@/lib/utils'
  * when the state changes rather than leaving the page silent.
  */
 
-export function LoadingState({ label = 'Loading', className }: { label?: string; className?: string }) {
+export function LoadingState({ label, className }: { label?: string; className?: string }) {
+  const t = useT()
+
   return (
     <div className={cn('space-y-3', className)} role="status" aria-busy="true" aria-live="polite">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t('state.loading')}</span>
       <Skeleton className="h-6 w-48" />
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-2/3" />
@@ -43,7 +46,7 @@ export function EmptyState({
 }
 
 export function ErrorState({
-  title = 'Something went wrong',
+  title,
   description,
   onRetry,
 }: {
@@ -51,15 +54,17 @@ export function ErrorState({
   description?: string
   onRetry?: () => void
 }) {
+  const t = useT()
+
   return (
     <Alert variant="destructive">
       <AlertTriangleIcon />
-      <AlertTitle>{title}</AlertTitle>
+      <AlertTitle>{title ?? t('state.error.title')}</AlertTitle>
       {description !== undefined && <AlertDescription>{description}</AlertDescription>}
       {onRetry !== undefined && (
         <AlertAction>
           <Button variant="outline" size="sm" onClick={onRetry}>
-            Try again
+            {t('state.retry')}
           </Button>
         </AlertAction>
       )}

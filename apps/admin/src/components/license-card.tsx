@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useApiClient } from '@/lib/client-context'
+import { useT, type Translate } from '@/lib/i18n'
 import { describeApiError } from '@/lib/session'
 
 /**
@@ -18,6 +19,7 @@ import { describeApiError } from '@/lib/session'
  * or it is a puzzle.
  */
 export function LicenseCard() {
+  const t = useT()
   const client = useApiClient()
   const [license, setLicense] = useState<LicenseResponse | null>(null)
   const [error, setError] = useState('')
@@ -30,7 +32,7 @@ export function LicenseCard() {
         if (!cancelled) setLicense(result)
       },
       (thrown: unknown) => {
-        if (!cancelled) setError(describeApiError(thrown))
+        if (!cancelled) setError(describeApiError(thrown, t))
       },
     )
 
@@ -42,50 +44,43 @@ export function LicenseCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Licence</CardTitle>
-        <CardDescription>
-          A white-label licence removes the &ldquo;Powered by Typeky&rdquo; badge from the site and this panel.
-        </CardDescription>
+        <CardTitle>{t('licence.title')}</CardTitle>
+        <CardDescription>{t('licence.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {error !== '' && <p className="text-destructive">{error}</p>}
 
-        {error === '' && license === null && <p className="text-muted-foreground">Reading the licence…</p>}
+        {error === '' && license === null && <p className="text-muted-foreground">{t('licence.reading')}</p>}
 
         {license !== null && license.whiteLabel && license.license !== undefined && (
           <p>
-            Active for <span className="font-medium">{license.license.domain}</span>, issued{' '}
-            <time dateTime={license.license.issuedAt}>
-              {license.license.issuedAt.slice(0, 10)}
-            </time>{' '}
-            ({license.license.tier}). Nothing here or on the site is attributed.
+            {t('licence.active', {
+              domain: license.license.domain,
+              issued: license.license.issuedAt.slice(0, 10),
+              tier: license.license.tier,
+            })}
           </p>
         )}
 
         {license !== null && !license.whiteLabel && license.problem === undefined && (
-          <p className="text-muted-foreground">
-            None. The site&rsquo;s footer says &ldquo;Powered by Typeky&rdquo;, and so does the sidebar.
-          </p>
+          <p className="text-muted-foreground">{t('licence.none')}</p>
         )}
 
         {license !== null && !license.whiteLabel && license.problem !== undefined && (
           <Alert variant="destructive">
-            <AlertTitle>A licence key is set, and it does not apply here</AlertTitle>
+            <AlertTitle>{t('licence.refused.title')}</AlertTitle>
             <AlertDescription>
               <p>
-                It was refused because <span className="font-medium">{describeProblem(license.problem)}</span>. The
-                request arrived as <span className="font-medium">{license.domain}</span>
-                {license.licensedDomain === undefined ? (
-                  '.'
-                ) : (
-                  <>
-                    , and the licence names <span className="font-medium">{license.licensedDomain}</span>.
-                  </>
-                )}
+                {t('licence.refused.reason', {
+                  reason: describeProblem(license.problem, t),
+                  domain: license.domain,
+                  licensed:
+                    license.licensedDomain === undefined
+                      ? '.'
+                      : t('licence.refused.licensed', { domain: license.licensedDomain }),
+                })}
               </p>
-              <p className="mt-2">
-                The site keeps serving, with the attribution on it. Nothing is blocked and nothing is lost.
-              </p>
+              <p className="mt-2">{t('licence.refused.reassurance')}</p>
             </AlertDescription>
           </Alert>
         )}
@@ -102,17 +97,15 @@ export function LicenseCard() {
  * a guess: a new reason should read as an unfamiliar word, not as the wrong
  * explanation.
  */
-function describeProblem(problem: string): string {
-  switch (problem) {
-    case 'malformed':
-      return 'the key is not in the expected form, which usually means part of it was lost in a copy and paste'
-    case 'bad_signature':
-      return 'the signature does not match, so the key was edited, truncated, or not issued by us'
-    case 'wrong_domain':
-      return 'it was issued for a different domain'
-    case 'unknown_key':
-      return 'this build cannot check keys at all, which is a fault in the deployment rather than in the key'
-    default:
-      return problem
-  }
+function describeProblem(problem: string, t: Translate): string {
+  const known = [
+    'malformed',
+    'bad_signature',
+    'wrong_domain',
+    'unknown_key',
+  ] as const
+
+  const match = known.find((candidate) => candidate === problem)
+
+  return match === undefined ? problem : t(`licence.problem.${match}`)
 }

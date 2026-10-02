@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useApiClient } from '@/lib/client-context'
+import { useT } from '@/lib/i18n'
 import { describeApiError } from '@/lib/session'
 
 /**
@@ -29,7 +30,8 @@ export interface MediaPickerProps {
   title?: string
 }
 
-export function MediaPicker({ open, onOpenChange, onSelect, title = 'Choose an image' }: MediaPickerProps) {
+export function MediaPicker({ open, onOpenChange, onSelect, title }: MediaPickerProps) {
+  const t = useT()
   const client = useApiClient()
 
   const [items, setItems] = useState<MediaItem[]>([])
@@ -54,7 +56,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, title = 'Choose an i
       },
       (thrown: unknown) => {
         if (cancelled) return
-        setError(describeApiError(thrown))
+        setError(describeApiError(thrown, t))
         setState('error')
       },
     )
@@ -73,7 +75,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, title = 'Choose an i
         onSelect(item)
         onOpenChange(false)
       } catch (thrown) {
-        toast.error(describeApiError(thrown))
+        toast.error(describeApiError(thrown, t))
       } finally {
         setUploading(false)
       }
@@ -85,7 +87,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, title = 'Choose an i
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
         <SheetHeader className="border-b">
-          <SheetTitle>{title}</SheetTitle>
+          <SheetTitle>{title ?? t('mediaPicker.defaultTitle')}</SheetTitle>
         </SheetHeader>
 
         <div className="space-y-4 p-4">
@@ -98,22 +100,22 @@ export function MediaPicker({ open, onOpenChange, onSelect, title = 'Choose an i
               }}
             >
               <div className="flex-1 space-y-2">
-                <Label htmlFor="media-search">Search</Label>
+                <Label htmlFor="media-search">{t('mediaPicker.search')}</Label>
                 <Input
                   id="media-search"
                   type="search"
-                  placeholder="Filename or alt text"
+                  placeholder={t('mediaPicker.searchPlaceholder')}
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                 />
               </div>
               <Button type="submit" variant="outline">
-                Search
+                {t('mediaPicker.search')}
               </Button>
             </form>
 
             <div className="space-y-2">
-              <Label htmlFor="media-upload">Upload</Label>
+              <Label htmlFor="media-upload">{t('mediaPicker.upload')}</Label>
               <Input
                 id="media-upload"
                 type="file"
@@ -128,19 +130,19 @@ export function MediaPicker({ open, onOpenChange, onSelect, title = 'Choose an i
             </div>
           </div>
 
-          {uploading && <p className="text-sm text-muted-foreground">Uploading…</p>}
+          {uploading && <p className="text-sm text-muted-foreground">{t('mediaPicker.uploading')}</p>}
 
           {state === 'error' ? (
             <ErrorState
-              title="Cannot load media"
+              title={t('mediaPicker.loadFailed')}
               description={error}
               onRetry={() => setAttempt((value) => value + 1)}
             />
           ) : state === 'loading' ? (
-            <LoadingState label="Loading media" />
+            <LoadingState label={t('mediaPicker.loading')} />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              {search === '' ? 'No media yet. Upload the first one above.' : `Nothing matches “${search}”.`}
+              {search === '' ? t('mediaPicker.empty') : t('mediaPicker.noMatches', { search })}
             </p>
           ) : (
             <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -192,6 +194,7 @@ export function MediaField({
   hint?: string
   error?: string
 }) {
+  const t = useT()
   const client = useApiClient()
   const [open, setOpen] = useState(false)
 
@@ -215,7 +218,7 @@ export function MediaField({
           aria-label={`Choose ${label.toLowerCase()}`}
           onClick={() => setOpen(true)}
         >
-          Choose
+          {t('mediaPicker.choose')}
         </Button>
       </div>
 
@@ -237,7 +240,7 @@ export function MediaField({
       <MediaPicker
         open={open}
         onOpenChange={setOpen}
-        title={`Choose for ${label.toLowerCase()}`}
+        title={t('mediaPicker.chooseFor', { field: label.toLowerCase() })}
         onSelect={(item) => onChange(item.id)}
       />
     </div>

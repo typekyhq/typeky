@@ -47,9 +47,10 @@ describe('an active licence', () => {
       license: { id: 'TY-0001', domain: 'example.com', issuedAt: '2026-01-01T00:00:00.000Z', tier: 'single' },
     }))
 
-    expect(await screen.findByText(/Active for/)).toBeTruthy()
-    expect(screen.getByText('example.com')).toBeTruthy()
-    expect(screen.getByText(/Nothing here or on the site is attributed/)).toBeTruthy()
+    // One sentence rather than spans around the parts: a translator needs the
+    // whole sentence, and a sentence assembled from fragments is a sentence that
+    // only works in the language it was written in.
+    expect(await screen.findByText(/Active for example\.com, issued 2026-01-01 \(single\)/)).toBeTruthy()
   })
 })
 
@@ -65,8 +66,7 @@ describe('a licence that does not apply here', () => {
     // Both halves of the puzzle: what was asked, and what the licence says. One
     // without the other is a support ticket.
     expect(await screen.findByText(/does not apply here/)).toBeTruthy()
-    expect(screen.getByText('www.example.com')).toBeTruthy()
-    expect(screen.getByText('other.example')).toBeTruthy()
+    expect(screen.getByText(/arrived as www\.example\.com, and the licence names other\.example/)).toBeTruthy()
     expect(screen.getByText(/keeps serving, with the attribution on it/)).toBeTruthy()
   })
 
@@ -81,6 +81,6 @@ describe('a licence that does not apply here', () => {
     // as the wrong explanation.
     renderCard(async () => ({ whiteLabel: false, domain: 'example.com', problem: 'a-new-reason' }))
 
-    expect(await screen.findByText('a-new-reason')).toBeTruthy()
+    expect(await screen.findByText(/refused because a-new-reason/)).toBeTruthy()
   })
 })

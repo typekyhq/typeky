@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useT, type Translate } from '@/lib/i18n'
 
 /**
  * The chrome the three content lists share.
@@ -16,10 +17,10 @@ import { Label } from '@/components/ui/label'
 
 export type StatusFilter = ContentStatus | 'all'
 
-const FILTERS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'draft', label: 'Drafts' },
-  { value: 'published', label: 'Published' },
+const FILTERS: ReadonlyArray<{ value: StatusFilter; labelKey: string }> = [
+  { value: 'all', labelKey: 'list.filter.all' },
+  { value: 'draft', labelKey: 'list.filter.draft' },
+  { value: 'published', labelKey: 'list.filter.published' },
 ]
 
 export function PageHeader({
@@ -49,8 +50,10 @@ export function StatusFilterGroup({
   value: StatusFilter
   onChange: (next: StatusFilter) => void
 }) {
+  const t = useT()
+
   return (
-    <div role="group" aria-label="Filter by status" className="flex gap-2">
+    <div role="group" aria-label={t('list.filterByStatus')} className="flex gap-2">
       {FILTERS.map((option) => (
         <Button
           key={option.value}
@@ -60,7 +63,7 @@ export function StatusFilterGroup({
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
         >
-          {option.label}
+          {t(option.labelKey)}
         </Button>
       ))}
     </div>
@@ -84,6 +87,8 @@ export function SearchBox({
   onSubmit: () => void
   placeholder: string
 }) {
+  const t = useT()
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     onSubmit()
@@ -92,7 +97,7 @@ export function SearchBox({
   return (
     <form onSubmit={handleSubmit} className="flex items-end gap-2">
       <div className="space-y-2">
-        <Label htmlFor="content-search">Search</Label>
+        <Label htmlFor="content-search">{t('list.search')}</Label>
         <Input
           id="content-search"
           type="search"
@@ -102,7 +107,7 @@ export function SearchBox({
         />
       </div>
       <Button type="submit" variant="outline">
-        Search
+        {t('list.search')}
       </Button>
     </form>
   )
@@ -119,13 +124,15 @@ export function Pager({
   shown: number
   onOffset: (next: number) => void
 }) {
+  const t = useT()
+
   const first = total === 0 ? 0 : offset + 1
   const last = offset + shown
 
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-muted-foreground" data-testid="content-count">
-        {total === 0 ? 'Nothing here' : `${first}–${last} of ${total}`}
+        {total === 0 ? t('list.empty') : t('list.count', { first, last, total })}
       </p>
       <div className="flex gap-2">
         <Button
@@ -135,7 +142,7 @@ export function Pager({
           disabled={offset === 0}
           onClick={() => onOffset(Math.max(0, offset - PAGE_SIZE))}
         >
-          Previous
+          {t('list.previous')}
         </Button>
         <Button
           type="button"
@@ -144,7 +151,7 @@ export function Pager({
           disabled={last >= total}
           onClick={() => onOffset(offset + PAGE_SIZE)}
         >
-          Next
+          {t('list.next')}
         </Button>
       </div>
     </div>
@@ -159,7 +166,8 @@ export interface SortChoice {
   value: string
   key: ContentSort
   direction: SortDirection
-  label: string
+  /** A locale key: this module holds no English. */
+  labelKey: string
 }
 
 export const SORT_DIRECTIONS_LIST: readonly SortDirection[] = ['asc', 'desc']
@@ -180,9 +188,11 @@ export function SortSelect({
   value: string
   onChange: (next: SortChoice) => void
 }) {
+  const t = useT()
+
   return (
     <div className="space-y-2">
-      <Label htmlFor="list-sort">Sort</Label>
+      <Label htmlFor="list-sort">{t('list.sort')}</Label>
       <select
         id="list-sort"
         className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
@@ -194,7 +204,7 @@ export function SortSelect({
       >
         {choices.map((choice) => (
           <option key={choice.value} value={choice.value}>
-            {choice.label}
+            {t(choice.labelKey)}
           </option>
         ))}
       </select>
@@ -217,6 +227,8 @@ export function SelectionHead({
   someSelected: boolean
   onChange: (next: boolean) => void
 }) {
+  const t = useT()
+
   const ref = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -230,7 +242,7 @@ export function SelectionHead({
         type="checkbox"
         className="size-4 align-middle"
         checked={allSelected}
-        aria-label="Select everything on this page"
+        aria-label={t('list.selectAll')}
         onChange={(event) => onChange(event.target.checked)}
       />
     </th>
@@ -246,13 +258,15 @@ export function SelectionCell({
   checked: boolean
   onChange: (next: boolean) => void
 }) {
+  const t = useT()
+
   return (
     <td className="py-3 pr-2">
       <input
         type="checkbox"
         className="size-4 align-middle"
         checked={checked}
-        aria-label={`Select ${label}`}
+        aria-label={t('list.select', { label })}
         onChange={(event) => onChange(event.target.checked)}
       />
     </td>
@@ -280,6 +294,8 @@ export function BulkBar({
   onDelete: () => void
   onClear: () => void
 }) {
+  const t = useT()
+
   if (count === 0) return null
 
   return (
@@ -289,19 +305,19 @@ export function BulkBar({
       data-testid="bulk-bar"
     >
       <span className="text-sm font-medium">
-        {count} selected
+        {t('list.selected', { count })}
       </span>
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onPublish}>
-        Publish
+        {t('list.publish')}
       </Button>
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onDraft}>
-        Move to draft
+        {t('list.moveToDraft')}
       </Button>
       <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onDelete}>
-        Delete
+        {t('common.delete')}
       </Button>
       <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onClear}>
-        Clear
+        {t('list.clear')}
       </Button>
     </div>
   )
@@ -322,31 +338,35 @@ export function RowActions({
   onDelete: () => void
   extra?: ReactNode
 }) {
+  const t = useT()
+
   return (
     <div className="flex justify-end gap-2">
       {extra}
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onToggleStatus}>
-        {status === 'published' ? 'Unpublish' : 'Publish'}
+        {status === 'published' ? t('list.unpublish') : t('list.publish')}
       </Button>
       <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onDelete}>
-        Delete
+        {t('common.delete')}
       </Button>
     </div>
   )
 }
 
-export function describeBulk(result: BulkResult): string {
+export function describeBulk(result: BulkResult, t: Translate): string {
   if (result.changed === result.requested) {
-    return `${String(result.changed)} ${result.changed === 1 ? 'item' : 'items'} updated.`
+    return t('list.bulkResult', { count: result.changed })
   }
 
   // The selection is made in a browser and can be stale, so saying how many were
   // actually there is more useful than reporting what was asked for.
-  return `${String(result.changed)} of ${String(result.requested)} changed; the rest were already gone.`
+  return t('list.bulkPartial', { changed: result.changed, requested: result.requested })
 }
 
 /** The status cell, spelled out rather than shown as a colour alone. */
 export function StatusText({ status }: { status: ContentStatus }) {
-  return <span>{status === 'published' ? 'Published' : 'Draft'}</span>
+  const t = useT()
+
+  return <span>{status === 'published' ? t('common.published') : t('common.draft')}</span>
 }
 

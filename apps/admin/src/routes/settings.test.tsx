@@ -276,7 +276,7 @@ describe('language and dates', () => {
 
     expect(field).toHaveProperty('value', '%Y年%-m月%-d日')
     // The preview instant is 2026-01-05T09:07:03Z, rendered in UTC.
-    expect(screen.getByText('2026年1月5日')).toBeTruthy()
+    expect(screen.getByText(/2026年1月5日/)).toBeTruthy()
   })
 
   it('shows the default format when the site has not chosen one', async () => {
@@ -284,7 +284,7 @@ describe('language and dates', () => {
 
     await screen.findByLabelText('Site date format')
 
-    expect(screen.getByText('January 5, 2026')).toBeTruthy()
+    expect(screen.getByText(/January 5, 2026/)).toBeTruthy()
   })
 
   it('refuses a directive it cannot render, before the network', async () => {

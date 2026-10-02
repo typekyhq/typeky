@@ -1,6 +1,7 @@
 import type { ApiErrorCode, LoginRequest, Session } from '@typeky/api'
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, type ApiClient } from './api-client'
+import { useT, type Translate } from './i18n'
 
 /**
  * Everything the shell needs to know about who is signed in.
@@ -26,32 +27,48 @@ export interface SessionController {
   reload(): void
 }
 
-const MESSAGES: Record<ApiErrorCode, string> = {
-  invalid_request: 'The server rejected that request.',
-  unauthorized: 'Your session has ended. Sign in again.',
-  csrf_failed: 'The session token was rejected. Reload the page and try again.',
-  invalid_credentials: 'Wrong username or password.',
-  admin_password_not_configured: 'No admin password is configured on this deployment.',
-  database_not_configured: 'This deployment has no database configured.',
-  not_found: 'That endpoint does not exist yet.',
-  slug_taken: 'That slug is already in use. Choose another one.',
-  storage_not_configured: 'This deployment has no media storage configured.',
-  internal_error: 'The server could not complete the request.',
+/** Error code to locale key. The words live in the locale file with the rest. */
+const ERROR_KEYS: Record<ApiErrorCode, string> = {
+  invalid_request: 'error.invalid_request',
+  unauthorized: 'error.unauthorized',
+  csrf_failed: 'error.csrf_failed',
+  invalid_credentials: 'error.invalid_credentials',
+  admin_password_not_configured: 'error.admin_password_not_configured',
+  database_not_configured: 'error.database_not_configured',
+  not_found: 'error.not_found',
+  slug_taken: 'error.slug_taken',
+  storage_not_configured: 'error.storage_not_configured',
+  internal_error: 'error.internal_error',
 }
 
-/** Turns any thrown value into something worth showing a person. */
-export function describeApiError(thrown: unknown): string {
+/**
+ * Turns any thrown value into something worth showing a person.
+ *
+ * The translator is a parameter rather than a hook because this is called from
+ * places that are not components -- and because a screen that forgot to pass one
+ * should be a type error, not a panel that silently speaks English.
+ */
+export function describeApiError(thrown: unknown, t: Translate): string {
   if (thrown instanceof ApiError) {
     // The server's words when it sent any. A slug conflict names the post that
     // already holds the slug, and no table of per-code wording can say that.
-    return thrown.serverMessage ?? MESSAGES[thrown.code]
+    return thrown.serverMessage ?? t(ERROR_KEYS[thrown.code])
   }
 
   if (thrown instanceof Error) return thrown.message
-  return 'Something went wrong.'
+  return t('error.unknown')
 }
 
 export function useSession(client: ApiClient): SessionController {
+  /**
+   * The default language, not the operator's.
+   *
+   * The preference is stored in the site document, which is behind the session --
+   * so before somebody has signed in there is nothing to read and nothing to be
+   * wrong about. The messages this function produces are exactly the pre-auth
+   * ones.
+   */
+  const t = useT()
   const [state, setState] = useState<SessionState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
@@ -70,7 +87,7 @@ export function useSession(client: ApiClient): SessionController {
         if (thrown instanceof ApiError && thrown.code === 'unauthorized') {
           setState({ status: 'signedOut' })
         } else {
-          setState({ status: 'unreachable', message: describeApiError(thrown) })
+          setState({ status: 'unreachable', message: describeApiError(thrown, t) })
         }
       },
     )

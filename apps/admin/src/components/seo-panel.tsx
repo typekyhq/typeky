@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { useT } from '@/lib/i18n'
 
 /**
  * The SEO overrides, shared by the three content types.
@@ -30,6 +31,7 @@ export interface SeoPanelProps {
 }
 
 export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: SeoPanelProps) {
+  const t = useT()
   const field = (name: keyof SeoMetadata) => `${idPrefix}-${name}-error`
 
   function set<K extends keyof SeoMetadata>(key: K, next: string): void {
@@ -48,9 +50,9 @@ export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: S
         <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
           <CardHeader>
             <CardTitle>
-              Search and sharing
+              {t('seo.summary')}
               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {countSet(value) === 0 ? 'using the defaults' : `${String(countSet(value))} overridden`}
+                {countSet(value) === 0 ? t('seo.usingDefaults') : t('seo.overridden', { count: countSet(value) })}
               </span>
             </CardTitle>
             <CardDescription>{fallback}</CardDescription>
@@ -59,7 +61,7 @@ export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: S
 
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-title`}>Meta title</Label>
+            <Label htmlFor={`${idPrefix}-title`}>{t('seo.title')}</Label>
             <Input
               id={`${idPrefix}-title`}
               value={value.title ?? ''}
@@ -67,15 +69,15 @@ export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: S
               aria-describedby={issues['seo.title'] !== undefined ? field('title') : undefined}
               onChange={(event) => set('title', event.target.value)}
             />
-            <FieldNote id={field('title')} error={issues['seo.title']} hint="Shown in search results and the browser tab." />
+            <FieldNote id={field('title')} error={issues['seo.title']} hint={t('seo.title.hint')} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-canonical`}>Canonical URL</Label>
+            <Label htmlFor={`${idPrefix}-canonical`}>{t('seo.canonical')}</Label>
             <Input
               id={`${idPrefix}-canonical`}
               value={value.canonical ?? ''}
-              placeholder="https://"
+              placeholder={t('seo.placeholder.url')}
               aria-invalid={issues['seo.canonical'] !== undefined}
               aria-describedby={issues['seo.canonical'] !== undefined ? field('canonical') : undefined}
               onChange={(event) => set('canonical', event.target.value)}
@@ -83,12 +85,12 @@ export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: S
             <FieldNote
               id={field('canonical')}
               error={issues['seo.canonical']}
-              hint="Overrides the address search engines treat as the original."
+              hint={t('seo.canonical.hint')}
             />
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor={`${idPrefix}-description`}>Meta description</Label>
+            <Label htmlFor={`${idPrefix}-description`}>{t('seo.description')}</Label>
             <Textarea
               id={`${idPrefix}-description`}
               value={value.description ?? ''}
@@ -99,17 +101,17 @@ export function SeoPanel({ value, onChange, issues = {}, idPrefix, fallback }: S
             <FieldNote
               id={field('description')}
               error={issues['seo.description']}
-              hint="Shown under the title in search results."
+              hint={t('seo.description.hint')}
             />
           </div>
 
           <div className="sm:col-span-2">
             <MediaField
               id={`${idPrefix}-ogImageMediaId`}
-              label="Social image"
+              label={t('seo.socialImage')}
               value={value.ogImageMediaId ?? ''}
               error={issues['seo.ogImageMediaId']}
-              hint="Overrides the image shown when this is shared."
+              hint={t('seo.socialImage.hint')}
               onChange={(next) => set('ogImageMediaId', next)}
             />
           </div>

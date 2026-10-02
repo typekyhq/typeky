@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import type { Session } from '@typeky/api'
 import { ATTRIBUTION } from '@typeky/core'
+import { en } from '@/locales/en'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import { ApiError, type ApiClient } from './lib/api-client'
@@ -131,7 +132,9 @@ describe('the shell', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Sections' })
     for (const section of NAVIGATION) {
-      expect(within(nav).getByRole('link', { name: section.label })).toBeTruthy()
+      // The label comes from the locale file, because that is now where the
+      // words are -- and a key pointing at nothing would fail this.
+      expect(within(nav).getByRole('link', { name: en[section.labelKey] })).toBeTruthy()
     }
   })
 
@@ -198,7 +201,7 @@ describe('the shell', () => {
 
     // The sections, then the badge: it sits after them in the document and is
     // therefore after them in the tab order, which is where a footer belongs.
-    expect(reached).toEqual([...NAVIGATION.map((section) => section.label), ATTRIBUTION.text])
+    expect(reached).toEqual([...NAVIGATION.map((section) => en[section.labelKey]), ATTRIBUTION.text])
   })
 
   it('drops the badge only when the server says a licence covers this domain', async () => {

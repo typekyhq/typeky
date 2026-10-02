@@ -10,6 +10,7 @@ import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { usePanelPreference } from '@/lib/panel-preference'
+import { useT } from '@/lib/i18n'
 
 /**
  * The theme's templates.
@@ -25,25 +26,26 @@ import { usePanelPreference } from '@/lib/panel-preference'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
-const GROUPS: ReadonlyArray<{ group: ThemeTemplateGroup; title: string; description: string }> = [
+const GROUPS: ReadonlyArray<{ group: ThemeTemplateGroup; titleKey: string; descriptionKey: string }> = [
   {
     group: 'layouts',
-    title: 'Layouts',
-    description: 'The page shell. A template renders into one of these.',
+    titleKey: 'theme.group.layouts',
+    descriptionKey: 'theme.group.layouts.hint',
   },
   {
     group: 'templates',
-    title: 'Templates',
-    description: 'One per kind of page, chosen by the URL that was asked for.',
+    titleKey: 'theme.group.templates',
+    descriptionKey: 'theme.group.templates.hint',
   },
   {
     group: 'snippets',
-    title: 'Snippets',
-    description: 'Reusable pieces, pulled in by name from the templates and each other.',
+    titleKey: 'theme.group.snippets',
+    descriptionKey: 'theme.group.snippets.hint',
   },
 ]
 
 export function ThemeSection() {
+  const t = useT()
   const client = useApiClient()
   const panel = usePanelPreference()
 
@@ -76,7 +78,7 @@ export function ThemeSection() {
       },
       (thrown: unknown) => {
         if (cancelled) return
-        setError(describeApiError(thrown))
+        setError(describeApiError(thrown, t))
         setState('error')
       },
     )
@@ -101,7 +103,7 @@ export function ThemeSection() {
       setSource(template.source)
       setSaved(template.source)
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
       setOpenPath(null)
     }
   }
@@ -128,7 +130,7 @@ export function ThemeSection() {
         setProblem({ message: thrown.serverMessage, line: thrown.line ?? null })
         setView('source')
       } else {
-        toast.error(describeApiError(thrown))
+        toast.error(describeApiError(thrown, t))
       }
     } finally {
       setPreviewing(false)
@@ -144,7 +146,7 @@ export function ThemeSection() {
     try {
       const template = await client.saveThemeTemplate(openPath, source)
       setSaved(template.source)
-      toast.success('Saved. The site picks this up on the next render.')
+      toast.success(t('theme.saved'))
       reload()
     } catch (thrown) {
       if (thrown instanceof ApiError && thrown.serverMessage !== undefined) {
@@ -153,7 +155,7 @@ export function ThemeSection() {
         // hunting for what is wrong with a line that looks fine.
         setProblem({ message: thrown.serverMessage, line: thrown.line ?? null })
       } else {
-        toast.error(describeApiError(thrown))
+        toast.error(describeApiError(thrown, t))
       }
     } finally {
       setSaving(false)
@@ -162,7 +164,7 @@ export function ThemeSection() {
 
   async function reset() {
     if (openPath === null) return
-    if (!window.confirm(`Restore the bundled version of ${openPath}? Your changes to it are lost.`)) {
+    if (!window.confirm(t('theme.restoreConfirm', { path: openPath }))) {
       return
     }
 
@@ -171,7 +173,7 @@ export function ThemeSection() {
 
     try {
       await client.resetThemeTemplate(openPath)
-      toast.success('Restored the bundled template.')
+      toast.success(t('theme.restored'))
 
       // Re-reading rather than assuming: what comes back is the baseline, and
       // showing it is how the operator sees that the restore happened.
@@ -180,17 +182,17 @@ export function ThemeSection() {
       setSaved(template.source)
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setSaving(false)
     }
   }
 
   if (state === 'error') {
-    return <ErrorState title="Cannot load the theme" description={error} onRetry={reload} />
+    return <ErrorState title={t('theme.loadFailed')} description={error} onRetry={reload} />
   }
 
-  if (state === 'loading') return <LoadingState label="Loading the theme" />
+  if (state === 'loading') return <LoadingState label={t('theme.loading')} />
 
   const customised = items.filter((item) => item.overridden).length
   /** The open template as the list knows it, which is where "overridden" lives. */
@@ -199,7 +201,7 @@ export function ThemeSection() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Theme</h1>
+        <h1 className="text-xl font-semibold">{t('theme.title')}</h1>
         <p className="max-w-prose text-sm text-muted-foreground">
           {customised === 0
             ? `Every template is the one the ${theme} theme ships.`
@@ -212,15 +214,15 @@ export function ThemeSection() {
         one: a theme upgrade that found files it did not put there is the conflict this avoids.
       </p>
 
-      {GROUPS.map(({ group, title, description }) => {
+      {GROUPS.map(({ group, titleKey, descriptionKey }) => {
         const grouped = items.filter((item) => item.group === group)
         if (grouped.length === 0) return null
 
         return (
           <Card key={group}>
             <CardHeader>
-              <CardTitle>{title}</CardTitle>
-              <CardDescription>{description}</CardDescription>
+              <CardTitle>{t(titleKey)}</CardTitle>
+              <CardDescription>{t(descriptionKey)}</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="divide-y">
@@ -242,11 +244,11 @@ export function ThemeSection() {
                           className="rounded-full border px-2 py-0.5 text-xs"
                           data-testid="customised-marker"
                         >
-                          Customised
+                          {t('theme.customised')}
                         </span>
                       )}
                       <Button type="button" size="sm" variant="outline" onClick={() => void open(item.path)}>
-                        Edit
+                        {t('theme.edit')}
                       </Button>
                     </div>
                   </li>
@@ -265,7 +267,7 @@ export function ThemeSection() {
 
           <div className="space-y-3 p-4">
             {source === null ? (
-              <LoadingState label="Loading the template" />
+              <LoadingState label={t('theme.loadingTemplate')} />
             ) : (
               <>
                 {problem !== null && (
@@ -279,7 +281,7 @@ export function ThemeSection() {
                   </p>
                 )}
 
-                <div className="flex gap-2" role="group" aria-label="Editor view">
+                <div className="flex gap-2" role="group" aria-label={t('theme.editorView')}>
                   <Button
                     type="button"
                     size="sm"
@@ -287,7 +289,7 @@ export function ThemeSection() {
                     aria-pressed={view === 'source'}
                     onClick={() => setView('source')}
                   >
-                    Source
+                    {t('theme.source')}
                   </Button>
                   <Button
                     type="button"
@@ -297,13 +299,13 @@ export function ThemeSection() {
                     disabled={previewing}
                     onClick={() => void preview()}
                   >
-                    {previewing ? 'Rendering…' : 'Preview'}
+                    {previewing ? t('theme.previewing') : t('theme.preview')}
                   </Button>
                 </div>
 
                 {view === 'preview' ? (
                   previewHtml === null ? (
-                    <LoadingState label="Rendering the preview" />
+                    <LoadingState label={t('theme.previewLoading')} />
                   ) : (
                     /*
                      * Fully sandboxed: no scripts, and no same-origin either.
@@ -316,7 +318,7 @@ export function ThemeSection() {
                      * preview that cannot affect anything.
                      */
                     <iframe
-                      title="Template preview"
+                      title={t('theme.previewTitle')}
                       sandbox=""
                       srcDoc={previewHtml}
                       className="h-[60vh] w-full rounded-md border bg-white"
@@ -335,7 +337,7 @@ export function ThemeSection() {
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
-                    {source === saved ? 'No changes.' : 'Unsaved changes.'}
+                    {source === saved ? t('theme.noChanges') : t('theme.unsaved')}
                   </p>
                   <div className="flex gap-2">
                     {opened?.overridden === true && (
@@ -345,7 +347,7 @@ export function ThemeSection() {
                         onClick={() => void reset()}
                         disabled={saving}
                       >
-                        Restore default
+                        {t('theme.restore')}
                       </Button>
                     )}
                     <Button
@@ -357,10 +359,10 @@ export function ThemeSection() {
                       }}
                       disabled={source === saved || saving}
                     >
-                      Discard
+                      {t('theme.discard')}
                     </Button>
                     <Button type="button" onClick={() => void save()} disabled={source === saved || saving}>
-                      {saving ? 'Saving…' : 'Save'}
+                      {saving ? t('editor.saving') : t('theme.save')}
                     </Button>
                   </div>
                 </div>

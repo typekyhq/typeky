@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useT } from '@/lib/i18n'
 import { NAVIGATION } from '@/lib/navigation'
 
 /**
@@ -35,6 +36,7 @@ export function AppHeader({
   onSignOut: () => void
   onOpenSections: () => void
 }) {
+  const t = useT()
   const trail = useTrail()
 
   return (
@@ -44,7 +46,7 @@ export function AppHeader({
         size="icon"
         className="md:hidden"
         onClick={onOpenSections}
-        aria-label="Open sections"
+        aria-label={t('shell.openSections')}
       >
         <MenuIcon />
       </Button>
@@ -80,11 +82,11 @@ export function AppHeader({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Signed in as {actorId}</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('shell.signedInAs', { actor: actorId })}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={onSignOut}>
             <LogOutIcon />
-            Sign out
+            {t('shell.signOut')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -94,9 +96,11 @@ export function AppHeader({
 
 function useTrail(): Array<{ label: string; to?: string }> {
   const { pathname } = useLocation()
+  const t = useT()
+  const home = t('nav.dashboard')
 
   const section = NAVIGATION.find((item) => item.to !== '/' && pathname.startsWith(item.to))
-  if (section === undefined) return [{ label: 'Dashboard' }]
+  if (section === undefined) return [{ label: home }]
 
-  return [{ label: 'Dashboard', to: '/' }, { label: section.label }]
+  return [{ label: home, to: '/' }, { label: t(section.labelKey) }]
 }

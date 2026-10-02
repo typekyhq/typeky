@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router'
 import { PoweredBy } from '@/components/powered-by'
+import { useT } from '@/lib/i18n'
 import { NAVIGATION } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
@@ -23,9 +24,11 @@ export function AppSidebar({
   /** From the deployment's licence. Defaults to showing the badge. */
   whiteLabel?: boolean
 }) {
+  const t = useT()
+
   return (
-    <nav aria-label="Sections" className={cn('flex w-56 shrink-0 flex-col gap-1 border-r p-3', className)}>
-      <span className="px-2 py-1 text-sm font-semibold">Typeky</span>
+    <nav aria-label={t('nav.sections')} className={cn('flex w-56 shrink-0 flex-col gap-1 border-r p-3', className)}>
+      <span className="px-2 py-1 text-sm font-semibold">{t('nav.brand')}</span>
 
       {NAVIGATION.map((item) => (
         <NavLink
@@ -43,7 +46,7 @@ export function AppSidebar({
             )
           }
         >
-          {item.label}
+          {t(item.labelKey)}
         </NavLink>
       ))}
 

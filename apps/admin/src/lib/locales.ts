@@ -3,22 +3,15 @@
  *
  * Two different lists, which is why they are separate:
  *
- *   - `ADMIN_LOCALES` is what the panel has **translations** for. Today that is
- *     English only, and the list is the honest place to say so: adding a language
- *     is adding a file next to this one, and it appears here the moment it
- *     exists. A panel that offered a language it could not render would be a
- *     promise the code does not keep.
- *   - `LANGUAGE_TAGS` is what a **site** may be written in. It is a claim about
- *     the content, not about this panel, so it is a suggestion list rather than a
- *     closed set -- a site in a language nobody here speaks is a normal thing.
+ *   - the panel's languages come from **the language files that exist**
+ *     (`@/locales`), so the settings screen cannot offer a translation the panel
+ *     does not have. Adding one is adding a file.
+ *   - `LANGUAGE_TAGS` is what a **site** may be written in. That is a claim about
+ *     the content rather than about this panel, so it is a suggestion list and not
+ *     a closed set -- a site in a language nobody here speaks is a normal thing.
  */
 
-export interface AdminLocale {
-  value: string
-  label: string
-}
-
-export const ADMIN_LOCALES: AdminLocale[] = [{ value: 'en', label: 'English' }]
+export { LOCALE_OPTIONS as ADMIN_LOCALES, type LocaleOption as AdminLocale } from '@/locales'
 
 /** Common BCP 47 tags, offered as a datalist and not as a limit. */
 export const LANGUAGE_TAGS = [

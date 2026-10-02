@@ -8,6 +8,7 @@ import type { ApiClient } from '@/lib/api-client'
 import { ApiClientProvider } from '@/lib/client-context'
 import { fakeApiClient } from '@/lib/testing'
 import { describeBulk } from '@/components/list-chrome'
+import { createTranslator } from '@/lib/i18n'
 import { PostsSection } from './posts'
 
 const POSTS: PostSummary[] = [
@@ -293,15 +294,20 @@ describe('acting on a selection', () => {
 })
 
 describe('the bulk result wording', () => {
+  // The translator is a parameter now, so the test hands it the same one the
+  // panel does. The wording stays asserted in English: that is what `en` says,
+  // and a change to it should fail here.
+  const t = createTranslator('en')
+
   it('says the count when everything changed', () => {
-    expect(describeBulk({ action: 'publish', requested: 3, changed: 3 })).toBe('3 items updated.')
-    expect(describeBulk({ action: 'publish', requested: 1, changed: 1 })).toBe('1 item updated.')
+    expect(describeBulk({ action: 'publish', requested: 3, changed: 3 }, t)).toBe('3 items updated.')
+    expect(describeBulk({ action: 'publish', requested: 1, changed: 1 }, t)).toBe('1 item updated.')
   })
 
   it('says how many were actually there when the selection was stale', () => {
     // The selection is made in a browser and somebody else may have deleted a
     // row between the list rendering and the button being pressed.
-    expect(describeBulk({ action: 'delete', requested: 5, changed: 3 })).toBe(
+    expect(describeBulk({ action: 'delete', requested: 5, changed: 3 }, t)).toBe(
       '3 of 5 changed; the rest were already gone.',
     )
   })

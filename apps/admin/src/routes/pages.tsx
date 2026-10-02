@@ -24,6 +24,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { usePanelPreference } from '@/lib/panel-preference'
+import { useT } from '@/lib/i18n'
 
 /**
  * The page list.
@@ -38,12 +39,13 @@ type LoadState = 'loading' | 'ready' | 'error'
 
 /** Ordering a page list can ask for. */
 const SORTS: readonly SortChoice[] = [
-  { value: 'order:asc', key: 'order', direction: 'asc', label: 'Manual order' },
-  { value: 'updated:desc', key: 'updated', direction: 'desc', label: 'Recently updated' },
-  { value: 'title:asc', key: 'title', direction: 'asc', label: 'Title A–Z' },
+  { value: 'order:asc', key: 'order', direction: 'asc', labelKey: 'sort.manual' },
+  { value: 'updated:desc', key: 'updated', direction: 'desc', labelKey: 'sort.updated' },
+  { value: 'title:asc', key: 'title', direction: 'asc', labelKey: 'sort.title' },
 ]
 
 export function PagesSection() {
+  const t = useT()
   const client = useApiClient()
   const panel = usePanelPreference()
   const navigate = useNavigate()
@@ -87,7 +89,7 @@ export function PagesSection() {
         },
         (thrown: unknown) => {
           if (cancelled) return
-          setLoadError(describeApiError(thrown))
+          setLoadError(describeApiError(thrown, t))
           setState('error')
         },
       )
@@ -104,18 +106,18 @@ export function PagesSection() {
     if (ids.length === 0) return
     if (
       action === 'delete' &&
-      !window.confirm(`Delete ${String(ids.length)} page${ids.length === 1 ? '' : 's'}? This cannot be undone.`)
+      !window.confirm(t('pages.confirmDelete', { count: ids.length }))
     ) {
       return
     }
 
     setBulkBusy(true)
     try {
-      toast.success(describeBulk(await client.bulkPages(ids, action)))
+      toast.success(describeBulk(await client.bulkPages(ids, action), t))
       setSelected(new Set())
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBulkBusy(false)
     }
@@ -129,7 +131,7 @@ export function PagesSection() {
       // Two rows change, so the list is reloaded rather than patched.
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
@@ -139,43 +141,43 @@ export function PagesSection() {
     setBusyId(page.id)
     try {
       await client.setPageStatus(page.id, page.status === 'published' ? 'draft' : 'published')
-      toast.success(page.status === 'published' ? 'Moved back to draft.' : 'Published.')
+      toast.success(page.status === 'published' ? t('pages.movedToDraft') : t('pages.published'))
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
   }
 
   async function remove(page: PageSummary) {
-    if (!window.confirm(`Delete “${page.title}”? This cannot be undone.`)) return
+    if (!window.confirm(t('content.confirmDeleteOne', { title: page.title }))) return
 
     setBusyId(page.id)
     try {
       await client.deletePage(page.id)
-      toast.success('Page deleted.')
+      toast.success(t('pages.deleted'))
       if (items.length === 1 && offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE))
       else reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
   }
 
   if (state === 'error') {
-    return <ErrorState title="Cannot load pages" description={loadError} onRetry={reload} />
+    return <ErrorState title={t('pages.loadFailed')} description={loadError} onRetry={reload} />
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Pages"
-        description="Standalone pages, including the one marked as the home page."
+        description={t('pages.description')}
       >
         <Button type="button" onClick={() => navigate('/pages/new')}>
-          New page
+          {t('pages.new')}
         </Button>
       </PageHeader>
 
@@ -199,7 +201,7 @@ export function PagesSection() {
           <SearchBox
             value={searchInput}
             onChange={setSearchInput}
-            placeholder="Title or slug"
+            placeholder={t('pages.searchPlaceholder')}
             onSubmit={() => {
               setSearch(searchInput.trim())
               setOffset(0)
@@ -220,16 +222,16 @@ export function PagesSection() {
       <Card>
         <CardContent>
           {state === 'loading' && items.length === 0 ? (
-            <LoadingState label="Loading pages" />
+            <LoadingState label={t('pages.loading')} />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {search === ''
-                ? 'No pages yet. The first one starts with “New page”.'
+                ? t('pages.empty')
                 : `Nothing matches “${search}”.`}
             </p>
           ) : (
             <table className="w-full border-collapse text-sm">
-              <caption className="sr-only">Pages</caption>
+              <caption className="sr-only">{t('pages.title')}</caption>
               <thead>
                 <tr className="border-b text-left">
                   <SelectionHead
@@ -240,22 +242,22 @@ export function PagesSection() {
                     }
                   />
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Title
+                    {t('content.title')}
                   </th>
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Slug
+                    {t('content.slug')}
                   </th>
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Status
+                    {t('content.status')}
                   </th>
                   <th scope="col" className="hidden py-2 pr-3 font-medium sm:table-cell">
-                    Order
+                    {t('content.order')}
                   </th>
                   <th scope="col" className="hidden py-2 pr-3 font-medium sm:table-cell">
-                    Updated
+                    {t('content.updated')}
                   </th>
                   <th scope="col" className="py-2 font-medium">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('content.actions')}</span>
                   </th>
                 </tr>
               </thead>
@@ -283,7 +285,7 @@ export function PagesSection() {
                       </Link>
                       {page.isHome && (
                         <p className="text-xs text-muted-foreground" data-testid="home-marker">
-                          Home page
+                          {t('pages.homeMarker')}
                         </p>
                       )}
                     </td>
@@ -312,7 +314,7 @@ export function PagesSection() {
                               disabled={busyId === page.id}
                               onClick={() => makeHome(page)}
                             >
-                              Set as home
+                              {t('pages.setAsHome')}
                             </Button>
                           )
                         }

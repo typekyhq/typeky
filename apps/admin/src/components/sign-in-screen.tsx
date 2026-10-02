@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useT } from '@/lib/i18n'
 import { describeApiError } from '@/lib/session'
 
 /**
@@ -14,6 +15,7 @@ import { describeApiError } from '@/lib/session'
  * alert tied to the form by `aria-describedby`, rather than colour alone.
  */
 export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginRequest) => Promise<void> }) {
+  const t = useT()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +29,7 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
     try {
       await onSubmit({ username, password })
     } catch (thrown) {
-      setError(describeApiError(thrown))
+      setError(describeApiError(thrown, t))
     } finally {
       setPending(false)
     }
@@ -37,8 +39,8 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
     <main id="main" className="flex min-h-dvh items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Typeky admin</CardDescription>
+          <CardTitle>{t('signIn.title')}</CardTitle>
+          <CardDescription>{t('signIn.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -47,7 +49,7 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
             aria-describedby={error === null ? undefined : 'sign-in-error'}
           >
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">{t('signIn.username')}</Label>
               <Input
                 id="username"
                 name="username"
@@ -60,7 +62,7 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('signIn.password')}</Label>
               <Input
                 id="password"
                 name="password"
@@ -79,7 +81,7 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
             )}
 
             <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? 'Signing in…' : 'Sign in'}
+              {pending ? t('signIn.pending') : t('signIn.submit')}
             </Button>
           </form>
         </CardContent>

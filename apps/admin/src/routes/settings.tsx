@@ -27,6 +27,7 @@ import { useApiClient } from '@/lib/client-context'
 import { ADMIN_LOCALES, LANGUAGE_TAGS } from '@/lib/locales'
 import { formatLocal, usePanelPreference } from '@/lib/panel-preference'
 import { describeApiError } from '@/lib/session'
+import { useT } from '@/lib/i18n'
 
 /**
  * Site settings.
@@ -55,6 +56,7 @@ const PREVIEW_INSTANT_UTC_LABEL = '2026-01-05 09:07 UTC'
 const DEFAULT_ACCENT = '#111827'
 
 export function SettingsPage() {
+  const t = useT()
   const client = useApiClient()
   const panel = usePanelPreference()
   const [status, setStatus] = useState<Status>('loading')
@@ -98,7 +100,7 @@ export function SettingsPage() {
           return
         }
 
-        setLoadError(describeApiError(thrown))
+        setLoadError(describeApiError(thrown, t))
         setStatus('error')
       },
     )
@@ -119,7 +121,7 @@ export function SettingsPage() {
     const parsed = siteWriteSchema.safeParse(draft)
     if (!parsed.success) {
       setIssues(collectIssues(parsed.error.issues))
-      toast.error('Some fields need attention.')
+      toast.error(t('editor.fieldsNeedAttention'))
       return
     }
 
@@ -136,18 +138,18 @@ export function SettingsPage() {
       panel.refresh()
       toast.success(`Saved at ${panel.format(saved.updatedAt)}`)
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setSaving(false)
     }
   }
 
-  if (status === 'loading') return <LoadingState label="Loading site settings" />
+  if (status === 'loading') return <LoadingState label={t('settings.loading')} />
 
   if (status === 'error' || draft === null) {
     return (
       <ErrorState
-        title="Cannot load the site settings"
+        title={t('settings.loadFailed')}
         description={loadError}
         onRetry={() => setAttempt((value) => value + 1)}
       />
@@ -169,53 +171,51 @@ export function SettingsPage() {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">Settings</h1>
-          <p className="text-sm text-muted-foreground">How the site introduces itself, everywhere.</p>
+          <h1 className="text-xl font-semibold">{t('settings.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('settings.description')}</p>
         </div>
         <Button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save changes'}
+          {saving ? t('editor.saving') : t('settings.save')}
         </Button>
       </div>
 
       {creating && (
         <Alert>
-          <AlertTitle>This site has not been set up yet</AlertTitle>
-          <AlertDescription>
-            Its pages answer 503 until something is saved here. A name is enough; everything else can wait.
-          </AlertDescription>
+          <AlertTitle>{t('settings.creating.title')}</AlertTitle>
+          <AlertDescription>{t('settings.creating.description')}</AlertDescription>
         </Alert>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Identity</CardTitle>
-          <CardDescription>Shown in the page header, the browser tab and search results.</CardDescription>
+          <CardTitle>{t('settings.identity')}</CardTitle>
+          <CardDescription>{t('settings.identity.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field
             id="name"
-            label="Name"
+            label={t('settings.name')}
             value={draft.name}
             error={issues.name}
             onChange={(value) => update((current) => ({ ...current, name: value }))}
           />
           <Field
             id="tagline"
-            label="Tagline"
+            label={t('settings.tagline')}
             value={draft.tagline ?? ''}
             error={issues.tagline}
             onChange={(value) => update((current) => ({ ...current, tagline: value }))}
           />
           <Field
             id="theme"
-            label="Theme"
+            label={t('settings.theme')}
             value={draft.theme}
             error={issues.theme}
-            hint="Only the bundled default theme ships today."
+            hint={t('settings.theme.hint')}
             onChange={(value) => update((current) => ({ ...current, theme: value }))}
           />
           <div className="space-y-2">
-            <Label htmlFor="accentColor">Accent colour</Label>
+            <Label htmlFor="accentColor">{t('settings.accentColour')}</Label>
             <Input
               id="accentColor"
               type="color"
@@ -235,10 +235,10 @@ export function SettingsPage() {
           <div className="sm:col-span-2">
             <MediaField
               id="logoMediaId"
-              label="Logo"
+              label={t('settings.logo')}
               value={draft.logoMediaId ?? ''}
               error={issues.logoMediaId}
-              hint="Shown in the header and used as the fallback social image."
+              hint={t('settings.logo.hint')}
               onChange={(value) =>
                 update((current) => ({ ...current, logoMediaId: value === '' ? null : value }))
               }
@@ -249,11 +249,11 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Navigation</CardTitle>
-          <CardDescription>The menu visitors see. Order here is the order on the site.</CardDescription>
+          <CardTitle>{t('settings.nav')}</CardTitle>
+          <CardDescription>{t('settings.nav.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {nav.length === 0 && <p className="text-sm text-muted-foreground">No navigation items yet.</p>}
+          {nav.length === 0 && <p className="text-sm text-muted-foreground">{t('settings.nav.empty')}</p>}
 
           <ol className="space-y-3">
             {nav.map((item, index) => (
@@ -261,7 +261,7 @@ export function SettingsPage() {
                 <div className="min-w-40 flex-1">
                   <Field
                     id={`nav-${index}-label`}
-                    label={`Item ${index + 1} label`}
+                    label={t('settings.nav.itemLabel', { number: index + 1 })}
                     value={item.label}
                     error={issues[`nav.${index}.label`]}
                     onChange={(value) => update((current) => ({ ...current, nav: replaceNav(current.nav, index, { label: value }) }))}
@@ -270,7 +270,7 @@ export function SettingsPage() {
                 <div className="min-w-40 flex-1">
                   <Field
                     id={`nav-${index}-href`}
-                    label={`Item ${index + 1} link`}
+                    label={t('settings.nav.itemHref', { number: index + 1 })}
                     value={item.href}
                     error={issues[`nav.${index}.href`]}
                     onChange={(value) => update((current) => ({ ...current, nav: replaceNav(current.nav, index, { href: value }) }))}
@@ -282,7 +282,7 @@ export function SettingsPage() {
                     variant="outline"
                     size="sm"
                     disabled={index === 0}
-                    aria-label={`Move ${item.label || 'item'} up`}
+                    aria-label={t('settings.nav.moveUp', { label: item.label || t('settings.nav.unnamed') })}
                     onClick={() => update((current) => ({ ...current, nav: moveNav(current.nav, index, -1) }))}
                   >
                     ↑
@@ -292,7 +292,7 @@ export function SettingsPage() {
                     variant="outline"
                     size="sm"
                     disabled={index === nav.length - 1}
-                    aria-label={`Move ${item.label || 'item'} down`}
+                    aria-label={t('settings.nav.moveDown', { label: item.label || t('settings.nav.unnamed') })}
                     onClick={() => update((current) => ({ ...current, nav: moveNav(current.nav, index, 1) }))}
                   >
                     ↓
@@ -301,7 +301,7 @@ export function SettingsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    aria-label={`Remove ${item.label || 'item'}`}
+                    aria-label={t('settings.nav.remove', { label: item.label || t('settings.nav.unnamed') })}
                     onClick={() =>
                       update((current) => ({
                         ...current,
@@ -328,18 +328,18 @@ export function SettingsPage() {
               }))
             }
           >
-            Add item
+            {t('settings.nav.add')}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Social links</CardTitle>
-          <CardDescription>Rendered by the theme's footer and header snippets.</CardDescription>
+          <CardTitle>{t('settings.social')}</CardTitle>
+          <CardDescription>{t('settings.social.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {socialLinks.length === 0 && <p className="text-sm text-muted-foreground">No social links yet.</p>}
+          {socialLinks.length === 0 && <p className="text-sm text-muted-foreground">{t('settings.social.empty')}</p>}
 
           <ol className="space-y-3">
             {socialLinks.map((link, index) => (
@@ -347,7 +347,7 @@ export function SettingsPage() {
                 <div className="min-w-40 flex-1">
                   <Field
                     id={`social-${index}-label`}
-                    label={`Link ${index + 1} label`}
+                    label={t('settings.social.linkLabel', { number: index + 1 })}
                     value={link.label}
                     error={issues[`settings.socialLinks.${index}.label`]}
                     onChange={(value) =>
@@ -361,7 +361,7 @@ export function SettingsPage() {
                 <div className="min-w-40 flex-1">
                   <Field
                     id={`social-${index}-href`}
-                    label={`Link ${index + 1} URL`}
+                    label={t('settings.social.linkHref', { number: index + 1 })}
                     value={link.href}
                     error={issues[`settings.socialLinks.${index}.href`]}
                     onChange={(value) =>
@@ -377,7 +377,7 @@ export function SettingsPage() {
                   variant="outline"
                   size="sm"
                   className="mb-0.5"
-                  aria-label={`Remove ${link.label || 'link'}`}
+                  aria-label={t('settings.social.remove', { label: link.label || t('settings.social.unnamed') })}
                   onClick={() =>
                     update((current) => ({
                       ...current,
@@ -408,20 +408,20 @@ export function SettingsPage() {
               }))
             }
           >
-            Add link
+            {t('settings.social.add')}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>SEO defaults</CardTitle>
-          <CardDescription>Used when a page does not set its own.</CardDescription>
+          <CardTitle>{t('settings.seo')}</CardTitle>
+          <CardDescription>{t('settings.seo.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Field
             id="seo-title"
-            label="Default title"
+            label={t('settings.seo.title')}
             value={settings.seo?.defaultTitle ?? ''}
             error={issues['settings.seo.defaultTitle']}
             onChange={(value) =>
@@ -432,7 +432,7 @@ export function SettingsPage() {
             }
           />
           <div className="space-y-2">
-            <Label htmlFor="seo-description">Default description</Label>
+            <Label htmlFor="seo-description">{t('settings.seo.description')}</Label>
             <Textarea
               id="seo-description"
               value={settings.seo?.defaultDescription ?? ''}
@@ -452,12 +452,12 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Footer</CardTitle>
-          <CardDescription>The last line of every page.</CardDescription>
+          <CardTitle>{t('settings.footer')}</CardTitle>
+          <CardDescription>{t('settings.footer.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="footer">Footer text</Label>
+            <Label htmlFor="footer">{t('settings.footer.text')}</Label>
             <Textarea
               id="footer"
               value={settings.footer ?? ''}
@@ -474,10 +474,10 @@ export function SettingsPage() {
           </div>
           <Field
             id="filingNumber"
-            label="Filing number"
+            label={t('settings.filing')}
             value={settings.filingNumber ?? ''}
             error={issues['settings.filingNumber']}
-            hint="Only needed for deployments in mainland China."
+            hint={t('settings.filing.hint')}
             onChange={(value) =>
               update((current) => ({
                 ...current,
@@ -490,14 +490,14 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Language and dates</CardTitle>
+          <CardTitle>{t('settings.language.dates')}</CardTitle>
           <CardDescription>
             The site and this panel are written in their own language, and write dates their own way.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="language">Site language</Label>
+            <Label htmlFor="language">{t('settings.language')}</Label>
             <Input
               id="language"
               list="language-tags"
@@ -519,14 +519,11 @@ export function SettingsPage() {
             {issues['settings.language'] !== undefined && (
               <p className="text-sm text-destructive">{issues['settings.language']}</p>
             )}
-            <p className="text-sm text-muted-foreground">
-              A BCP 47 tag such as <code>en</code> or <code>zh-CN</code>. It becomes the page&rsquo;s{' '}
-              <code>lang</code> attribute, which is what tells a screen reader and a search engine what the text is.
-            </p>
+            <p className="text-sm text-muted-foreground">{t('settings.language.hint')}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dateFormat">Site date format</Label>
+            <Label htmlFor="dateFormat">{t('settings.dateFormat')}</Label>
             <Input
               id="dateFormat"
               value={settings.dateFormat ?? ''}
@@ -543,17 +540,13 @@ export function SettingsPage() {
               <p className="text-sm text-destructive">{issues['settings.dateFormat']}</p>
             )}
             <p className="text-sm text-muted-foreground">
-              {PREVIEW_INSTANT_UTC_LABEL} → <span className="font-medium">{sitePreview}</span>
+              {t('settings.dateFormat.preview', { instant: PREVIEW_INSTANT_UTC_LABEL, formatted: sitePreview })}
             </p>
-            <p className="text-sm text-muted-foreground">
-              Directives: <code>%Y %m %d %B %b %A %a %H %I %M %S %p</code>, with <code>%-m</code> and{' '}
-              <code>%-d</code> for no leading zero, and <code>%%</code> for a literal one. Anything else is refused
-              rather than rendered as something else.
-            </p>
+            <p className="text-sm text-muted-foreground">{t('settings.dateFormat.directives')}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adminLanguage">Panel language</Label>
+            <Label htmlFor="adminLanguage">{t('settings.adminLanguage')}</Label>
             <select
               id="adminLanguage"
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -572,12 +565,12 @@ export function SettingsPage() {
               ))}
             </select>
             <p className="text-sm text-muted-foreground">
-              Only the languages this panel has been translated into appear here. It ships with one.
+              {t('settings.adminLanguage.hint')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adminDateFormat">Panel date format</Label>
+            <Label htmlFor="adminDateFormat">{t('settings.adminDateFormat')}</Label>
             <Input
               id="adminDateFormat"
               value={settings.admin?.dateFormat ?? ''}
@@ -597,7 +590,7 @@ export function SettingsPage() {
               <p className="text-sm text-destructive">{issues['settings.admin.dateFormat']}</p>
             )}
             <p className="text-sm text-muted-foreground">
-              → <span className="font-medium">{adminPreview}</span> in your own time zone
+              {t('settings.adminDateFormat.preview', { formatted: adminPreview })}
             </p>
           </div>
         </CardContent>

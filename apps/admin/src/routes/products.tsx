@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
+import { useT } from '@/lib/i18n'
 
 /** The product list. Same shape as the other two, showing the price label. */
 
@@ -30,13 +31,14 @@ type LoadState = 'loading' | 'ready' | 'error'
 
 /** Ordering a product list can ask for. */
 const SORTS: readonly SortChoice[] = [
-  { value: 'order:asc', key: 'order', direction: 'asc', label: 'Manual order' },
-  { value: 'updated:desc', key: 'updated', direction: 'desc', label: 'Recently updated' },
-  { value: 'title:asc', key: 'title', direction: 'asc', label: 'Title A–Z' },
+  { value: 'order:asc', key: 'order', direction: 'asc', labelKey: 'sort.manual' },
+  { value: 'updated:desc', key: 'updated', direction: 'desc', labelKey: 'sort.updated' },
+  { value: 'title:asc', key: 'title', direction: 'asc', labelKey: 'sort.title' },
 ]
 
 export function ProductsSection() {
   const client = useApiClient()
+  const t = useT()
   const navigate = useNavigate()
 
   const [state, setState] = useState<LoadState>('loading')
@@ -78,7 +80,7 @@ export function ProductsSection() {
         },
         (thrown: unknown) => {
           if (cancelled) return
-          setLoadError(describeApiError(thrown))
+          setLoadError(describeApiError(thrown, t))
           setState('error')
         },
       )
@@ -96,7 +98,7 @@ export function ProductsSection() {
     if (
       action === 'delete' &&
       !window.confirm(
-        `Delete ${String(ids.length)} product${ids.length === 1 ? '' : 's'}? This cannot be undone.`,
+        t('products.confirmDelete', { count: ids.length }),
       )
     ) {
       return
@@ -104,11 +106,11 @@ export function ProductsSection() {
 
     setBulkBusy(true)
     try {
-      toast.success(describeBulk(await client.bulkProducts(ids, action)))
+      toast.success(describeBulk(await client.bulkProducts(ids, action), t))
       setSelected(new Set())
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBulkBusy(false)
     }
@@ -118,40 +120,40 @@ export function ProductsSection() {
     setBusyId(product.id)
     try {
       await client.setProductStatus(product.id, product.status === 'published' ? 'draft' : 'published')
-      toast.success(product.status === 'published' ? 'Moved back to draft.' : 'Published.')
+      toast.success(product.status === 'published' ? t('products.movedToDraft') : t('products.published'))
       reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
   }
 
   async function remove(product: ProductSummary) {
-    if (!window.confirm(`Delete “${product.title}”? This cannot be undone.`)) return
+    if (!window.confirm(t('content.confirmDeleteOne', { title: product.title }))) return
 
     setBusyId(product.id)
     try {
       await client.deleteProduct(product.id)
-      toast.success('Product deleted.')
+      toast.success(t('products.deleted'))
       if (items.length === 1 && offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE))
       else reload()
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     } finally {
       setBusyId(null)
     }
   }
 
   if (state === 'error') {
-    return <ErrorState title="Cannot load products" description={loadError} onRetry={reload} />
+    return <ErrorState title={t('products.loadFailed')} description={loadError} onRetry={reload} />
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Products" description="Showcase items, with a gallery, specs and a link out.">
+      <PageHeader title="Products" description={t('products.description')}>
         <Button type="button" onClick={() => navigate('/products/new')}>
-          New product
+          {t('products.new')}
         </Button>
       </PageHeader>
 
@@ -175,7 +177,7 @@ export function ProductsSection() {
           <SearchBox
             value={searchInput}
             onChange={setSearchInput}
-            placeholder="Title, slug or summary"
+            placeholder={t('products.searchPlaceholder')}
             onSubmit={() => {
               setSearch(searchInput.trim())
               setOffset(0)
@@ -196,16 +198,16 @@ export function ProductsSection() {
       <Card>
         <CardContent>
           {state === 'loading' && items.length === 0 ? (
-            <LoadingState label="Loading products" />
+            <LoadingState label={t('products.loading')} />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {search === ''
-                ? 'No products yet. The first one starts with “New product”.'
+                ? t('products.empty')
                 : `Nothing matches “${search}”.`}
             </p>
           ) : (
             <table className="w-full border-collapse text-sm">
-              <caption className="sr-only">Products</caption>
+              <caption className="sr-only">{t('products.title')}</caption>
               <thead>
                 <tr className="border-b text-left">
                   <SelectionHead
@@ -216,19 +218,19 @@ export function ProductsSection() {
                     }
                   />
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Title
+                    {t('content.title')}
                   </th>
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Slug
+                    {t('content.slug')}
                   </th>
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Price
+                    {t('content.price')}
                   </th>
                   <th scope="col" className="py-2 pr-3 font-medium">
-                    Status
+                    {t('content.status')}
                   </th>
                   <th scope="col" className="py-2 font-medium">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('content.actions')}</span>
                   </th>
                 </tr>
               </thead>

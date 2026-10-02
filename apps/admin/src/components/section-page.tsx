@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { EmptyState } from '@/components/states'
+import { useT } from '@/lib/i18n'
 import type { NavigationItem } from '@/lib/navigation'
 
 /**
@@ -10,25 +11,21 @@ import type { NavigationItem } from '@/lib/navigation'
  * "not yet".
  */
 export function SectionPage({ section }: { section: NavigationItem }) {
+  const t = useT()
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">{section.label}</h1>
-        <p className="max-w-prose text-sm text-muted-foreground">{section.description}</p>
+        <h1 className="text-xl font-semibold">{t(section.labelKey)}</h1>
+        <p className="max-w-prose text-sm text-muted-foreground">{t(section.descriptionKey)}</p>
       </div>
 
       <Alert>
-        <AlertTitle>Not built yet</AlertTitle>
-        <AlertDescription>
-          This screen exists so the shell, the routing and the session handling can be exercised.
-          The real one arrives with the content work.
-        </AlertDescription>
+        <AlertTitle>{t('section.notBuilt.title')}</AlertTitle>
+        <AlertDescription>{t('section.notBuilt.description')}</AlertDescription>
       </Alert>
 
-      <EmptyState
-        title="Nothing here yet"
-        description="Once this section is built, its list will appear in this space."
-      />
+      <EmptyState title={t('section.empty.title')} description={t('section.empty.description')} />
     </div>
   )
 }

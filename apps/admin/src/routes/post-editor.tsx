@@ -22,6 +22,7 @@ import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
 import { usePanelPreference } from '@/lib/panel-preference'
+import { useT } from '@/lib/i18n'
 
 /**
  * The post editor.
@@ -68,6 +69,7 @@ const EMPTY_FORM: PostForm = {
 }
 
 export function PostEditorPage() {
+  const t = useT()
   const client = useApiClient()
   const panel = usePanelPreference()
   const navigate = useNavigate()
@@ -121,7 +123,7 @@ export function PostEditorPage() {
       },
       (thrown: unknown) => {
         if (cancelled) return
-        setLoadError(describeApiError(thrown))
+        setLoadError(describeApiError(thrown, t))
         setState('error')
       },
     )
@@ -140,7 +142,7 @@ export function PostEditorPage() {
     const parsed = getPostWriteSchema().safeParse(candidate)
     if (!parsed.success) {
       setIssues(collectIssues(parsed.error.issues))
-      toast.error('Some fields need attention.')
+      toast.error(t('editor.fieldsNeedAttention'))
       return
     }
 
@@ -162,7 +164,7 @@ export function PostEditorPage() {
       setForm(toForm(saved))
       setIssues({})
 
-      toast.success(saved.status === 'published' ? 'Published.' : 'Saved as a draft.')
+      toast.success(saved.status === 'published' ? t('editor.saved') : t('editor.savedAsDraft'))
 
       // The URL catches up without a reload, so a refresh resumes this post. The
       // editor is not keyed on it, so nothing is rebuilt underneath the cursor.
@@ -170,10 +172,10 @@ export function PostEditorPage() {
     } catch (thrown) {
       if (thrown instanceof ApiError && thrown.code === 'slug_taken') {
         // On the field that caused it, not only in a toast that disappears.
-        setSlugError(thrown.serverMessage ?? 'That slug is already in use.')
-        toast.error('That slug is already in use.')
+        setSlugError(thrown.serverMessage ?? t('editor.slugTaken'))
+        toast.error(t('editor.slugTaken'))
       } else {
-        toast.error(describeApiError(thrown))
+        toast.error(describeApiError(thrown, t))
       }
     } finally {
       setSaving(null)
@@ -182,28 +184,28 @@ export function PostEditorPage() {
 
   async function handleDelete() {
     if (post === null) return
-    if (!window.confirm(`Delete “${post.title}”? This cannot be undone.`)) return
+    if (!window.confirm(t('content.confirmDeleteOne', { title: post.title }))) return
 
     try {
       await client.deletePost(post.id)
-      toast.success('Post deleted.')
+      toast.success(t('posts.deleted'))
       navigate('/posts')
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     }
   }
 
   if (state === 'error') {
     return (
       <ErrorState
-        title="Cannot load this post"
+        title={t('postEditor.loadFailed')}
         description={loadError}
         onRetry={() => setAttempt((value) => value + 1)}
       />
     )
   }
 
-  if (state === 'loading') return <LoadingState label="Loading the post" />
+  if (state === 'loading') return <LoadingState label={t('postEditor.loading')} />
 
   return (
     <form
@@ -218,10 +220,10 @@ export function PostEditorPage() {
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">{isNewPost ? 'New post' : 'Edit post'}</h1>
+          <h1 className="text-xl font-semibold">{isNewPost ? t('postEditor.new') : t('postEditor.edit')}</h1>
           <p className="text-sm text-muted-foreground">
             <Link to="/posts" className="underline-offset-4 hover:underline">
-              Back to posts
+              {t('content.backToPosts')}
             </Link>
           </p>
         </div>
@@ -229,34 +231,37 @@ export function PostEditorPage() {
         <div className="flex flex-wrap gap-2">
           {post !== null && (
             <Button type="button" variant="destructive" disabled={saving !== null} onClick={handleDelete}>
-              Delete
+              {t('common.delete')}
             </Button>
           )}
           <Button type="button" variant="outline" disabled={saving !== null} onClick={() => void handleSave('draft')}>
-            {saving === 'draft' ? 'Saving…' : 'Save draft'}
+            {saving === 'draft' ? t('editor.saving') : t('editor.saveDraft')}
           </Button>
           <Button type="submit" disabled={saving !== null}>
-            {saving === 'published' ? 'Saving…' : post?.status === 'published' ? 'Update' : 'Publish'}
+            {saving === 'published' ? t('editor.saving') : post?.status === 'published' ? t('editor.update') : t('editor.publish')}
           </Button>
         </div>
       </div>
 
       {post !== null && (
         <p className="text-sm text-muted-foreground" data-testid="post-meta">
-          {post.status === 'published' ? 'Published' : 'Draft'} · revision {post.revision} · updated{' '}
-          {panel.format(post.updatedAt)}
+          {t('editor.meta', {
+            status: post.status === 'published' ? t('common.published') : t('common.draft'),
+            revision: post.revision,
+            updated: panel.format(post.updatedAt),
+          })}
         </p>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Details</CardTitle>
-          <CardDescription>What the list shows and what the URL is built from.</CardDescription>
+          <CardTitle>{t('editor.details')}</CardTitle>
+          <CardDescription>{t('editor.details.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field
             id="title"
-            label="Title"
+            label={t('editor.title')}
             value={form.title}
             error={issues.title}
             onChange={(value) =>
@@ -271,10 +276,10 @@ export function PostEditorPage() {
           />
           <Field
             id="slug"
-            label="Slug"
+            label={t('editor.slug')}
             value={form.slug}
             error={slugError !== '' ? slugError : issues.slug}
-            hint="Lowercase words separated by hyphens. This is the URL."
+            hint={t('editor.slug.hint')}
             onChange={(value) => {
               slugTouched.current = true
               update((current) => ({ ...current, slug: value }))
@@ -282,21 +287,21 @@ export function PostEditorPage() {
           />
           <Field
             id="category"
-            label="Category"
+            label={t('postEditor.category')}
             value={form.category}
             error={issues.category}
             onChange={(value) => update((current) => ({ ...current, category: value }))}
           />
           <Field
             id="tags"
-            label="Tags"
+            label={t('postEditor.tags')}
             value={form.tags}
             error={issues.tags}
-            hint="Separated by commas."
+            hint={t('postEditor.tags.hint')}
             onChange={(value) => update((current) => ({ ...current, tags: value }))}
           />
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="excerpt">Excerpt</Label>
+            <Label htmlFor="excerpt">{t('postEditor.excerpt')}</Label>
             <Textarea
               id="excerpt"
               value={form.excerpt}
@@ -314,10 +319,10 @@ export function PostEditorPage() {
           <div className="sm:col-span-2">
             <MediaField
               id="coverMediaId"
-              label="Cover image"
+              label={t('editor.coverImage')}
               value={form.coverMediaId}
               error={issues.coverMediaId}
-              hint="Shown on the post list and in social previews."
+              hint={t('postEditor.cover.hint')}
               onChange={(value) => update((current) => ({ ...current, coverMediaId: value }))}
             />
           </div>
@@ -329,13 +334,13 @@ export function PostEditorPage() {
         value={form.seo}
         onChange={(seo) => update((current) => ({ ...current, seo }))}
         issues={issues}
-        fallback="Left empty, the post's own title and excerpt are used, then the site defaults."
+        fallback={t('postEditor.seoFallback')}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Body</CardTitle>
-          <CardDescription>The body is stored as blocks, not as markup.</CardDescription>
+          <CardTitle>{t('editor.body')}</CardTitle>
+          <CardDescription>{t('editor.body.hint')}</CardDescription>
         </CardHeader>
         <CardContent>
           <LazyBlockEditor

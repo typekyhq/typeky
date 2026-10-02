@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label'
 import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { describeApiError } from '@/lib/session'
+import { useT } from '@/lib/i18n'
 
 /**
  * The page editor.
@@ -48,6 +49,7 @@ const EMPTY_FORM: PageForm = { title: '', slug: '', sortOrder: '0', seo: {}, blo
 
 export function PageEditorPage() {
   const client = useApiClient()
+  const t = useT()
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const isNew = id === undefined || id === 'new'
@@ -89,7 +91,7 @@ export function PageEditorPage() {
       },
       (thrown: unknown) => {
         if (cancelled) return
-        setLoadError(describeApiError(thrown))
+        setLoadError(describeApiError(thrown, t))
         setState('error')
       },
     )
@@ -108,7 +110,7 @@ export function PageEditorPage() {
     const parsed = getPageWriteSchema().safeParse(candidate)
     if (!parsed.success) {
       setIssues(collectIssues(parsed.error.issues))
-      toast.error('Some fields need attention.')
+      toast.error(t('editor.fieldsNeedAttention'))
       return
     }
 
@@ -128,14 +130,14 @@ export function PageEditorPage() {
       setForm(toForm(saved))
       setIssues({})
 
-      toast.success(saved.status === 'published' ? 'Published.' : 'Saved as a draft.')
+      toast.success(saved.status === 'published' ? t('editor.saved') : t('editor.savedAsDraft'))
       if (wasNew) navigate(`/pages/${saved.id}`, { replace: true })
     } catch (thrown) {
       if (thrown instanceof ApiError && thrown.code === 'slug_taken') {
-        setSlugError(thrown.serverMessage ?? 'That slug is already in use.')
-        toast.error('That slug is already in use.')
+        setSlugError(thrown.serverMessage ?? t('editor.slugTaken'))
+        toast.error(t('editor.slugTaken'))
       } else {
-        toast.error(describeApiError(thrown))
+        toast.error(describeApiError(thrown, t))
       }
     } finally {
       setSaving(null)
@@ -148,36 +150,36 @@ export function PageEditorPage() {
     try {
       const saved = await client.setPageHome(page.id)
       setPage(saved)
-      toast.success('This is now the home page.')
+      toast.success(t('pageEditor.nowHome'))
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     }
   }
 
   async function handleDelete() {
     if (page === null) return
-    if (!window.confirm(`Delete “${page.title}”? This cannot be undone.`)) return
+    if (!window.confirm(t('content.confirmDeleteOne', { title: page.title }))) return
 
     try {
       await client.deletePage(page.id)
-      toast.success('Page deleted.')
+      toast.success(t('pages.deleted'))
       navigate('/pages')
     } catch (thrown) {
-      toast.error(describeApiError(thrown))
+      toast.error(describeApiError(thrown, t))
     }
   }
 
   if (state === 'error') {
     return (
       <ErrorState
-        title="Cannot load this page"
+        title={t('pageEditor.loadFailed')}
         description={loadError}
         onRetry={() => setAttempt((value) => value + 1)}
       />
     )
   }
 
-  if (state === 'loading') return <LoadingState label="Loading the page" />
+  if (state === 'loading') return <LoadingState label={t('pageEditor.loading')} />
 
   return (
     <form
@@ -189,10 +191,10 @@ export function PageEditorPage() {
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">{isNewPage ? 'New page' : 'Edit page'}</h1>
+          <h1 className="text-xl font-semibold">{isNewPage ? t('pageEditor.new') : t('pageEditor.edit')}</h1>
           <p className="text-sm text-muted-foreground">
             <Link to="/pages" className="underline-offset-4 hover:underline">
-              Back to pages
+              {t('content.backToPages')}
             </Link>
           </p>
         </div>
@@ -202,11 +204,11 @@ export function PageEditorPage() {
             <>
               {!page.isHome && (
                 <Button type="button" variant="ghost" disabled={saving !== null} onClick={makeHome}>
-                  Set as home
+                  {t('pages.setAsHome')}
                 </Button>
               )}
               <Button type="button" variant="destructive" disabled={saving !== null} onClick={handleDelete}>
-                Delete
+                {t('common.delete')}
               </Button>
             </>
           )}
@@ -216,30 +218,33 @@ export function PageEditorPage() {
             disabled={saving !== null}
             onClick={() => void handleSave('draft')}
           >
-            {saving === 'draft' ? 'Saving…' : 'Save draft'}
+            {saving === 'draft' ? t('editor.saving') : t('editor.saveDraft')}
           </Button>
           <Button type="submit" disabled={saving !== null}>
-            {saving === 'published' ? 'Saving…' : page?.status === 'published' ? 'Update' : 'Publish'}
+            {saving === 'published' ? t('editor.saving') : page?.status === 'published' ? t('editor.update') : t('editor.publish')}
           </Button>
         </div>
       </div>
 
       {page !== null && (
         <p className="text-sm text-muted-foreground" data-testid="page-meta">
-          {page.isHome ? 'Home page' : 'Not the home page'} ·{' '}
-          {page.status === 'published' ? 'Published' : 'Draft'} · revision {page.revision}
+          {t('editor.pageMeta', {
+            home: page.isHome ? t('pageEditor.isHome') : t('pageEditor.notHome'),
+            status: page.status === 'published' ? t('common.published') : t('common.draft'),
+            revision: page.revision,
+          })}
         </p>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Details</CardTitle>
-          <CardDescription>What the list shows and what the URL is built from.</CardDescription>
+          <CardTitle>{t('editor.details')}</CardTitle>
+          <CardDescription>{t('editor.details.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field
             id="title"
-            label="Title"
+            label={t('editor.title')}
             value={form.title}
             error={issues.title}
             onChange={(value) =>
@@ -253,10 +258,10 @@ export function PageEditorPage() {
           />
           <Field
             id="slug"
-            label="Slug"
+            label={t('editor.slug')}
             value={form.slug}
             error={slugError !== '' ? slugError : issues.slug}
-            hint="Lowercase words separated by hyphens. This is the URL."
+            hint={t('editor.slug.hint')}
             onChange={(value) => {
               slugTouched.current = true
               update((current) => ({ ...current, slug: value }))
@@ -264,10 +269,10 @@ export function PageEditorPage() {
           />
           <Field
             id="sortOrder"
-            label="Sort order"
+            label={t('editor.sortOrder')}
             value={form.sortOrder}
             error={issues.sortOrder}
-            hint="Lower sorts first in the menu and the list."
+            hint={t('pageEditor.sortOrder.hint')}
             onChange={(value) => update((current) => ({ ...current, sortOrder: value }))}
           />
         </CardContent>
@@ -278,13 +283,13 @@ export function PageEditorPage() {
         value={form.seo}
         onChange={(seo) => update((current) => ({ ...current, seo }))}
         issues={issues}
-        fallback="Left empty, the page title is used, then the site defaults."
+        fallback={t('pageEditor.seoFallback')}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Body</CardTitle>
-          <CardDescription>The body is stored as blocks, not as markup.</CardDescription>
+          <CardTitle>{t('editor.body')}</CardTitle>
+          <CardDescription>{t('editor.body.hint')}</CardDescription>
         </CardHeader>
         <CardContent>
           <LazyBlockEditor

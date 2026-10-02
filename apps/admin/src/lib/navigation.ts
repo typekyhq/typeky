@@ -2,53 +2,56 @@
  * The sections of the admin panel.
  *
  * One list, used by the sidebar, the breadcrumbs and the router, so a section
- * cannot appear in one place and be missing from another.
+ * cannot appear in one place and be missing from another. The labels are keys
+ * rather than words: a module of data has no way to reach the translator, and a
+ * label built here would be the one string a translator could not find.
  */
 
 export interface NavigationItem {
   to: string
-  label: string
+  /** A key into the locale file, not a word: this module holds no English. */
+  labelKey: string
   /** Exact match only; needed for the index route. */
   end?: boolean
   /** What the section will do, shown on its placeholder page. */
-  description: string
+  descriptionKey: string
 }
 
 export const NAVIGATION: NavigationItem[] = [
   {
-    to: '/',
-    label: 'Dashboard',
-    end: true,
-    description: 'An overview of the site: recent content, drafts and the last publish.',
-  },
+      to: '/',
+      labelKey: 'nav.dashboard',
+      end: true,
+      descriptionKey: 'nav.dashboard.description',
+    },
   {
-    to: '/pages',
-    label: 'Pages',
-    description: 'Standalone pages, including the one marked as the home page.',
-  },
+      to: '/pages',
+      labelKey: 'nav.pages',
+      descriptionKey: 'nav.pages.description',
+    },
   {
-    to: '/posts',
-    label: 'Posts',
-    description: 'Blog posts, with drafts, tags and a category.',
-  },
+      to: '/posts',
+      labelKey: 'nav.posts',
+      descriptionKey: 'nav.posts.description',
+    },
   {
-    to: '/products',
-    label: 'Products',
-    description: 'Showcase products: gallery, specs, a price label and an outbound link.',
-  },
+      to: '/products',
+      labelKey: 'nav.products',
+      descriptionKey: 'nav.products.description',
+    },
   {
-    to: '/media',
-    label: 'Media',
-    description: 'Images and other uploads, stored in R2 and referenced by content.',
-  },
+      to: '/media',
+      labelKey: 'nav.media',
+      descriptionKey: 'nav.media.description',
+    },
   {
-    to: '/theme',
-    label: 'Theme',
-    description: 'Edit the Liquid templates online; changes go live as soon as they are saved.',
-  },
+      to: '/theme',
+      labelKey: 'nav.theme',
+      descriptionKey: 'nav.theme.description',
+    },
   {
-    to: '/settings',
-    label: 'Settings',
-    description: 'Site name, tagline, logo, accent colour, navigation and SEO defaults.',
-  },
+      to: '/settings',
+      labelKey: 'nav.settings',
+      descriptionKey: 'nav.settings.description',
+    },
 ]
