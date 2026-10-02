@@ -1,4 +1,5 @@
 export * from './blocks'
 export * from './codec'
+export * from './html'
 export * from './id'
 export * from './model'

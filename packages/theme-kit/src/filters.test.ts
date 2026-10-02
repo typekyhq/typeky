@@ -1,3 +1,4 @@
+import { blockToHtml, type Block } from '@typeky/core'
 import { describe, expect, it } from 'vitest'
 import { createLiquidRuntime } from './runtime'
 
@@ -99,11 +100,42 @@ describe('render_blocks', () => {
     expect(seen).toEqual([blocks])
   })
 
-  it('escapes again when the result is assigned first, because raw applies only to the last filter of an output', async () => {
+  it('is reachable through an assign, and then gets escaped again', async () => {
     const { render } = createLiquidRuntime({ renderBlocks: () => '<p>Body</p>' })
 
     expect(
       await render('{% assign html = blocks | render_blocks %}{{ html }}', { blocks: [] }),
     ).toBe('&lt;p&gt;Body&lt;/p&gt;')
+  })
+
+  it('works with the real producer, which is what the runtime is wired to in practice', async () => {
+    // Closes the loop between this filter and `blockToHtml`: the filter takes an
+    // injected renderer precisely so the site Worker can supply it without
+    // pulling the editor in (architecture section 3.11).
+    const { render } = createLiquidRuntime({
+      renderBlocks: (blocks) => blockToHtml(blocks as Block[]),
+    })
+
+    const blocks: Block[] = [
+      { type: 'heading', level: 2, content: [{ type: 'text', text: 'Title' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Body' }] },
+    ]
+
+    expect(await render('{{ blocks | render_blocks }}', { blocks })).toBe('<h2>Title</h2><p>Body</p>')
+  })
+
+  it('escapes nothing the producer already escaped', async () => {
+    const { render } = createLiquidRuntime({
+      renderBlocks: (blocks) => blockToHtml(blocks as Block[]),
+    })
+
+    const blocks: Block[] = [
+      { type: 'paragraph', content: [{ type: 'text', text: '<script>alert(1)</script>' }] },
+    ]
+
+    const html = await render('{{ blocks | render_blocks }}', { blocks })
+
+    expect(html).toBe('<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>')
+    expect(html).not.toContain('<script>')
   })
 })

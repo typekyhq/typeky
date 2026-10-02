@@ -46,7 +46,10 @@ export const Image = Node.create({
   parseHTML() {
     return [
       {
-        tag: 'figure[data-media-id]',
+        // `:not([data-media-kind])` matters: a video is also a
+        // `figure[data-media-id]`, and without it this rule would claim every
+        // video before the video rule got a chance.
+        tag: 'figure[data-media-id]:not([data-media-kind])',
         getAttrs: (element) => ({
           mediaId: element.getAttribute('data-media-id') ?? '',
           alt: element.getAttribute('data-alt'),

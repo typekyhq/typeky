@@ -15,6 +15,7 @@
 export { BlockEditor, type BlockEditorProps } from './block-editor'
 export { createEditorExtensions, HEADING_LEVELS } from './schema'
 export { fromBlockJSON, toBlockJSON } from './mapping'
+export { htmlToBlocks } from './inbound'
 export { BLOCK_ACTIONS, EditorToolbar } from './toolbar'
 export { Cta, type CtaAttributes } from './extensions/cta'
 export { Image, type ImageAttributes, Video, type VideoAttributes } from './extensions/media'
