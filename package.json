@@ -15,7 +15,7 @@
     "dev:admin": "pnpm --filter @typeky/admin dev",
     "types": "pnpm --filter @typeky/site types",
     "typecheck": "pnpm -r --if-present typecheck",
-    "build": "pnpm -r --if-present build",
+    "build": "pnpm -r --if-present build && node scripts/build-site.mjs",
     "test": "vitest run --passWithNoTests",
     "db:generate": "tsx packages/db/scripts/schema.ts generate",
     "check:schema-drift": "tsx packages/db/scripts/schema.ts check",

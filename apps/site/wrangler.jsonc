@@ -32,7 +32,10 @@
   "assets": {
     "directory": "../../public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    // Everything else is served from static assets without starting the Worker
+    // (architecture section 2.1). Only these paths need the Worker on the first
+    // hop; a path that misses the asset store still falls through to it.
+    "run_worker_first": ["/api/*", "/healthz"]
   },
 
   "vars": { "APP_ENV": "development" }

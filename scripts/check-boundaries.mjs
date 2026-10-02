@@ -3,7 +3,8 @@
  * Asset boundary assertions (CONTRIBUTING.md section 3, red lines 1 / 2 / 6).
  *
  * Runs in CI and after local builds to ensure:
- *   1. The site Worker source never imports @typeky/editor (the editor belongs to the admin SPA).
+ *   1. The site Worker source never imports a frontend framework, Hono JSX, or
+ *      @typeky/editor (red lines 1 and 6).
  *   2. The site build output contains no frontend framework or editor runtime code.
  *
  * When no build output exists yet, the asset scan is skipped -- that is not a failure.
@@ -47,9 +48,24 @@ function walk(dir) {
   })
 }
 
-const FORBIDDEN_FOR_SITE = [/^@typeky\/editor(?:\/|$)/]
+/**
+ * Red line 1: the site side renders through LiquidJS only. Enforced at the source
+ * level here, and again against the build output below.
+ */
+const FORBIDDEN_FOR_SITE = [
+  /^@typeky\/editor(?:\/|$)/,
+  /^hono\/jsx(?:\/|$)/,
+  /^react(?:\/|$)/,
+  /^react-dom(?:\/|$)/,
+  /^preact(?:\/|$)/,
+  /^vue(?:\/|$)/,
+  /^svelte(?:\/|$)/,
+  /^solid-js(?:\/|$)/,
+  /^@tiptap\//,
+  /^prosemirror-/,
+]
 
-// ---- 1. The site Worker must not reference the editor package ----
+// ---- 1. The site Worker must not reference a forbidden package ----
 const siteSrc = join(root, 'apps/site/src')
 let siteFilesScanned = 0
 for (const file of walk(siteSrc)) {
@@ -58,7 +74,7 @@ for (const file of walk(siteSrc)) {
   for (const spec of importedSpecifiers(readFileSync(file, 'utf8'))) {
     for (const re of FORBIDDEN_FOR_SITE) {
       if (re.test(spec)) {
-        failures.push(`site Worker imports a forbidden package: ${file} -> ${spec}`)
+        failures.push(`site Worker imports a forbidden package (red line 1): ${file} -> ${spec}`)
       }
     }
   }
