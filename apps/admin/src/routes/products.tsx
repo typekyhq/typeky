@@ -151,7 +151,7 @@ export function ProductsSection() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Products" description={t('products.description')}>
+      <PageHeader title={t('products.title')} description={t('products.description')}>
         <Button type="button" onClick={() => navigate('/products/new')}>
           {t('products.new')}
         </Button>
@@ -203,7 +203,7 @@ export function ProductsSection() {
             <p className="text-sm text-muted-foreground">
               {search === ''
                 ? t('products.empty')
-                : `Nothing matches “${search}”.`}
+                : t('list.noMatches', { search })}
             </p>
           ) : (
             <table className="w-full border-collapse text-sm">

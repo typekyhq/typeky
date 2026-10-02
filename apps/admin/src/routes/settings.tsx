@@ -67,7 +67,7 @@ const TABS: SettingsTab[] = [
   { id: 'navigation', labelKey: 'settings.nav', owns: ['nav'] },
   { id: 'social', labelKey: 'settings.social', owns: ['settings.socialLinks'] },
   { id: 'seo', labelKey: 'settings.seo', owns: ['settings.seo'] },
-  { id: 'footer', labelKey: 'settings.footer', owns: ['settings.footer', 'settings.filingNumber'] },
+  { id: 'footer', labelKey: 'settings.footer', owns: ['settings.footer'] },
   {
     id: 'language',
     labelKey: 'settings.language.dates',
@@ -548,19 +548,6 @@ export function SettingsPage() {
                 <p className="text-sm text-destructive">{issues['settings.footer']}</p>
               )}
             </div>
-            <Field
-              id="filingNumber"
-              label={t('settings.filing')}
-              value={settings.filingNumber ?? ''}
-              error={issues['settings.filingNumber']}
-              hint={t('settings.filing.hint')}
-              onChange={(value) =>
-                update((current) => ({
-                  ...current,
-                  settings: { ...current.settings, filingNumber: value },
-                }))
-              }
-            />
           </CardContent>
         </Card>
       </TabsContent>
@@ -569,9 +556,7 @@ export function SettingsPage() {
       <TabsContent value="language" forceMount hidden={tab !== 'language'}>
         <Card>
           <CardHeader>
-            <CardDescription>
-              The site and this panel are written in their own language, and write dates their own way.
-            </CardDescription>
+            <CardDescription>{t('settings.language.dates.hint')}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">

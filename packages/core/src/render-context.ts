@@ -25,7 +25,6 @@ export interface NavItem {
 export interface SiteSettingsForTemplates {
   footer?: string
   social_links?: { label: string; href: string }[]
-  filing_number?: string
   cookie_notice?: string
 }
 

@@ -204,14 +204,13 @@ export function ThemeSection() {
         <h1 className="text-xl font-semibold">{t('theme.title')}</h1>
         <p className="max-w-prose text-sm text-muted-foreground">
           {customised === 0
-            ? `Every template is the one the ${theme} theme ships.`
-            : `${String(customised)} of ${String(items.length)} templates have been customised.`}
+            ? t('theme.subtitle.all', { theme })
+            : t('theme.subtitle.customised', { customised, total: items.length })}
         </p>
       </div>
 
       <p className="max-w-prose rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-        You can edit the templates your theme ships, and only those. There is no way to add a new
-        one: a theme upgrade that found files it did not put there is the conflict this avoids.
+        {t('theme.note')}
       </p>
 
       {GROUPS.map(({ group, titleKey, descriptionKey }) => {

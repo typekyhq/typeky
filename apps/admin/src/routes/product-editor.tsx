@@ -353,7 +353,7 @@ export function ProductEditorPage() {
                 <div className="min-w-48 flex-1">
                   <Field
                     id={`gallery-${String(index)}`}
-                    label={`Image ${String(index + 1)}`}
+                    label={t('productEditor.gallery.imageLabel', { number: index + 1 })}
                     value={mediaId}
                     error={issues[`gallery.${String(index)}`]}
                     onChange={(value) =>
@@ -365,7 +365,7 @@ export function ProductEditorPage() {
                   />
                 </div>
                 <RepeaterButtons
-                  label={`image ${String(index + 1)}`}
+                  label={t('productEditor.gallery.imageName', { number: index + 1 })}
                   index={index}
                   count={form.gallery.length}
                   onMove={(delta) =>
@@ -424,7 +424,7 @@ export function ProductEditorPage() {
                 <div className="min-w-40 flex-1">
                   <Field
                     id={`spec-${String(index)}-label`}
-                    label={`Spec ${String(index + 1)} name`}
+                    label={t('productEditor.specs.nameLabel', { number: index + 1 })}
                     value={spec.label}
                     error={issues[`specs.${String(index)}.label`]}
                     onChange={(value) =>
@@ -435,7 +435,7 @@ export function ProductEditorPage() {
                 <div className="min-w-40 flex-1">
                   <Field
                     id={`spec-${String(index)}-value`}
-                    label={`Spec ${String(index + 1)} value`}
+                    label={t('productEditor.specs.valueLabel', { number: index + 1 })}
                     value={spec.value}
                     error={issues[`specs.${String(index)}.value`]}
                     onChange={(value) =>
@@ -444,7 +444,7 @@ export function ProductEditorPage() {
                   />
                 </div>
                 <RepeaterButtons
-                  label={`spec ${String(index + 1)}`}
+                  label={t('productEditor.specs.entryName', { number: index + 1 })}
                   index={index}
                   count={form.specs.length}
                   onMove={(delta) =>
@@ -549,6 +549,8 @@ function RepeaterButtons({
   onMove: (delta: number) => void
   onRemove: () => void
 }) {
+  const t = useT()
+
   return (
     <div className="flex gap-1 pb-0.5">
       <Button
@@ -556,7 +558,7 @@ function RepeaterButtons({
         variant="outline"
         size="sm"
         disabled={index === 0}
-        aria-label={`Move ${label} up`}
+        aria-label={t('editor.moveUp', { label })}
         onClick={() => onMove(-1)}
       >
         ↑
@@ -566,12 +568,12 @@ function RepeaterButtons({
         variant="outline"
         size="sm"
         disabled={index === count - 1}
-        aria-label={`Move ${label} down`}
+        aria-label={t('editor.moveDown', { label })}
         onClick={() => onMove(1)}
       >
         ↓
       </Button>
-      <Button type="button" variant="outline" size="sm" aria-label={`Remove ${label}`} onClick={onRemove}>
+      <Button type="button" variant="outline" size="sm" aria-label={t('editor.remove', { label })} onClick={onRemove}>
         ✕
       </Button>
     </div>

@@ -211,7 +211,7 @@ export function PostsSection() {
             <p className="text-sm text-muted-foreground">
               {search === ''
                 ? t('posts.empty')
-                : `Nothing matches “${search}”.`}
+                : t('list.noMatches', { search })}
             </p>
           ) : (
             <table className="w-full border-collapse text-sm">

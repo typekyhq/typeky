@@ -225,10 +225,6 @@ main {
   list-style: none;
 }
 
-.site-footer .filing {
-  margin-block: 0.5rem 0;
-  font-size: 0.875rem;
-}
 
 /* The platform's own badge: quieter than the site's own text, because it is a
  * statement about the software and not about the site. The link keeps the

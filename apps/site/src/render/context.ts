@@ -174,7 +174,6 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       settings: {
         ...(typeof site.settings.footer === 'string' ? { footer: site.settings.footer } : {}),
         ...(socialLinks === undefined ? {} : { social_links: socialLinks }),
-        ...(typeof site.settings.filingNumber === 'string' ? { filing_number: site.settings.filingNumber } : {}),
         ...(typeof site.settings.cookieNotice === 'string' ? { cookie_notice: site.settings.cookieNotice } : {}),
       },
       // Absent, not empty, when a licence removes it -- so a template's `{% if %}`

@@ -94,7 +94,6 @@ there are no functions to call and nothing to fetch.
 | `site.nav` | array | `{ label, href }`, already in the order the operator set |
 | `site.settings.footer` | string? | |
 | `site.settings.social_links` | array? | `{ label, href }` |
-| `site.settings.filing_number` | string? | |
 | `site.settings.cookie_notice` | string? | Present only when one is configured |
 
 ### `page`

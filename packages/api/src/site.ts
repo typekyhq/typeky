@@ -78,8 +78,6 @@ export const siteSettingsSchema = z.object({
     }),
   ),
   footer: z.optional(z.string().check(z.maxLength(500))),
-  /** ICP filing number, for deployments in mainland China. */
-  filingNumber: z.optional(z.string().check(z.maxLength(60))),
   /** The language the site is written in, for `<html lang>`. */
   language: z.optional(LANGUAGE),
   /** How the site writes a date. */

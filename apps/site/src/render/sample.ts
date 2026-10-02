@@ -23,7 +23,6 @@ const SAMPLE_SITE: SiteInput = {
     language: 'en',
     footer: 'Built with Typeky.',
     socialLinks: [{ label: 'GitHub', href: 'https://example.com/github' }],
-    filingNumber: 'ICP 000000',
     cookieNotice: 'This site uses no cookies.',
   },
   nav: [

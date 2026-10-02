@@ -83,6 +83,7 @@ export const zhCN: Locale = {
   // Picking an image.
   'mediaPicker.defaultTitle': '选择图片',
   'mediaPicker.chooseFor': '为「{field}」选择',
+  'mediaPicker.chooseField': '选择{field}',
   'mediaPicker.search': '搜索',
   'mediaPicker.searchPlaceholder': '文件名或替代文本',
   'mediaPicker.upload': '上传',
@@ -92,6 +93,21 @@ export const zhCN: Locale = {
   'mediaPicker.empty': '还没有媒体。在上方上传第一个。',
   'mediaPicker.noMatches': '没有匹配「{search}」的内容。',
   'mediaPicker.choose': '选择',
+
+  'list.noMatches': '没有匹配「{search}」的内容。',
+  'editor.moveUp': '上移 {label}',
+  'editor.moveDown': '下移 {label}',
+  'editor.remove': '移除 {label}',
+  'productEditor.gallery.imageLabel': '第 {number} 张图片',
+  'productEditor.gallery.imageName': '第 {number} 张图片',
+  'productEditor.specs.nameLabel': '第 {number} 项规格名称',
+  'productEditor.specs.valueLabel': '第 {number} 项规格内容',
+  'productEditor.specs.entryName': '第 {number} 项规格',
+  'theme.subtitle.all': '所有模板都是 {theme} 主题自带的版本。',
+  'theme.subtitle.customised': '{total} 个模板中有 {customised} 个已被自定义。',
+  'theme.note':
+    '你只能编辑主题自带的模板，也只有这些。没有办法新增：主题升级时发现不是自己放进去的文件，正是这个设计要避开的冲突。',
+  'settings.language.dates.hint': '站点和本面板各用各的语言，也各用各的日期写法。',
 
   // Lists: the toolbar above every collection.
   'list.filter.all': '全部',
@@ -277,8 +293,6 @@ export const zhCN: Locale = {
   'settings.footer': '页脚',
   'settings.footer.hint': '每个页面的最后一行。',
   'settings.footer.text': '页脚文字',
-  'settings.filing': '备案号',
-  'settings.filing.hint': '只有在中国大陆部署时才需要。',
   'settings.language.dates': '语言与日期',
   'settings.language': '站点语言',
   'settings.language.hint':

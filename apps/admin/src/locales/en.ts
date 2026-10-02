@@ -87,6 +87,7 @@ export const en: Locale = {
   // Picking an image.
   'mediaPicker.defaultTitle': 'Choose an image',
   'mediaPicker.chooseFor': 'Choose for {field}',
+  'mediaPicker.chooseField': 'Choose {field}',
   'mediaPicker.search': 'Search',
   'mediaPicker.searchPlaceholder': 'Filename or alt text',
   'mediaPicker.upload': 'Upload',
@@ -95,6 +96,22 @@ export const en: Locale = {
   'mediaPicker.loading': 'Loading media',
   'mediaPicker.empty': 'No media yet. Upload the first one above.',
   'mediaPicker.noMatches': 'Nothing matches “{search}”.',
+
+  'list.noMatches': 'Nothing matches “{search}”.',
+  'editor.moveUp': 'Move {label} up',
+  'editor.moveDown': 'Move {label} down',
+  'editor.remove': 'Remove {label}',
+  'productEditor.gallery.imageLabel': 'Image {number}',
+  'productEditor.gallery.imageName': 'image {number}',
+  'productEditor.specs.nameLabel': 'Spec {number} name',
+  'productEditor.specs.valueLabel': 'Spec {number} value',
+  'productEditor.specs.entryName': 'spec {number}',
+  'theme.subtitle.all': 'Every template is the one the {theme} theme ships.',
+  'theme.subtitle.customised': '{customised} of {total} templates have been customised.',
+  'theme.note':
+    'You can edit the templates your theme ships, and only those. There is no way to add a new one: a theme upgrade that found files it did not put there is the conflict this avoids.',
+  'settings.language.dates.hint':
+    'The site and this panel are written in their own language, and write dates their own way.',
 
   // Lists: the toolbar above every collection.
   'list.filter.all': 'All',
@@ -283,8 +300,6 @@ export const en: Locale = {
   'settings.footer': 'Footer',
   'settings.footer.hint': 'The last line of every page.',
   'settings.footer.text': 'Footer text',
-  'settings.filing': 'Filing number',
-  'settings.filing.hint': 'Only needed for deployments in mainland China.',
   'settings.language.dates': 'Language and dates',
   'settings.language': 'Site language',
   'settings.language.hint':

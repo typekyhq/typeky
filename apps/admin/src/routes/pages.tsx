@@ -173,7 +173,7 @@ export function PagesSection() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pages"
+        title={t('pages.title')}
         description={t('pages.description')}
       >
         <Button type="button" onClick={() => navigate('/pages/new')}>
@@ -227,7 +227,7 @@ export function PagesSection() {
             <p className="text-sm text-muted-foreground">
               {search === ''
                 ? t('pages.empty')
-                : `Nothing matches “${search}”.`}
+                : t('list.noMatches', { search })}
             </p>
           ) : (
             <table className="w-full border-collapse text-sm">

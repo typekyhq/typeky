@@ -43,8 +43,6 @@ export interface SiteSettings {
   socialLinks?: SocialLink[]
   seo?: { defaultTitle?: string; defaultDescription?: string }
   footer?: string
-  /** ICP filing number, shown in the footer for deployments in mainland China. */
-  filingNumber?: string
 }
 
 export interface Site {

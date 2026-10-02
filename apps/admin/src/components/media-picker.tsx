@@ -215,7 +215,7 @@ export function MediaField({
           variant="outline"
           // Names the field it fills. "Choose" alone is ambiguous the moment a
           // page has two of them, both to a screen reader and to voice control.
-          aria-label={`Choose ${label.toLowerCase()}`}
+          aria-label={t('mediaPicker.chooseField', { field: label.toLowerCase() })}
           onClick={() => setOpen(true)}
         >
           {t('mediaPicker.choose')}
