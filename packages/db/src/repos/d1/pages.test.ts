@@ -1,3 +1,4 @@
+import type { Block } from '@typeky/core'
 import { describe, expect, it } from 'vitest'
 import { defaultContext } from '../../contracts'
 import { createD1Repositories } from '.'
@@ -28,7 +29,7 @@ describe('page repository', () => {
 
   it('round-trips blocks and SEO metadata through their JSON columns', async () => {
     const { pages } = setup()
-    const blocks = [{ id: 'blk_1', type: 'paragraph', text: 'Hello' }]
+    const blocks: Block[] = [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }]
 
     const created = await pages.upsert(ctx, {
       title: 'About',

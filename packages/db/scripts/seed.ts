@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { model, type LogicalType, type TableDef } from '@typeky/core'
+import { model, type Block, type LogicalType, type TableDef } from '@typeky/core'
 import { repoRoot } from './paths'
 
 /**
@@ -22,28 +22,40 @@ const POST_HELLO = '01930000-0000-7000-8000-0000000000c1'
 const PRODUCT_STARTER = '01930000-0000-7000-8000-0000000000d1'
 
 /**
- * Placeholder block payloads. The Block JSON contract is frozen by the block
- * editor work (M3); this is demo data, deliberately not typed here so it cannot
- * be mistaken for the schema.
+ * Demo bodies, in the real Block JSON shape (architecture section 3.11).
+ *
+ * Typed as `Block[]` so a change to the block model is a compile error here
+ * rather than demo content that quietly stops matching the schema.
  */
-const pageBlocks = [
+const pageBlocks: Block[] = [
   {
-    id: 'blk_home_intro',
     type: 'paragraph',
-    text: 'Typeky builds personal blogs, business sites and niche sites on a single Cloudflare account.',
+    content: [
+      {
+        type: 'text',
+        text: 'Typeky builds personal blogs, business sites and niche sites on a single Cloudflare account.',
+      },
+    ],
   },
 ]
 
-const postBlocks = [
-  { id: 'blk_post_lead', type: 'paragraph', text: 'This post exists so the blog list has something to show.' },
-  { id: 'blk_post_body', type: 'paragraph', text: 'Edit or delete it from the admin, or replace it with your own writing.' },
+const postBlocks: Block[] = [
+  {
+    type: 'paragraph',
+    content: [{ type: 'text', text: 'This post exists so the blog list has something to show.' }],
+  },
+  {
+    type: 'paragraph',
+    content: [
+      { type: 'text', text: 'Edit or delete it from the admin, or replace it with your own writing.' },
+    ],
+  },
 ]
 
-const productBlocks = [
+const productBlocks: Block[] = [
   {
-    id: 'blk_product_intro',
     type: 'paragraph',
-    text: 'A showcase product. Prices are display labels, not a checkout.',
+    content: [{ type: 'text', text: 'A showcase product. Prices are display labels, not a checkout.' }],
   },
 ]
 

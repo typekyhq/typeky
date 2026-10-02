@@ -1,4 +1,4 @@
-import { decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
+import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
 import { resolveWindow } from '../../contracts'
 import type { ListPostsQuery, Post, PostRepository, PostWrite, SeoMetadata, TenantContext } from '../../contracts'
@@ -45,7 +45,7 @@ function toPost(row: PostRow): Post {
     slug: row.slug,
     excerpt: row.excerpt,
     coverMediaId: row.cover_media_id,
-    blocks: decodeJson<unknown[]>(row.content_blocks),
+    blocks: decodeJson<Block[]>(row.content_blocks),
     tags: decodeJson<string[]>(row.tags),
     category: row.category,
     seo: decodeJson<SeoMetadata>(row.seo_metadata),

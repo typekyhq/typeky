@@ -35,7 +35,7 @@ describe('post repository', () => {
       excerpt: 'The first post',
       tags: ['getting-started', 'news'],
       category: 'News',
-      blocks: [{ id: 'blk_1', type: 'paragraph', text: 'Body' }],
+      blocks: [{ type: 'paragraph', content: [{ type: 'text', text: 'Body' }] }],
       seo: { description: 'A first post' },
     })
 
@@ -43,7 +43,7 @@ describe('post repository', () => {
     expect(read?.tags).toEqual(['getting-started', 'news'])
     expect(read?.category).toBe('News')
     expect(read?.excerpt).toBe('The first post')
-    expect(read?.blocks).toEqual([{ id: 'blk_1', type: 'paragraph', text: 'Body' }])
+    expect(read?.blocks).toEqual([{ type: 'paragraph', content: [{ type: 'text', text: 'Body' }] }])
     expect(read?.seo).toEqual({ description: 'A first post' })
   })
 

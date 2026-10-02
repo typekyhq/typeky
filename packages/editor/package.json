@@ -12,7 +12,8 @@
     "@tiptap/core": "^3.31.4",
     "@tiptap/pm": "^3.31.4",
     "@tiptap/react": "^3.31.4",
-    "@tiptap/starter-kit": "^3.31.4"
+    "@tiptap/starter-kit": "^3.31.4",
+    "@typeky/core": "workspace:*"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.3",

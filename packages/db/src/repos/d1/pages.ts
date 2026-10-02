@@ -1,4 +1,4 @@
-import { decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
+import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
 import { resolveWindow } from '../../contracts'
 import type { ListQuery, Page, PageRepository, PageResult, PageWrite, SeoMetadata, TenantContext } from '../../contracts'
@@ -39,7 +39,7 @@ function toPage(row: PageRow): Page {
     id: row.id,
     title: row.title,
     slug: row.slug,
-    blocks: decodeJson<unknown[]>(row.content_blocks),
+    blocks: decodeJson<Block[]>(row.content_blocks),
     seo: decodeJson<SeoMetadata>(row.seo_metadata),
     status: row.status === 'published' ? 'published' : 'draft',
     isHome: asBoolean(row.is_home),

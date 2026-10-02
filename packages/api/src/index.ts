@@ -26,6 +26,15 @@ export {
 } from './session'
 
 export {
+  getBlockSchema,
+  getBlocksSchema,
+  parseBlocks,
+  safeParseBlocks,
+  type BlockSchema,
+  type BlocksSchema,
+} from './blocks'
+
+export {
   navItemSchema,
   siteResponseSchema,
   siteSettingsSchema,

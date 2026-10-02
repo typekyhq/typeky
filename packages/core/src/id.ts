@@ -13,6 +13,15 @@
 /** Random bits: 12 for rand_a, 62 for rand_b. Held as 9 bytes, or 18 hex chars. */
 const RANDOM_BYTES = 9
 
+/**
+ * `crypto.getRandomValues` exists in Workers, Node and browsers alike, but no
+ * single lib target declares it: the DOM lib has it, `@types/node` has it, and a
+ * Worker build has neither. Declaring the one method this file uses keeps the
+ * package compilable under any consumer's tsconfig -- without it, every package
+ * that imports `@typeky/core` would also need Node's types.
+ */
+declare const crypto: { getRandomValues<T extends ArrayBufferView>(array: T): T }
+
 /** Marks this as a version 7 UUID. */
 const VERSION_NIBBLE = '7'
 

@@ -1,3 +1,5 @@
+import type { Block } from '@typeky/core'
+
 /**
  * Domain types for the six CE tables.
  *
@@ -11,11 +13,10 @@ export type ContentStatus = 'draft' | 'published'
 /**
  * Block JSON as stored in a `content_blocks` column.
  *
- * Deliberately opaque. The per-block shape is frozen by the block editor work
- * (M3) and typing it here first would freeze a layout nothing has agreed on, then
- * make it load-bearing by accident.
+ * The shape is defined in `@typeky/core` rather than here, because the site side
+ * renders it and must not depend on the data layer to read the type.
  */
-export type BlockContent = unknown[]
+export type BlockContent = Block[]
 
 export interface SeoMetadata {
   title?: string

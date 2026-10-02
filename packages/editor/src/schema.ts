@@ -1,3 +1,4 @@
+import { HEADING_LEVELS } from '@typeky/core'
 import type { AnyExtension } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -26,7 +27,8 @@ import { CtaNodeView, ImageNodeView, VideoNodeView } from './node-views'
  * here so the extension modules stay usable without a renderer.
  */
 
-export const HEADING_LEVELS = [2, 3, 4] as const
+/** Re-exported so callers do not have to reach into `@typeky/core` for it. */
+export { HEADING_LEVELS }
 
 export function createEditorExtensions(): AnyExtension[] {
   return [

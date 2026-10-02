@@ -1,4 +1,4 @@
-import { decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
+import { type Block, decodeJson, decodeTimestamp, encodeJson, nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
 import { resolveWindow } from '../../contracts'
 import type {
@@ -60,7 +60,7 @@ function toProduct(row: ProductRow): Product {
     title: row.title,
     slug: row.slug,
     summary: row.summary,
-    blocks: decodeJson<unknown[]>(row.content_blocks),
+    blocks: decodeJson<Block[]>(row.content_blocks),
     coverMediaId: row.cover_media_id,
     gallery: decodeJson<string[]>(row.gallery),
     specs: decodeJson<ProductSpec[]>(row.specs),
