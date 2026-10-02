@@ -100,6 +100,17 @@ export {
 } from './media'
 
 export {
+  THEME_TEMPLATE_GROUPS,
+  themeTemplateListResponseSchema,
+  themeTemplateResponseSchema,
+  themeTemplateSummarySchema,
+  type ThemeTemplateGroup,
+  type ThemeTemplateListResponse,
+  type ThemeTemplateResponse,
+  type ThemeTemplateSummary,
+} from './theme'
+
+export {
   navItemSchema,
   siteResponseSchema,
   siteSettingsSchema,

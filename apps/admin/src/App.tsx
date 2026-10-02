@@ -15,6 +15,7 @@ import { ProductEditorPage } from '@/routes/product-editor'
 import { ProductsSection } from '@/routes/products'
 import { MediaSection } from '@/routes/media'
 import { SettingsPage } from '@/routes/settings'
+import { ThemeSection } from '@/routes/theme'
 import { ApiClientProvider } from '@/lib/client-context'
 import { apiClient } from '@/lib/client'
 import type { ApiClient } from '@/lib/api-client'
@@ -39,6 +40,7 @@ const BUILT_SECTIONS: Record<string, ReactNode> = {
   '/posts': <PostsSection />,
   '/products': <ProductsSection />,
   '/media': <MediaSection />,
+  '/theme': <ThemeSection />,
   '/settings': <SettingsPage />,
 }
 

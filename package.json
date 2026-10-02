@@ -23,7 +23,9 @@
     "seed": "tsx packages/db/scripts/seed.ts",
     "admin:password": "tsx apps/site/scripts/hash-password.ts",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm build && pnpm check:boundaries"
+    "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm check:theme-drift && pnpm build && pnpm check:boundaries",
+    "theme:generate": "tsx packages/themes/default/scripts/baseline.ts generate",
+    "check:theme-drift": "tsx packages/themes/default/scripts/baseline.ts check"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",

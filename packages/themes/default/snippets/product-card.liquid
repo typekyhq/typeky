@@ -1,0 +1,5 @@
+<article class="card">
+  {% if product.cover_url %}<img src="{{ product.cover_url }}" alt="{{ product.title }}">{% endif %}
+  <h2><a href="{{ product.url | url }}">{{ product.title }}</a></h2>
+  {% if product.price_label %}<p class="price">{{ product.price_label }}</p>{% endif %}
+</article>

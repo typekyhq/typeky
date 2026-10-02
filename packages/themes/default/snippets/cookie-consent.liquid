@@ -1,0 +1,7 @@
+{% if site.settings.cookie_notice %}
+  <div class="cookie-consent" role="status" hidden data-cookie-consent>
+    <p>{{ site.settings.cookie_notice }}</p>
+    <button type="button" data-cookie-consent-accept>Got it</button>
+  </div>
+  <script src="{{ 'theme.js' | asset_url }}" defer></script>
+{% endif %}

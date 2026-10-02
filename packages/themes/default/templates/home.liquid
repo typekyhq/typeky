@@ -1,0 +1,6 @@
+{% layout 'layouts/base' %}
+{% comment %} The home page: whichever page is flagged is_home, rendered as blocks. {% endcomment %}
+<article class="prose">
+  <h1>{{ content.title }}</h1>
+  {{ blocks_html }}
+</article>

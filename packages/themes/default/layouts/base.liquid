@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="{{ site.language | default: 'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% render 'seo-meta' %}
+    <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
+  </head>
+  <body>
+    {% render 'header' %}
+    <main id="main">
+      {{ content_for_layout }}
+    </main>
+    {% render 'footer' %}
+    {% render 'cookie-consent' %}
+  </body>
+</html>

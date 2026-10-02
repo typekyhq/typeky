@@ -24,6 +24,7 @@ import {
   updatePage,
 } from './pages'
 import { verifyPassword } from './password'
+import { readThemeTemplate, readThemeTemplates } from './theme'
 import {
   bulkPosts,
   createPost,
@@ -176,6 +177,11 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.get('/media/:id/content', (c) => readMediaContent(c, repositories, blobs))
   api.get('/media/:id/usages', (c) => readMediaUsages(c, repositories))
   api.delete('/media/:id', (c) => deleteMedia(c, repositories, blobs))
+
+  // The theme's templates. Read-only for now, and deliberately without a way to
+  // create one: a site may edit what its theme ships and nothing more.
+  api.get('/theme/templates', (c) => readThemeTemplates(c, repositories))
+  api.get('/theme/template', (c) => readThemeTemplate(c, repositories))
 
   api.all('*', (c) => apiError(c, 'not_found'))
 

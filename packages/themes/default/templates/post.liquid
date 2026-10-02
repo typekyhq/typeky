@@ -1,0 +1,14 @@
+{% layout 'layouts/base' %}
+<article class="prose">
+  <h1>{{ content.title }}</h1>
+  <p class="meta">
+    {% if content.published_at %}<time datetime="{{ content.published_at }}">{{ content.published_at | date: '%Y-%m-%d' }}</time>{% endif %}
+    {% if content.category %}<span>{{ content.category }}</span>{% endif %}
+  </p>
+  {{ blocks_html }}
+  {% if content.tags.size > 0 %}
+    <ul class="tags">
+      {% for tag in content.tags %}<li>{{ tag }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+</article>

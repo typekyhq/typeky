@@ -77,6 +77,8 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     mediaContentUrl(id: string) {
       return `/api/admin/media/${id}/content`
     },
+    listThemeTemplates: async () => ({ theme: 'default', items: [] }),
+    getThemeTemplate: unexpected('getThemeTemplate'),
 
     ...overrides,
   }

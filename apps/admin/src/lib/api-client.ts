@@ -11,6 +11,8 @@ import {
   mediaItemSchema,
   mediaUsageSchema,
   bulkResultSchema,
+  themeTemplateListResponseSchema,
+  themeTemplateResponseSchema,
   sessionSchema,
   siteResponseSchema,
   type ApiErrorCode,
@@ -35,6 +37,8 @@ import {
   type SiteResponse,
   type SiteWrite,
   type SortDirection,
+  type ThemeTemplateListResponse,
+  type ThemeTemplateResponse,
 } from '@typeky/api'
 
 /**
@@ -115,6 +119,9 @@ export interface ApiClient {
   deleteMedia(id: string): Promise<void>
   /** Where the admin serves an item's bytes from. */
   mediaContentUrl(id: string): string
+
+  listThemeTemplates(): Promise<ThemeTemplateListResponse>
+  getThemeTemplate(path: string): Promise<ThemeTemplateResponse>
 }
 
 /** The filters the media grid can ask for. */
@@ -492,6 +499,24 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
     mediaContentUrl(id) {
       return `${baseUrl}/media/${encodeURIComponent(id)}/content`
+    },
+
+    async listThemeTemplates() {
+      return readContract(
+        themeTemplateListResponseSchema,
+        await send('GET', '/theme/templates'),
+        'the template list did not match the contract',
+      )
+    },
+
+    async getThemeTemplate(path) {
+      return readContract(
+        themeTemplateResponseSchema,
+        // A query parameter: a template name contains a slash, and putting one
+        // into a path is how traversal bugs start.
+        await send('GET', `/theme/template?path=${encodeURIComponent(path)}`),
+        'the template did not match the contract',
+      )
     },
   }
 

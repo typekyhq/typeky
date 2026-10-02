@@ -14,6 +14,7 @@
     "@typeky/core": "workspace:*",
     "@typeky/db": "workspace:*",
     "@typeky/platform": "workspace:*",
+    "@typeky/theme-default": "workspace:*",
     "@typeky/theme-kit": "workspace:*",
     "hono": "^4.13.11"
   },

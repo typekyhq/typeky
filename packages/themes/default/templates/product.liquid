@@ -1,0 +1,19 @@
+{% layout 'layouts/base' %}
+<article class="product">
+  <h1>{{ content.title }}</h1>
+  {% if content.price_label %}<p class="price">{{ content.price_label }}</p>{% endif %}
+  {% if content.gallery.size > 0 %}
+    <ul class="gallery">
+      {% for image in content.gallery %}<li><img src="{{ image }}" alt="{{ content.title }}"></li>{% endfor %}
+    </ul>
+  {% endif %}
+  {{ blocks_html }}
+  {% if content.specs.size > 0 %}
+    <dl class="specs">
+      {% for spec in content.specs %}<dt>{{ spec.label }}</dt><dd>{{ spec.value }}</dd>{% endfor %}
+    </dl>
+  {% endif %}
+  {% if content.cta_url %}
+    <a class="cta" href="{{ content.cta_url }}">{{ content.cta_label | default: 'Learn more' }}</a>
+  {% endif %}
+</article>

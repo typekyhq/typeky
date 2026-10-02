@@ -275,6 +275,9 @@ importers:
       '@typeky/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      '@typeky/theme-default':
+        specifier: workspace:*
+        version: link:../../packages/themes/default
       '@typeky/theme-kit':
         specifier: workspace:*
         version: link:../../packages/theme-kit

@@ -1,0 +1,11 @@
+{% if page.pagination %}
+  <nav class="pagination" aria-label="Pagination">
+    {% if page.pagination.previous_url %}
+      <a rel="prev" href="{{ page.pagination.previous_url | url }}">Newer</a>
+    {% endif %}
+    <span>{{ page.pagination.page }} / {{ page.pagination.pages }}</span>
+    {% if page.pagination.next_url %}
+      <a rel="next" href="{{ page.pagination.next_url | url }}">Older</a>
+    {% endif %}
+  </nav>
+{% endif %}

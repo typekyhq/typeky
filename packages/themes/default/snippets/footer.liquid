@@ -1,0 +1,11 @@
+<footer class="site-footer">
+  {% if site.settings.footer %}<p>{{ site.settings.footer }}</p>{% endif %}
+  {% if site.settings.social_links.size > 0 %}
+    <ul class="social">
+      {% for link in site.settings.social_links %}
+        <li><a href="{{ link.href }}">{{ link.label }}</a></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if site.settings.filing_number %}<p class="filing">{{ site.settings.filing_number }}</p>{% endif %}
+</footer>
