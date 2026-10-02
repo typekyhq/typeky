@@ -22,6 +22,7 @@
     "db:generate": "tsx packages/db/scripts/schema.ts generate",
     "check:schema-drift": "tsx packages/db/scripts/schema.ts check",
     "db:migrate": "wrangler d1 migrations apply DB --local --config apps/site/wrangler.jsonc",
+    "db:reset": "node scripts/db-reset.mjs",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote --config apps/site/wrangler.jsonc",
     "seed": "tsx packages/db/scripts/seed.ts",
     "admin:password": "tsx apps/site/scripts/hash-password.ts",

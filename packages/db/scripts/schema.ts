@@ -32,11 +32,27 @@ const targets: Target[] = [
 const mode = process.argv[2]
 
 if (mode === 'generate') {
+  const rewritten: Target[] = []
+
   for (const target of targets) {
+    const current = existsSync(target.path) ? readFileSync(target.path, 'utf8') : undefined
     mkdirSync(dirname(target.path), { recursive: true })
     writeFileSync(target.path, target.content, 'utf8')
-    console.log(`  ${target.label}: wrote ${relative(repoRoot, target.path)}`)
+    if (current !== target.content) rewritten.push(target)
+    console.log(
+      `  ${target.label}: wrote ${relative(repoRoot, target.path)}${current === target.content ? ' (unchanged)' : ''}`,
+    )
   }
+
+  // Saying this out loud is the whole point. The migration is rewritten in place
+  // rather than appended to, so an existing local database never learns about the
+  // change -- wrangler has recorded this file as applied and skips it. The
+  // symptom is a screen that answers 500, with nothing on it to say why.
+  if (rewritten.some((target) => target.label === 'D1 migration')) {
+    console.log('  the migration was rewritten, so an existing local database does not have the change.')
+    console.log('  run `pnpm db:reset` to rebuild the local one (it deletes local data).')
+  }
+
   console.log('  ok')
 } else if (mode === 'check') {
   const stale = targets.filter((target) => {

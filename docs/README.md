@@ -66,6 +66,7 @@ password. Restart `pnpm dev` after changing it.
 | `pnpm test:sandbox` | Just the theme sandbox suite — the things a theme must not be able to do |
 | `pnpm build` | Build the admin SPA and the site assets |
 | `pnpm db:migrate` | Apply migrations to the local database |
+| `pnpm db:reset` | Rebuild the local database from the migration — **it deletes local data** |
 | `pnpm seed` | Load the demo site |
 | `pnpm theme:generate` | Regenerate the bundled theme module after editing a `.liquid` file |
 | `pnpm check:theme-drift` | Fail if that module and the `.liquid` files disagree |
@@ -75,6 +76,16 @@ Two of these exist because something is generated from files that people edit:
 `pnpm theme:generate` compiles the bundled theme's `.liquid` files into a module
 a Worker can import. Edit the source, run the generator, commit both. CI fails if
 you forget the second half.
+
+`pnpm db:generate` rewrites that one migration in place rather than appending a new
+one, and that has a consequence worth knowing. It is right while CE has never
+shipped — one initialization script that always describes the current schema — but
+an existing local database is then never told about a table added since it was
+created, because wrangler has recorded `0001_init.sql` as applied and skips it. The
+symptom is a screen that answers 500 with nothing on it to say why. So after a
+schema change, run `pnpm db:reset` (and `pnpm seed` if you want the demo site back).
+The generator prints a reminder when it rewrites the migration. This stops being
+necessary once migrations are append-only, which is what the first release changes.
 
 ## Editing a theme
 
