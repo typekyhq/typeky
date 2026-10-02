@@ -2,6 +2,7 @@ import type { Block } from '@typeky/core'
 import type { Schema } from '@tiptap/pm/model'
 import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model'
 import { toBlockJSON } from './mapping'
+import { cleanPastedHtml } from './paste'
 
 /**
  * HTML back into blocks.
@@ -17,7 +18,8 @@ import { toBlockJSON } from './mapping'
 export function htmlToBlocks(html: string, schema: Schema): Block[] {
   if (html === '') return []
 
-  const parsed = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html')
+  const cleaned = cleanPastedHtml(html)
+  const parsed = new DOMParser().parseFromString(`<body>${cleaned}</body>`, 'text/html')
   const document = ProseMirrorDOMParser.fromSchema(schema).parse(parsed.body)
 
   return toBlockJSON(document.toJSON())

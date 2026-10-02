@@ -26,6 +26,7 @@
     "check": "pnpm typecheck && pnpm test && pnpm check:schema-drift && pnpm build && pnpm check:boundaries"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
     "@types/node": "^26.6.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

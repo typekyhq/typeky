@@ -21,5 +21,6 @@ export default defineConfig({
     // is a global, and without it one component test's markup leaks into the
     // next one, producing "found multiple elements" far from the real cause.
     globals: true,
+    setupFiles: ['./vitest.setup.ts'],
   },
 })
