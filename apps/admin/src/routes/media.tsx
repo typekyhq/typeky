@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { PAGE_SIZE, PageHeader, Pager, SearchBox } from '@/components/list-chrome'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
-import { UploadField } from '@/components/upload-field'
+import { UploadField, type UploadDetails } from '@/components/upload-field'
 import { Card, CardContent } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
@@ -75,15 +75,19 @@ export function MediaSection() {
 
   const reload = useCallback(() => setAttempt((value) => value + 1), [])
 
-  async function upload(file: File) {
+  async function upload(file: File, details: UploadDetails): Promise<void> {
     setUploading(true)
     try {
-      await client.uploadMedia(file, { alt: file.name })
-      toast.success(t('media.uploaded', { name: file.name }))
+      const saved = await client.uploadMedia(file, details)
+      toast.success(t('media.uploaded', { name: saved.filename }))
       setOffset(0)
       reload()
     } catch (thrown) {
       toast.error(describeApiError(thrown, t))
+      // Reported and rethrown: the upload control keeps the staged file and the
+      // typed name, so a retry is one click instead of a second trip through the
+      // file picker.
+      throw thrown
     } finally {
       setUploading(false)
     }
@@ -129,10 +133,9 @@ export function MediaSection() {
 
           <UploadField
             id="media-grid-upload"
-            label={t('media.upload')}
             accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/mp4,video/webm"
             disabled={uploading}
-            onPick={(file) => void upload(file)}
+            onUpload={upload}
           />
       </div>
 

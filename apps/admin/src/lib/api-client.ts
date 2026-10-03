@@ -139,7 +139,10 @@ export interface ApiClient {
   bulkProducts(ids: string[], action: BulkAction): Promise<BulkResult>
 
   listMedia(query?: MediaQuery): Promise<MediaListResponse>
-  uploadMedia(file: File, details: { alt?: string; width?: number; height?: number }): Promise<MediaItem>
+  uploadMedia(
+    file: File,
+    details: { filename?: string; alt?: string; width?: number; height?: number },
+  ): Promise<MediaItem>
   mediaUsages(id: string): Promise<MediaUsage>
   deleteMedia(id: string): Promise<void>
   /** Where the admin serves an item's bytes from. */
@@ -524,7 +527,9 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     },
 
     async uploadMedia(file, details) {
-      const query = new URLSearchParams({ filename: file.name })
+      // The chosen name, or the file's own when the operator left the field blank:
+      // an empty filename in the library is worse than the one the camera wrote.
+      const query = new URLSearchParams({ filename: details.filename?.trim() || file.name })
       if (details.alt !== undefined && details.alt !== '') query.set('alt', details.alt)
       if (details.width !== undefined) query.set('width', String(details.width))
       if (details.height !== undefined) query.set('height', String(details.height))

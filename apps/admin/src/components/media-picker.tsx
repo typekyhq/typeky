@@ -5,7 +5,7 @@ import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { UploadField } from '@/components/upload-field'
+import { UploadField, type UploadDetails } from '@/components/upload-field'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useApiClient } from '@/lib/client-context'
 import { useT } from '@/lib/i18n'
@@ -68,20 +68,24 @@ export function MediaPicker({ open, onOpenChange, onSelect, title }: MediaPicker
   }, [client, open, search, attempt])
 
   const upload = useCallback(
-    async (file: File) => {
+    async (file: File, details: UploadDetails): Promise<void> => {
       setUploading(true)
       try {
-        const item = await client.uploadMedia(file, { alt: file.name })
-        toast.success(`${file.name} uploaded.`)
+        const item = await client.uploadMedia(file, details)
+        // The localised sentence, not the file's own name glued to English: this
+        // panel has a translation, and the media screen already ships the words.
+        toast.success(t('media.uploaded', { name: item.filename }))
         onSelect(item)
         onOpenChange(false)
       } catch (thrown) {
         toast.error(describeApiError(thrown, t))
+        // Reported and rethrown, so the upload control keeps what was staged.
+        throw thrown
       } finally {
         setUploading(false)
       }
     },
-    [client, onSelect, onOpenChange],
+    [client, onSelect, onOpenChange, t],
   )
 
   return (
@@ -117,10 +121,9 @@ export function MediaPicker({ open, onOpenChange, onSelect, title }: MediaPicker
 
               <UploadField
                 id="media-upload"
-                label={t('mediaPicker.upload')}
                 accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/mp4,video/webm"
                 disabled={uploading}
-                onPick={(file) => void upload(file)}
+                onUpload={upload}
               />
           </div>
 

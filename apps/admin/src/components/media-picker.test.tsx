@@ -87,10 +87,25 @@ describe('the media picker', () => {
     )
 
     const file = new File([new Uint8Array([1, 2, 3])], 'new.png', { type: 'image/png' })
-    await userEvent.upload(await screen.findByLabelText('Upload'), file)
+    await userEvent.upload(await screen.findByLabelText('Choose a file'), file)
+
+    // Staged, not sent: the two things an upload needs to be told are the filename
+    // and the alt text, and neither is something the file picker asked for.
+    expect(uploadMedia).not.toHaveBeenCalled()
+    expect(await screen.findByText('Chosen: new.png')).toBeTruthy()
+
+    // The name starts as the file's own; the alt starts empty, because an alt that
+    // repeats the filename helps nobody.
+    expect(screen.getByLabelText('File name')).toHaveProperty('value', 'new.png')
+    expect(screen.getByLabelText('Alt text')).toHaveProperty('value', '')
+
+    await userEvent.clear(screen.getByLabelText('File name'))
+    await userEvent.type(screen.getByLabelText('File name'), 'holiday.png')
+    await userEvent.type(screen.getByLabelText('Alt text'), 'A beach at sunset')
+    await userEvent.click(screen.getByRole('button', { name: 'Upload' }))
 
     await waitFor(() => {
-      expect(uploadMedia).toHaveBeenCalledWith(file, expect.objectContaining({ alt: 'new.png' }))
+      expect(uploadMedia).toHaveBeenCalledWith(file, { filename: 'holiday.png', alt: 'A beach at sunset' })
     })
     await waitFor(() => {
       expect(onSelect).toHaveBeenCalledWith(uploaded)

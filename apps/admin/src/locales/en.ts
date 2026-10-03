@@ -105,7 +105,6 @@ export const en: Locale = {
   'mediaPicker.chooseField': 'Choose {field}',
   'mediaPicker.search': 'Search',
   'mediaPicker.searchPlaceholder': 'Filename or alt text',
-  'mediaPicker.upload': 'Upload',
   'mediaPicker.uploading': 'Uploading…',
   'mediaPicker.loadFailed': 'Cannot load media',
   'mediaPicker.loading': 'Loading media',
@@ -198,6 +197,17 @@ export const en: Locale = {
   'content.backToPages': 'Back to pages',
   'content.backToProducts': 'Back to products',
 
+  // Choosing a file and describing it. Shared by the library and the picker,
+  // because it is one control: pick, name, upload.
+  'upload.choose': 'Choose a file',
+  'upload.chosen': 'Chosen: {name}',
+  'upload.filename': 'File name',
+  'upload.alt': 'Alt text',
+  'upload.alt.hint':
+    'A sentence for somebody who cannot see the image. Left empty, the file name stands in.',
+  'upload.start': 'Upload',
+  'upload.cancel': 'Cancel',
+
   // The media library.
   'media.title': 'Media',
   'media.description': 'Images and video, stored in R2 and referenced by content.',
@@ -207,7 +217,6 @@ export const en: Locale = {
   'media.viewSize': 'Size',
   'media.viewDimensions': 'Dimensions',
   'media.viewAlt': 'Alt text',
-  'media.upload': 'Upload',
   'media.uploading': 'Uploading…',
   'media.searchPlaceholder': 'Filename or alt text',
   'media.empty': 'No media yet. Upload the first one above.',

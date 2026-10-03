@@ -100,7 +100,6 @@ export const zhCN: Locale = {
   'mediaPicker.chooseField': '选择{field}',
   'mediaPicker.search': '搜索',
   'mediaPicker.searchPlaceholder': '文件名或替代文本',
-  'mediaPicker.upload': '上传',
   'mediaPicker.uploading': '正在上传…',
   'mediaPicker.loadFailed': '无法加载媒体',
   'mediaPicker.loading': '正在加载媒体',
@@ -187,6 +186,16 @@ export const zhCN: Locale = {
   'content.backToPages': '返回页面列表',
   'content.backToProducts': '返回产品列表',
 
+  // Choosing a file and describing it. Shared by the library and the picker,
+  // because it is one control: pick, name, upload.
+  'upload.choose': '选择文件',
+  'upload.chosen': '已选择 {name}',
+  'upload.filename': '文件名',
+  'upload.alt': '替代文本',
+  'upload.alt.hint': '给看不见这张图的人一句话。留空则显示文件名。',
+  'upload.start': '上传',
+  'upload.cancel': '取消',
+
   // The media library.
   'media.title': '媒体',
   'media.description': '图片与视频，存放在 R2 中，由内容引用。',
@@ -196,7 +205,6 @@ export const zhCN: Locale = {
   'media.viewSize': '大小',
   'media.viewDimensions': '尺寸',
   'media.viewAlt': '替代文本',
-  'media.upload': '上传',
   'media.uploading': '正在上传…',
   'media.searchPlaceholder': '文件名或替代文本',
   'media.empty': '还没有媒体。在上方上传第一个。',
