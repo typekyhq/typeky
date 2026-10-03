@@ -1,3 +1,4 @@
+import { defaultContext } from '@typeky/db'
 import { createD1DbPort } from '@typeky/platform'
 import type { ApiErrorBody } from '@typeky/api'
 import { Hono } from 'hono'
@@ -9,6 +10,7 @@ import { licenseState } from './license'
 import { serveMedia } from './media'
 import { errorPage, notFoundPage } from './pages'
 import { renderPage } from './render/page'
+import { robotsRules } from './render/seo-settings'
 import { renderRobots, renderSitemap } from './render/sitemap'
 import { repositoriesFor } from './repositories'
 import { serveThemeAsset } from './theme-assets'
@@ -63,8 +65,16 @@ export function createApp(): Hono<{ Bindings: Env }> {
   // `robots.txt` and `sitemap.xml` before the catch-all too: both have a file
   // extension, so the catch-all would answer them with a plain 404 and a crawler
   // would take that for an answer.
-  app.get('/robots.txt', (c) => {
-    return c.body(renderRobots(new URL(c.req.url).origin), 200, {
+  app.get('/robots.txt', async (c) => {
+    // Read for the robots settings alone. A database that cannot be reached is not
+    // a reason to hand a crawler an error page: the platform's own rules stand on
+    // their own, and the answer that keeps them in force is the one without the
+    // operator's extras.
+    const store = repositoriesFor(c.env)
+    const site = store === null ? null : await store.sites.get(defaultContext()).catch(() => null)
+    const rules = site === null ? { noindex: false, disallowPaths: [] } : robotsRules(site.settings)
+
+    return c.body(renderRobots(new URL(c.req.url).origin, rules), 200, {
       'content-type': 'text/plain; charset=utf-8',
       'cache-control': 'public, max-age=3600',
     })

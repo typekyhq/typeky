@@ -135,4 +135,24 @@ describe('robots.txt', () => {
     expect(text).toContain('Disallow: /admin')
     expect(text).toContain('Disallow: /api/')
   })
+
+  it('adds the paths the operator listed', () => {
+    const text = renderRobots('https://example.com', { disallowPaths: ['/search', '/cart'] })
+
+    expect(text).toContain('Disallow: /search')
+    expect(text).toContain('Disallow: /cart')
+    // The platform's own rules are not preferences, so they stay.
+    expect(text).toContain('Disallow: /admin')
+  })
+
+  it('replaces the lot when the site is not ready to be found', () => {
+    const text = renderRobots('https://example.com', { noindex: true, disallowPaths: ['/search'] })
+
+    expect(text).toContain('Disallow: /')
+    // `Allow: /` beside `Disallow: /` is a contradiction, and the per-path rules
+    // are noise under it -- a path nobody may crawl is not worth listing.
+    expect(text).not.toContain('Allow: /')
+    expect(text).not.toContain('Disallow: /search')
+    expect(text).not.toContain('Disallow: /admin')
+  })
 })

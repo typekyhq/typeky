@@ -26,6 +26,16 @@ export interface SiteSettingsForTemplates {
   footer?: string
   social_links?: { label: string; href: string }[]
   cookie_notice?: string
+  /**
+   * Whatever the operator added under "Custom settings", as one object.
+   *
+   * The escape hatch, and the one field here no bundled template reads on
+   * purpose: its whole point is that a theme reaches for the value it wants by
+   * name, which a theme written before the key existed cannot do. Keys are lower
+   * snake case, so `site.settings.custom.contact_email` is a plain name in Liquid
+   * rather than a bracket expression.
+   */
+  custom?: Record<string, string>
 }
 
 export interface SiteForTemplates {
@@ -42,11 +52,19 @@ export interface SiteForTemplates {
    *
    * The platform does not format dates for the theme; it hands over the format
    * the site was configured with, and the theme renders. That keeps the theme's
-   * own `datetime` attributes and its text in one place -- and it is why the
-   * bundled theme passes `'UTC'` alongside it, since a Worker runs in UTC and a
-   * laptop does not.
+   * own `datetime` attributes and its text in one place.
    */
   date_format: string
+  /**
+   * The zone `date_format` is rendered in, e.g. `Asia/Shanghai`.
+   *
+   * A site-level setting rather than the theme's, and passed to `| date` as its
+   * second argument. It used to be the string `'UTC'` written into every template:
+   * true of a Worker and false of the operator, who is writing for readers in a
+   * zone they know. Always present, defaulting to `UTC`, so a theme never has to
+   * decide what "no zone" means.
+   */
+  timezone: string
   nav: NavItem[]
   settings: SiteSettingsForTemplates
   /**
@@ -73,7 +91,18 @@ export interface PageForTemplates {
 }
 
 export interface SeoForTemplates {
+  /** The page's own title: what a card and a search result's headline say. */
   title: string
+  /**
+   * `title` with the site's title template applied, for `<title>`.
+   *
+   * Separate from `title` because the two are read by different audiences with
+   * different ideas about branding: a browser tab and a search result benefit from
+   * the site's name, while a social card already carries it in `og:site_name` and
+   * a `BlogPosting` headline should be the headline. A template of `%s` -- the
+   * default -- makes the two identical.
+   */
+  document_title: string
   description?: string
   /** Absolute: a relative Open Graph image is not one. */
   og_image?: string

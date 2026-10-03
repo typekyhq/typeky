@@ -136,7 +136,14 @@ export interface LiquidRuntimeOptions {
   baseUrl?: string
   /** Defaults to `USD`. */
   currency?: string
-  /** Defaults to `en-US`. */
+  /**
+   * Names in dates, and the language `t` reads.
+   *
+   * Defaults to `en-US`, and it is pinned rather than left to the runtime: liquidjs
+   * falls back to the default locale of whatever is running the engine, so a month
+   * name would be the developer's own language in development and English on the
+   * edge -- the same page, rendered two ways.
+   */
   locale?: string
   translations?: Record<string, string>
   /** Wired from `@typeky/core` once `blockToHtml()` exists (M3). */
@@ -225,6 +232,13 @@ export function createLiquidRuntime(options: LiquidRuntimeOptions = {}): LiquidR
     // liquidjs does not escape output on its own: without this, every
     // `{{ value }}` is an XSS hole. Verified against liquidjs 10.29.
     outputEscape: 'escape',
+    // The same locale the platform filters get below, and pinned for the same
+    // reason: liquidjs's own `date` filter falls back to the *runtime's* default
+    // locale when it is not given one. That is `zh-CN` on a developer's machine and
+    // `en-US` on the edge, so a month name would change when the page is deployed
+    // -- and the admin's preview, which formats with `@typeky/core`, would disagree
+    // with the site it claims to show.
+    locale: options.locale ?? 'en-US',
     parseLimit: limits.parseLimit,
     renderLimit: limits.renderLimit,
     memoryLimit: limits.memoryLimit,

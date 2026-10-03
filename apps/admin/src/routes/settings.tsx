@@ -23,11 +23,14 @@ import {
   DEFAULT_ADMIN_DATE_FORMAT,
   DEFAULT_DATE_FORMAT,
   DEFAULT_LANGUAGE,
+  DEFAULT_TIME_ZONE,
   formatDate,
+  isTimeZone,
 } from '@typeky/core'
 import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
-import { ADMIN_LOCALES, LANGUAGE_TAGS } from '@/lib/locales'
+import { ADMIN_DATE_FORMATS, SITE_DATE_FORMATS, withCurrentFormat } from '@/lib/date-formats'
+import { ADMIN_LOCALES, LANGUAGE_TAGS, TIME_ZONES } from '@/lib/locales'
 import { formatLocal, usePanelPreference } from '@/lib/panel-preference'
 import { describeApiError } from '@/lib/session'
 import { PLATFORM_PATHS } from '@typeky/api'
@@ -48,6 +51,11 @@ import { tabOwning, type FormTab } from '@/lib/tabs'
 
 type Status = 'loading' | 'ready' | 'error'
 
+/** The nested settings the form edits as a group. */
+type SeoSettings = NonNullable<SiteWrite['settings']['seo']>
+type RobotsSettings = NonNullable<SeoSettings['robots']>
+type AdminSettings = NonNullable<SiteWrite['settings']['admin']>
+
 const TABS: FormTab[] = [
   {
     id: 'identity',
@@ -59,17 +67,20 @@ const TABS: FormTab[] = [
     'logoMediaId',
     'faviconMediaId',
     'settings.accentColor',
+    // The footer copy lives here rather than in a panel of its own: it is one line
+    // of the site's identity, and a tab with one field in it is a tab nobody opens.
+    'settings.footer',
   ],
   },
   { id: 'paths', labelKey: 'settings.paths', owns: ['settings.reservedPaths'] },
   { id: 'navigation', labelKey: 'settings.nav', owns: ['nav'] },
   { id: 'social', labelKey: 'settings.social', owns: ['settings.socialLinks'] },
   { id: 'seo', labelKey: 'settings.seo', owns: ['settings.seo'] },
-  { id: 'footer', labelKey: 'settings.footer', owns: ['settings.footer'] },
+  { id: 'custom', labelKey: 'settings.custom', owns: ['settings.custom'] },
   {
     id: 'language',
     labelKey: 'settings.language.dates',
-    owns: ['settings.language', 'settings.dateFormat', 'settings.admin'],
+    owns: ['settings.language', 'settings.dateFormat', 'settings.timezone', 'settings.admin'],
   },
   { id: 'licence', labelKey: 'licence.title', owns: [] },
 ]
@@ -84,7 +95,6 @@ const FIRST_TAB = 'identity'
  * a format's output cannot be checked against a date that keeps moving.
  */
 const PREVIEW_INSTANT = '2026-01-05T09:07:03.000Z'
-const PREVIEW_INSTANT_UTC_LABEL = '2026-01-05 09:07 UTC'
 
 const DEFAULT_ACCENT = '#111827'
 
@@ -148,6 +158,38 @@ export function SettingsPage() {
     setDraft((current) => (current === null ? current : change(current)))
   }, [])
 
+  /**
+   * One field of a nested settings object, without the spread the caller would
+   * otherwise have to repeat. The write is a whole document, so each of these puts
+   * back the three levels it touched and nothing else.
+   */
+  const setSeo = useCallback(
+    (change: (seo: SeoSettings) => SeoSettings) => {
+      update((current) => ({
+        ...current,
+        settings: { ...current.settings, seo: change(current.settings.seo ?? {}) },
+      }))
+    },
+    [update],
+  )
+
+  const setRobots = useCallback(
+    (change: (robots: RobotsSettings) => RobotsSettings) => {
+      setSeo((seo) => ({ ...seo, robots: change(seo.robots ?? {}) }))
+    },
+    [setSeo],
+  )
+
+  const setAdmin = useCallback(
+    (change: (admin: AdminSettings) => AdminSettings) => {
+      update((current) => ({
+        ...current,
+        settings: { ...current.settings, admin: change(current.settings.admin ?? {}) },
+      }))
+    },
+    [update],
+  )
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (draft === null) return
@@ -201,13 +243,22 @@ export function SettingsPage() {
   const settings = draft.settings
   const nav = [...draft.nav].sort((left, right) => left.order - right.order)
   const socialLinks = settings.socialLinks ?? []
+  const custom = settings.custom ?? []
 
-  // The site's preview is rendered in UTC, which is what the bundled theme asks
-  // for and what a Worker runs in; the panel's is in the operator's own zone.
+  // The typed value can be half a zone -- `Asia/Shang` on the way to somewhere --
+  // and `Intl` throws on a zone it does not know. The preview falls back to UTC
+  // while that is true instead of taking the page down with it; the field still
+  // shows what was typed, and saving refuses it.
+  const typedTimeZone = settings.timezone ?? ''
+  const siteTimeZone = isTimeZone(typedTimeZone) ? typedTimeZone : DEFAULT_TIME_ZONE
   const sitePreview = formatDate(PREVIEW_INSTANT, settings.dateFormat ?? DEFAULT_DATE_FORMAT, {
-    timeZone: 'UTC',
+    timeZone: siteTimeZone,
   })
   const adminPreview = formatLocal(PREVIEW_INSTANT, settings.admin?.dateFormat ?? DEFAULT_ADMIN_DATE_FORMAT)
+
+  // The instant, said in the zone being previewed, so the two lines agree about
+  // which moment they are describing.
+  const instantLabel = `${formatDate(PREVIEW_INSTANT, '%Y-%m-%d %H:%M', { timeZone: siteTimeZone })} ${siteTimeZone}`
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -314,6 +365,23 @@ export function SettingsPage() {
                   update((current) => ({ ...current, faviconMediaId: value === '' ? null : value }))
                 }
               />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="footer">{t('settings.footer.text')}</Label>
+              <Textarea
+                id="footer"
+                value={settings.footer ?? ''}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, footer: event.target.value },
+                  }))
+                }
+              />
+              <p className="text-sm text-muted-foreground">{t('settings.footer.hint')}</p>
+              {issues['settings.footer'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.footer']}</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -501,56 +569,170 @@ export function SettingsPage() {
               label={t('settings.seo.title')}
               value={settings.seo?.defaultTitle ?? ''}
               error={issues['settings.seo.defaultTitle']}
-              onChange={(value) =>
-                update((current) => ({
-                  ...current,
-                  settings: { ...current.settings, seo: { ...current.settings.seo, defaultTitle: value } },
-                }))
-              }
+              onChange={(value) => setSeo((seo) => ({ ...seo, defaultTitle: value }))}
             />
             <div className="space-y-2">
               <Label htmlFor="seo-description">{t('settings.seo.description')}</Label>
               <Textarea
                 id="seo-description"
                 value={settings.seo?.defaultDescription ?? ''}
-                onChange={(event) =>
-                  update((current) => ({
-                    ...current,
-                    settings: { ...current.settings, seo: { ...current.settings.seo, defaultDescription: event.target.value } },
-                  }))
-                }
+                onChange={(event) => setSeo((seo) => ({ ...seo, defaultDescription: event.target.value }))}
               />
               {issues['settings.seo.defaultDescription'] !== undefined && (
                 <p className="text-sm text-destructive">{issues['settings.seo.defaultDescription']}</p>
               )}
             </div>
+            <Field
+              id="seo-title-template"
+              label={t('settings.seo.titleTemplate')}
+              value={settings.seo?.titleTemplate ?? ''}
+              error={issues['settings.seo.titleTemplate']}
+              hint={t('settings.seo.titleTemplate.hint')}
+              onChange={(value) => setSeo((seo) => ({ ...seo, titleTemplate: value }))}
+            />
+            <MediaField
+              id="seo-og-image"
+              label={t('settings.seo.ogImage')}
+              value={settings.seo?.defaultOgImageMediaId ?? ''}
+              error={issues['settings.seo.defaultOgImageMediaId']}
+              hint={t('settings.seo.ogImage.hint')}
+              onChange={(value) =>
+                setSeo((seo) => ({ ...seo, defaultOgImageMediaId: value === '' ? null : value }))
+              }
+            />
+
+            {/*
+              Robots last, and set apart: everything above is a default a page may
+              override, while this is a statement about the whole site.
+            */}
+            <fieldset className="space-y-3 border-t pt-4">
+              <legend className="text-sm font-medium">{t('settings.seo.robots')}</legend>
+              <p className="text-sm text-muted-foreground">{t('settings.seo.robots.hint')}</p>
+              <Label className="font-normal">
+                <input
+                  type="checkbox"
+                  className="size-4"
+                  checked={settings.seo?.robots?.noindex ?? false}
+                  onChange={(event) =>
+                    setRobots((robots) => ({ ...robots, noindex: event.target.checked }))
+                  }
+                />
+                {t('settings.seo.noindex')}
+              </Label>
+              <div className="space-y-2">
+                <Label htmlFor="seo-disallow">{t('settings.seo.disallow')}</Label>
+                <Textarea
+                  id="seo-disallow"
+                  rows={3}
+                  value={(settings.seo?.robots?.disallowPaths ?? []).join('\n')}
+                  onChange={(event) =>
+                    setRobots((robots) => ({ ...robots, disallowPaths: splitPaths(event.target.value) }))
+                  }
+                />
+                {issues['settings.seo.robots.disallowPaths'] !== undefined && (
+                  <p className="text-sm text-destructive">
+                    {issues['settings.seo.robots.disallowPaths']}
+                  </p>
+                )}
+                <p className="max-w-prose text-xs text-muted-foreground">
+                  {t('settings.seo.disallow.hint')}
+                </p>
+              </div>
+            </fieldset>
           </CardContent>
         </Card>
       </TabsContent>
 
 
-      <TabsContent value="footer" forceMount hidden={tab !== 'footer'}>
+      <TabsContent value="custom" forceMount hidden={tab !== 'custom'}>
         <Card>
           <CardHeader>
-            <CardDescription>{t('settings.footer.hint')}</CardDescription>
+            <CardDescription>{t('settings.custom.hint')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="footer">{t('settings.footer.text')}</Label>
-              <Textarea
-                id="footer"
-                value={settings.footer ?? ''}
-                onChange={(event) =>
-                  update((current) => ({
-                    ...current,
-                    settings: { ...current.settings, footer: event.target.value },
-                  }))
-                }
-              />
-              {issues['settings.footer'] !== undefined && (
-                <p className="text-sm text-destructive">{issues['settings.footer']}</p>
-              )}
-            </div>
+            {custom.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('settings.custom.empty')}</p>
+            )}
+
+            <ol className="space-y-3">
+              {custom.map((entry, index) => (
+                <li key={index} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto] sm:items-start">
+                  <Field
+                    id={`custom-${String(index)}-key`}
+                    label={t('settings.custom.key', { number: index + 1 })}
+                    value={entry.key}
+                    error={issues[`settings.custom.${String(index)}.key`]}
+                    onChange={(value) =>
+                      update((current) => ({
+                        ...current,
+                        settings: {
+                          ...current.settings,
+                          custom: replaceCustom(current.settings.custom ?? [], index, { key: value }),
+                        },
+                      }))
+                    }
+                  />
+                  <Field
+                    id={`custom-${String(index)}-value`}
+                    label={t('settings.custom.value', { number: index + 1 })}
+                    value={entry.value}
+                    error={issues[`settings.custom.${String(index)}.value`]}
+                    onChange={(value) =>
+                      update((current) => ({
+                        ...current,
+                        settings: {
+                          ...current.settings,
+                          custom: replaceCustom(current.settings.custom ?? [], index, { value }),
+                        },
+                      }))
+                    }
+                  />
+                  <div className="flex gap-1 pb-0.5 sm:mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={t('settings.custom.remove', {
+                        key: entry.key || t('settings.custom.unnamed'),
+                      })}
+                      onClick={() =>
+                        update((current) => ({
+                          ...current,
+                          settings: {
+                            ...current.settings,
+                            custom: (current.settings.custom ?? []).filter((_, position) => position !== index),
+                          },
+                        }))
+                      }
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {issues['settings.custom'] !== undefined && (
+              <p className="text-sm text-destructive">{issues['settings.custom']}</p>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                update((current) => ({
+                  ...current,
+                  settings: {
+                    ...current.settings,
+                    custom: [...(current.settings.custom ?? []), { key: '', value: '' }],
+                  },
+                }))
+              }
+            >
+              {t('settings.custom.add')}
+            </Button>
+
+            <p className="max-w-prose text-xs text-muted-foreground">{t('settings.custom.syntax')}</p>
           </CardContent>
         </Card>
       </TabsContent>
@@ -590,10 +772,9 @@ export function SettingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="dateFormat">{t('settings.dateFormat')}</Label>
-              <Input
+              <Select
                 id="dateFormat"
-                value={settings.dateFormat ?? ''}
-                placeholder={DEFAULT_DATE_FORMAT}
+                value={settings.dateFormat ?? DEFAULT_DATE_FORMAT}
                 aria-invalid={issues['settings.dateFormat'] !== undefined}
                 onChange={(event) =>
                   update((current) => ({
@@ -601,14 +782,52 @@ export function SettingsPage() {
                     settings: { ...current.settings, dateFormat: event.target.value },
                   }))
                 }
-              />
+              >
+                {/*
+                  Each option is the format rendered, not its instruction set: the
+                  question an operator is answering is "which of these looks right",
+                  and `%B %-d, %Y` is not an answer to it. The pattern is shown too,
+                  for the one person who does want to read the directives.
+                */}
+                {withCurrentFormat(SITE_DATE_FORMATS, settings.dateFormat ?? '').map((format) => (
+                  <option key={format} value={format}>
+                    {`${formatDate(PREVIEW_INSTANT, format, { timeZone: siteTimeZone })}  ${format}`}
+                  </option>
+                ))}
+              </Select>
               {issues['settings.dateFormat'] !== undefined && (
                 <p className="text-sm text-destructive">{issues['settings.dateFormat']}</p>
               )}
               <p className="text-sm text-muted-foreground">
-                {t('settings.dateFormat.preview', { instant: PREVIEW_INSTANT_UTC_LABEL, formatted: sitePreview })}
+                {t('settings.dateFormat.preview', { instant: instantLabel, formatted: sitePreview })}
               </p>
               <p className="text-sm text-muted-foreground">{t('settings.dateFormat.directives')}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">{t('settings.timezone')}</Label>
+              <Input
+                id="timezone"
+                list="time-zones"
+                value={settings.timezone ?? ''}
+                placeholder={DEFAULT_TIME_ZONE}
+                aria-invalid={issues['settings.timezone'] !== undefined}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, timezone: event.target.value },
+                  }))
+                }
+              />
+              <datalist id="time-zones">
+                {TIME_ZONES.map((zone) => (
+                  <option key={zone} value={zone} />
+                ))}
+              </datalist>
+              {issues['settings.timezone'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.timezone']}</p>
+              )}
+              <p className="text-sm text-muted-foreground">{t('settings.timezone.hint')}</p>
             </div>
 
             <div className="space-y-2">
@@ -616,12 +835,7 @@ export function SettingsPage() {
               <Select
                 id="adminLanguage"
                 value={settings.admin?.language ?? DEFAULT_LANGUAGE}
-                onChange={(event) =>
-                  update((current) => ({
-                    ...current,
-                    settings: { ...current.settings, admin: { ...current.settings.admin, language: event.target.value } },
-                  }))
-                }
+                onChange={(event) => setAdmin((admin) => ({ ...admin, language: event.target.value }))}
               >
                 {ADMIN_LOCALES.map((locale) => (
                   <option key={locale.value} value={locale.value}>
@@ -636,21 +850,23 @@ export function SettingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="adminDateFormat">{t('settings.adminDateFormat')}</Label>
-              <Input
+              <Select
                 id="adminDateFormat"
-                value={settings.admin?.dateFormat ?? ''}
-                placeholder={DEFAULT_ADMIN_DATE_FORMAT}
+                value={settings.admin?.dateFormat ?? DEFAULT_ADMIN_DATE_FORMAT}
                 aria-invalid={issues['settings.admin.dateFormat'] !== undefined}
-                onChange={(event) =>
-                  update((current) => ({
-                    ...current,
-                    settings: {
-                      ...current.settings,
-                      admin: { ...current.settings.admin, dateFormat: event.target.value },
-                    },
-                  }))
-                }
-              />
+                onChange={(event) => setAdmin((admin) => ({ ...admin, dateFormat: event.target.value }))}
+              >
+                {/*
+                  The panel's own clock, so the examples are in the operator's zone
+                  rather than the site's: a timestamp in a list is about when they
+                  did something, not about how a reader will see it.
+                */}
+                {withCurrentFormat(ADMIN_DATE_FORMATS, settings.admin?.dateFormat ?? '').map((format) => (
+                  <option key={format} value={format}>
+                    {`${formatLocal(PREVIEW_INSTANT, format)}  ${format}`}
+                  </option>
+                ))}
+              </Select>
               {issues['settings.admin.dateFormat'] !== undefined && (
                 <p className="text-sm text-destructive">{issues['settings.admin.dateFormat']}</p>
               )}
@@ -791,6 +1007,14 @@ function replaceNav(items: NavItem[], index: number, change: Partial<NavItem>): 
 
 function replaceSocial(items: SocialLink[], index: number, change: Partial<SocialLink>): SocialLink[] {
   return items.map((item, position) => (position === index ? { ...item, ...change } : item))
+}
+
+function replaceCustom(
+  entries: NonNullable<SiteWrite['settings']['custom']>,
+  index: number,
+  change: Partial<{ key: string; value: string }>,
+): NonNullable<SiteWrite['settings']['custom']> {
+  return entries.map((entry, position) => (position === index ? { ...entry, ...change } : entry))
 }
 
 /** Swaps two entries and renumbers them, so order always matches the list. */

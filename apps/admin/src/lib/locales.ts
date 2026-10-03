@@ -29,3 +29,41 @@ export const LANGUAGE_TAGS = [
   'ru',
   'ar',
 ]
+
+/**
+ * Time zones a site is commonly written for, offered as a datalist.
+ *
+ * The same shape as `LANGUAGE_TAGS`, and for the same reason: there are some six
+ * hundred IANA zones. The site's zone is a fact about its readers rather than about
+ * this panel, so the field takes what is typed and the platform validates it
+ * against `Intl` -- a closed list here would be wrong for somebody.
+ */
+export const TIME_ZONES = [
+  'UTC',
+  'Asia/Shanghai',
+  'Asia/Hong_Kong',
+  'Asia/Taipei',
+  'Asia/Tokyo',
+  'Asia/Seoul',
+  'Asia/Singapore',
+  'Asia/Bangkok',
+  'Asia/Jakarta',
+  'Asia/Kolkata',
+  'Asia/Dubai',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Madrid',
+  'Europe/Moscow',
+  'Africa/Cairo',
+  'Africa/Johannesburg',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Sao_Paulo',
+  'America/Mexico_City',
+  'Australia/Sydney',
+  'Australia/Perth',
+  'Pacific/Auckland',
+]

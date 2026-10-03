@@ -13,6 +13,7 @@ import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
 import { buildRenderContext, type ItemInput, type TemplateTerm } from './context'
+import { robotsRules, seoDefaults } from './seo-settings'
 import { renderDocument, renderPageSource, themeRuntimeOptions } from './theme-runtime'
 
 /**
@@ -111,7 +112,7 @@ export async function renderPage(
     site: siteInput(site, dependencies.whiteLabel),
     baseUrl: dependencies.baseUrl,
     resolveMedia,
-    defaults: seoDefaults(site),
+    defaults: seoDefaults(site.settings),
   }
 
   const assembled = await assemble(resolveRoute(pathname), store, common)
@@ -403,15 +404,6 @@ function siteInput(site: Site, whiteLabel: boolean): ContextInput['site'] {
   }
 }
 
-function seoDefaults(site: Site): { title?: string; description?: string } {
-  const seo = site.settings.seo
-
-  return {
-    ...(typeof seo?.defaultTitle === 'string' ? { title: seo.defaultTitle } : {}),
-    ...(typeof seo?.defaultDescription === 'string' ? { description: seo.defaultDescription } : {}),
-  }
-}
-
 /**
  * A media id to a URL this site serves.
  *
@@ -475,7 +467,9 @@ async function renderWith(
   template: string,
   input: ContextInput,
 ): Promise<string> {
-  return renderDocument(runtimeFor(db, site), template, buildRenderContext(input))
+  return renderDocument(runtimeFor(db, site), template, buildRenderContext(input), {
+    noindex: robotsRules(site.settings).noindex,
+  })
 }
 
 async function renderCustom(
@@ -484,7 +478,9 @@ async function renderCustom(
   source: string,
   input: ContextInput,
 ): Promise<string> {
-  return renderPageSource(runtimeFor(db, site), source, buildRenderContext(input))
+  return renderPageSource(runtimeFor(db, site), source, buildRenderContext(input), {
+    noindex: robotsRules(site.settings).noindex,
+  })
 }
 
 /**

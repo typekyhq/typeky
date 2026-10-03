@@ -353,31 +353,65 @@ describe('language and dates', () => {
     const field = await screen.findByLabelText('Site date format')
 
     expect(field).toHaveProperty('value', '%Y年%-m月%-d日')
-    // The preview instant is 2026-01-05T09:07:03Z, rendered in UTC.
-    expect(screen.getByText(/2026年1月5日/)).toBeTruthy()
+    // The preview instant is 2026-01-05T09:07:03Z, rendered in the site's own zone.
+    expect(screen.getByText(/→ 2026年1月5日/)).toBeTruthy()
+  })
+
+  it('keeps a format that is not one of the common ones', async () => {
+    // A `<select>` whose options do not include its value renders the first option
+    // instead and writes that back on the next save, so a format somebody set
+    // before this list existed has to become an option of its own.
+    renderPage(
+      fakeClient({
+        async getSite() {
+          return { ...SITE, settings: { ...SITE.settings, dateFormat: '%d.%m.%Y' } }
+        },
+      }),
+    )
+
+    const field = await screen.findByLabelText('Site date format')
+    const options = [...field.querySelectorAll('option')].map((option) => option.getAttribute('value'))
+
+    expect(field).toHaveProperty('value', '%d.%m.%Y')
+    expect(options).toContain('%d.%m.%Y')
+    expect(options.indexOf('%d.%m.%Y')).toBe(0)
   })
 
   it('shows the default format when the site has not chosen one', async () => {
     renderPage(fakeClient())
 
-    await screen.findByLabelText('Site date format')
+    const field = await screen.findByLabelText('Site date format')
 
-    expect(screen.getByText(/January 5, 2026/)).toBeTruthy()
+    // The field opens on the default rather than on a blank option, and the preview
+    // says what that default produces.
+    expect(field).toHaveProperty('value', '%B %-d, %Y')
+    expect(screen.getByText(/→ January 5, 2026/)).toBeTruthy()
   })
 
-  it('refuses a directive it cannot render, before the network', async () => {
+  it('refuses a time zone it cannot render, before the network', async () => {
     const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
     renderPage(fakeClient({ saveSite }))
 
-    const field = await screen.findByLabelText('Site date format')
-    await userEvent.clear(field)
-    // `%q` renders as "nd" in the theme, which is why it has to be refused here
-    // rather than discovered in a footer.
-    await userEvent.type(field, '%q')
+    const field = await screen.findByLabelText('Site time zone')
+    await userEvent.type(field, 'Mars/Olympus')
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
+    // A zone that does not exist makes `Intl.DateTimeFormat` throw, which at render
+    // time is a 500 on every page -- so it is refused here instead.
     expect(saveSite).not.toHaveBeenCalled()
-    expect(await screen.findByText(/use only the listed directives/)).toBeTruthy()
+    expect(await screen.findByText(/use an IANA time zone/)).toBeTruthy()
+  })
+
+  it('saves the site time zone', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    const field = await screen.findByLabelText('Site time zone')
+    await userEvent.type(field, 'Asia/Shanghai')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({ settings: { timezone: 'Asia/Shanghai' } })
   })
 
   it('saves the site language', async () => {
@@ -400,7 +434,7 @@ describe('language and dates', () => {
     renderPage(fakeClient({ saveSite }))
 
     const field = await screen.findByLabelText('Panel date format')
-    await userEvent.type(field, '%H:%M')
+    await userEvent.selectOptions(field, '%H:%M')
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
@@ -444,7 +478,7 @@ describe('the tabs', () => {
       'Navigation',
       'Social links',
       'SEO defaults',
-      'Footer',
+      'Custom settings',
       'Language and dates',
       'Licence',
     ])
@@ -454,10 +488,10 @@ describe('the tabs', () => {
   it('shows the panel that was asked for and hides the rest', async () => {
     const { container } = renderPage(fakeClient())
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Footer' }))
+    await userEvent.click(await screen.findByRole('tab', { name: 'Custom settings' }))
 
-    expect(screen.getByRole('tab', { name: 'Footer', selected: true })).toBeTruthy()
-    expect(screen.getByRole('tabpanel', { name: 'Footer' }).hasAttribute('hidden')).toBe(false)
+    expect(screen.getByRole('tab', { name: 'Custom settings', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tabpanel', { name: 'Custom settings' }).hasAttribute('hidden')).toBe(false)
 
     // Seven of the eight are hidden rather than removed: the form is the document,
     // and a panel that unmounted would take its fields out of it.
@@ -483,15 +517,14 @@ describe('the tabs', () => {
     // The mistake is made on one panel and the save is pressed on another, which
     // is what splitting a long form up makes ordinary.
     await openTab('Language and dates')
-    const dateFormat = await screen.findByLabelText('Site date format')
-    await userEvent.clear(dateFormat)
-    await userEvent.type(dateFormat, '%q')
+    const timezone = await screen.findByLabelText('Site time zone')
+    await userEvent.type(timezone, 'Mars/Olympus')
     await openTab('Identity')
 
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     expect(await screen.findByRole('tab', { name: 'Language and dates', selected: true })).toBeTruthy()
-    expect(screen.getByText(/use only the listed directives/)).toBeTruthy()
+    expect(screen.getByText(/use an IANA time zone/)).toBeTruthy()
   })
 
   it('leaves the tab alone when the failing field is the one already open', async () => {
@@ -502,5 +535,190 @@ describe('the tabs', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     expect(screen.getByRole('tab', { name: 'Identity', selected: true })).toBeTruthy()
+  })
+})
+
+/**
+ * The footer line, which used to have a panel of its own.
+ *
+ * It is one line about the site's identity, and a tab with one field in it is a tab
+ * nobody opens -- so it sits with the name and the logo now. What is worth pinning
+ * is that it still saves, from where it now is.
+ */
+describe('the footer line', () => {
+  it('saves the footer text from the identity panel', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    const footer = await screen.findByLabelText('Footer text')
+    await userEvent.clear(footer)
+    await userEvent.type(footer, 'Made by hand.')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({ settings: { footer: 'Made by hand.' } })
+  })
+})
+
+/**
+ * Custom settings.
+ *
+ * The escape hatch: keys the platform has never heard of, for a template to read.
+ * Three things matter and each has a test -- that the list survives a save, that a
+ * key is a name a template can actually reach, and that two of the same are refused
+ * rather than silently collapsing into one.
+ */
+describe('custom settings', () => {
+  function withCustom(custom: { key: string; value: string }[]) {
+    return { ...SITE, settings: { ...SITE.settings, custom } }
+  }
+
+  it('shows what the server has', async () => {
+    renderPage(
+      fakeClient({
+        async getSite() {
+          return withCustom([{ key: 'contact_email', value: 'hi@example.com' }])
+        },
+      }),
+    )
+
+    expect(await screen.findByLabelText('Key 1')).toHaveProperty('value', 'contact_email')
+    expect(screen.getByLabelText('Value 1')).toHaveProperty('value', 'hi@example.com')
+  })
+
+  it('saves a key that was just added', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('Custom settings')
+    await userEvent.click(screen.getByRole('button', { name: 'Add a setting' }))
+    await userEvent.type(screen.getByLabelText('Key 1'), 'contact_email')
+    await userEvent.type(screen.getByLabelText('Value 1'), 'hi@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({
+      settings: { custom: [{ key: 'contact_email', value: 'hi@example.com' }] },
+    })
+  })
+
+  it('removes a key', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(
+      fakeClient({
+        saveSite,
+        async getSite() {
+          return withCustom([{ key: 'phone', value: '+1 555 0100' }])
+        },
+      }),
+    )
+
+    await openTab('Custom settings')
+    await userEvent.click(screen.getByRole('button', { name: 'Remove phone' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]?.settings.custom).toEqual([])
+  })
+
+  it('refuses a key a template could not reach', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('Custom settings')
+    await userEvent.click(screen.getByRole('button', { name: 'Add a setting' }))
+    // A dotted path in Liquid is split on dots: a key with a capital or a space in
+    // it would only be reachable by a bracket expression nobody writes.
+    await userEvent.type(screen.getByLabelText('Key 1'), 'Contact Email')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(saveSite).not.toHaveBeenCalled()
+    // The exact message, not a fragment: the note under the list repeats the same
+    // words, and a looser match would find that one instead.
+    expect(
+      await screen.findByText('lower-case letters, digits and underscores, starting with a letter'),
+    ).toBeTruthy()
+  })
+
+  it('refuses two keys with the same name', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('Custom settings')
+    await userEvent.click(screen.getByRole('button', { name: 'Add a setting' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add a setting' }))
+    await userEvent.type(screen.getByLabelText('Key 1'), 'phone')
+    await userEvent.type(screen.getByLabelText('Key 2'), 'phone')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(saveSite).not.toHaveBeenCalled()
+    expect(await screen.findByText('keys must be unique')).toBeTruthy()
+  })
+})
+
+/**
+ * The SEO defaults.
+ *
+ * Two of these are new and both are about what a stranger sees: the picture a link
+ * shows when it is shared, and the site's name in a search result. The robots
+ * switch is the one that matters most -- it is what keeps a site under construction
+ * out of an index -- so it is tested through a save rather than as a field.
+ */
+describe('the seo defaults', () => {
+  it('saves a title template', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('SEO defaults')
+    await userEvent.type(await screen.findByLabelText('Title template'), '%s · Demo')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({
+      settings: { seo: { titleTemplate: '%s · Demo' } },
+    })
+  })
+
+  it('refuses a title template with no place for the title', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('SEO defaults')
+    await userEvent.type(await screen.findByLabelText('Title template'), 'Demo')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(saveSite).not.toHaveBeenCalled()
+    expect(await screen.findByText(/include %s/)).toBeTruthy()
+  })
+
+  it('saves the robots switch and the paths to keep out', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('SEO defaults')
+    await userEvent.click(await screen.findByLabelText('Ask search engines not to index this site'))
+    const disallow = screen.getByLabelText('Paths to keep out')
+    await userEvent.click(disallow)
+    await userEvent.paste('/search\n/cart')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({
+      settings: { seo: { robots: { noindex: true, disallowPaths: ['/search', '/cart'] } } },
+    })
+  })
+
+  it('keeps the seo defaults it already had', async () => {
+    // The write is a whole document: adding a robots rule must not drop the title
+    // that was already there.
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('SEO defaults')
+    await userEvent.click(await screen.findByLabelText('Ask search engines not to index this site'))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]?.settings.seo?.defaultTitle).toBe('Typeky Demo')
   })
 })

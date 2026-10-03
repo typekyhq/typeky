@@ -12,10 +12,12 @@
  *     implemented on both sides from the same list, and a test renders every
  *     directive through Liquid and through `formatDate` to prove they match.
  *
- * Names are English and digits are ASCII on both sides. Liquid's `date` filter
- * has no locale, so a format string cannot mean one thing in the admin and
- * another on the site -- and a site's month names becoming locale-aware is a
- * change to the theme contract rather than a change to a setting.
+ * Names are English and digits are ASCII on both sides, and that is enforced rather
+ * than assumed: the theme's runtime is pinned to `en-US` (see `LiquidRuntimeOptions`),
+ * because liquidjs otherwise falls back to the locale of whatever is running it. A
+ * format string that means one thing in the admin and another on the site would make
+ * the preview a lie -- and making month names follow the site's language is a change
+ * to the theme contract, not a change to a setting.
  */
 
 /** Every directive a configured format may use, longest first where they overlap. */
@@ -43,6 +45,14 @@ export const DEFAULT_DATE_FORMAT = '%B %-d, %Y'
 
 /** What a timestamp looks like in the admin when nobody has chosen. */
 export const DEFAULT_ADMIN_DATE_FORMAT = '%Y-%m-%d %H:%M'
+
+/**
+ * The zone a site renders in when nobody has chosen one.
+ *
+ * `UTC` because that is what a Worker runs in: the default is then what a deployed
+ * site shows rather than what the machine developing it happens to be set to.
+ */
+export const DEFAULT_TIME_ZONE = 'UTC'
 
 /** Long enough for a date and a time, short enough to stay a setting. */
 const MAX_LENGTH = 60
@@ -73,6 +83,45 @@ export const DATE_FORMAT_PATTERN = new RegExp(
  */
 export function isDateFormat(value: string): boolean {
   return value.length > 0 && value.length <= MAX_LENGTH && DATE_FORMAT_PATTERN.test(value)
+}
+
+/**
+ * The shape a named time zone has.
+ *
+ * `UTC`, `Asia/Shanghai`, `America/Argentina/Buenos_Aires`. A shape rather than a
+ * list, because the list is `Intl`'s and it changes with the runtime -- what this
+ * rejects is the thing that is not a zone name at all. An offset such as `+08:00`
+ * is the one worth naming: `Intl` accepts it, and Liquid's own `date` filter does
+ * not, so the preview and the site would disagree about the same instant.
+ */
+export const TIME_ZONE_PATTERN = /^[A-Za-z][A-Za-z0-9_+-]*(?:\/[A-Za-z0-9_+-]+)*$/
+
+/**
+ * Whether a string is a time zone this runtime can render in.
+ *
+ * Asked of `Intl` rather than checked against a list: a zone that does not exist
+ * makes `Intl.DateTimeFormat` throw, and a throw at render time is a 500 on every
+ * page. The refusal has to happen when the value is saved, which is what this is
+ * for.
+ *
+ * Answers are remembered, because the render path asks the same question about the
+ * same zone on every page: the first call builds a formatter, and after that it is
+ * a lookup. Nothing goes in the set that has not been proven, so a bad value is
+ * simply refused again.
+ */
+const KNOWN_TIME_ZONES = new Set<string>()
+
+export function isTimeZone(value: string): boolean {
+  if (!TIME_ZONE_PATTERN.test(value)) return false
+  if (KNOWN_TIME_ZONES.has(value)) return true
+
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value })
+    KNOWN_TIME_ZONES.add(value)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export interface FormatDateOptions {

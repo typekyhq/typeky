@@ -1,4 +1,10 @@
-import { blockToHtml, injectAttribution, type Block, type RenderContext } from '@typeky/core'
+import {
+  blockToHtml,
+  injectAttribution,
+  injectRobotsMeta,
+  type Block,
+  type RenderContext,
+} from '@typeky/core'
 import type { LiquidRuntime, LiquidRuntimeOptions } from '@typeky/theme-kit'
 import { ASSET_VERSIONS } from '@typeky/theme-default'
 
@@ -31,6 +37,18 @@ export function themeRuntimeOptions(
 }
 
 /**
+ * What a render needs to know that is not the page's data.
+ *
+ * `noindex` is here rather than in the context because no template reads it: the
+ * platform puts the tag in itself, for the same reason it injects the attribution.
+ * A theme is free to print its own -- `injectRobotsMeta` leaves a page that already
+ * has one alone -- but it is not what keeps the promise.
+ */
+export interface RenderOptions {
+  noindex?: boolean
+}
+
+/**
  * Renders a template into the document that actually goes out.
  *
  * The second half of the same story as `themeRuntimeOptions`, and the same lesson
@@ -45,10 +63,11 @@ export async function renderDocument(
   runtime: LiquidRuntime,
   template: string,
   context: RenderContext,
+  options: RenderOptions = {},
 ): Promise<string> {
   const html = await runtime.renderFile(template, context)
 
-  return injectAttribution(html, context.site.attribution)
+  return injectRobotsMeta(injectAttribution(html, context.site.attribution), options.noindex)
 }
 
 /**
@@ -64,8 +83,9 @@ export async function renderPageSource(
   runtime: LiquidRuntime,
   source: string,
   context: RenderContext,
+  options: RenderOptions = {},
 ): Promise<string> {
   const html = await runtime.render(source, context)
 
-  return injectAttribution(html, context.site.attribution)
+  return injectRobotsMeta(injectAttribution(html, context.site.attribution), options.noindex)
 }

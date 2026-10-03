@@ -14,7 +14,7 @@
 
   <p class="meta">
     {% if post.published_at %}
-      <time datetime="{{ post.published_at }}">{{ post.published_at | date: site.date_format, 'UTC' }}</time>
+      <time datetime="{{ post.published_at }}">{{ post.published_at | date: site.date_format, site.timezone }}</time>
     {% endif %}
     {% for term in post.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
   </p>

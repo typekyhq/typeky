@@ -1,4 +1,4 @@
-import { DATE_FORMAT_PATTERN } from '@typeky/core'
+import { DATE_FORMAT_PATTERN, TIME_ZONE_PATTERN, isTimeZone } from '@typeky/core'
 import * as z from 'zod/mini'
 
 /**
@@ -67,21 +67,130 @@ export const adminSettingsSchema = z.object({
 
 export type AdminSettings = z.infer<typeof adminSettingsSchema>
 
+/**
+ * A time zone, checked against what the runtime can actually render.
+ *
+ * Two checks rather than one, and both are needed: the pattern refuses an offset
+ * like `+08:00`, which `Intl` accepts and Liquid's `date` filter does not, while
+ * `isTimeZone` refuses a name that looks right and does not exist. A bad zone that
+ * got through would not be a bad date -- `Intl.DateTimeFormat` throws, and every
+ * page becomes a 500.
+ */
+const TIME_ZONE = z
+  .string()
+  .check(
+    z.minLength(1),
+    z.maxLength(64),
+    z.regex(TIME_ZONE_PATTERN, 'use an IANA time zone, for example Asia/Shanghai'),
+    z.refine(isTimeZone, 'use an IANA time zone, for example Asia/Shanghai'),
+  )
+
+/**
+ * A key an operator can reach from a template.
+ *
+ * Lower snake case so `site.settings.custom.contact_email` parses as one name in
+ * Liquid: a dotted path is split on dots, and a key with a dot, a space or a
+ * capital in it would only be reachable by a bracket expression nobody writes.
+ */
+const CUSTOM_KEY = z
+  .string()
+  .check(
+    z.minLength(1),
+    z.maxLength(40),
+    z.regex(
+      /^[a-z][a-z0-9_]*$/,
+      'lower-case letters, digits and underscores, starting with a letter',
+    ),
+  )
+
+/**
+ * One key and its value.
+ *
+ * A list rather than an object, because an operator edits a list: an object has no
+ * order, and a form that reorders itself between saves is a form that loses things.
+ */
+export const customSettingSchema = z.object({
+  key: CUSTOM_KEY,
+  value: z.string().check(z.maxLength(500)),
+})
+
+export type CustomSetting = z.infer<typeof customSettingSchema>
+
+/**
+ * Robots rules the operator adds on top of the platform's own.
+ *
+ * The platform's rules are not here because they are not preferences: `/admin` and
+ * `/api/` are disallowed whether or not anybody thinks about it. This is the other
+ * half -- "do not index the site yet" and "keep this path out" -- which is a
+ * judgment only the operator can make.
+ */
+export const robotsSettingsSchema = z.object({
+  /** Discourage every crawler: `noindex` on each page, `Disallow: /` in robots.txt. */
+  noindex: z.optional(z.boolean()),
+  /** Extra `Disallow:` lines, one path each. */
+  disallowPaths: z.optional(z.array(z.string().check(z.maxLength(200))).check(z.maxLength(100))),
+})
+
+export type RobotsSettings = z.infer<typeof robotsSettingsSchema>
+
+export const seoDefaultsSchema = z.object({
+  defaultTitle: z.optional(z.string().check(z.maxLength(120))),
+  defaultDescription: z.optional(z.string().check(z.maxLength(300))),
+  /**
+   * The share image a page without one of its own uses.
+   *
+   * A media id, like every other image the site references: a theme is given a URL
+   * to print rather than an id it would have to resolve.
+   */
+  defaultOgImageMediaId: z.optional(z.nullable(z.string())),
+  /**
+   * How the site's name joins a page title, e.g. `%s · Example`.
+   *
+   * Required to contain `%s` when it is set: a template without it is not a
+   * template, it is a site name that replaced every title.
+   */
+  titleTemplate: z.optional(
+    z
+      .string()
+      .check(
+        z.maxLength(120),
+        z.refine((value) => value.includes('%s'), 'include %s where the page title goes'),
+      ),
+  ),
+  robots: z.optional(robotsSettingsSchema),
+})
+
+export type SeoDefaults = z.infer<typeof seoDefaultsSchema>
+
 export const siteSettingsSchema = z.object({
   /** Six hex digits, which is the one shape a colour input produces. */
   accentColor: z.optional(z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/))),
   socialLinks: z.optional(z.array(socialLinkSchema).check(z.maxLength(10))),
-  seo: z.optional(
-    z.object({
-      defaultTitle: z.optional(z.string().check(z.maxLength(120))),
-      defaultDescription: z.optional(z.string().check(z.maxLength(300))),
-    }),
-  ),
+  seo: z.optional(seoDefaultsSchema),
   footer: z.optional(z.string().check(z.maxLength(500))),
   /** The language the site is written in, for `<html lang>`. */
   language: z.optional(LANGUAGE),
   /** How the site writes a date. */
   dateFormat: z.optional(DATE_FORMAT),
+  /** The zone those dates are written in. Defaults to `UTC` when unset. */
+  timezone: z.optional(TIME_ZONE),
+  /**
+   * Keys and values the operator invents, for their templates to read.
+   *
+   * The list is what makes the theme contract finite: without it, every value a
+   * theme wants that the platform did not think of is a template edited by hand, or
+   * a new field in this schema. Duplicates are refused here because the object the
+   * template sees would silently keep only one of them.
+   */
+  custom: z.optional(
+    z.array(customSettingSchema).check(
+      z.maxLength(30),
+      z.refine(
+        (entries) => new Set(entries.map((entry) => entry.key)).size === entries.length,
+        'keys must be unique',
+      ),
+    ),
+  ),
   /**
    * Paths the operator wants kept free for something else, one entry each.
    *

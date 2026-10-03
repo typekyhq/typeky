@@ -161,17 +161,34 @@ export async function renderSitemap(store: Repositories, origin: string): Promis
  * The admin and the API are disallowed as well as unlinked: they are behind a
  * session, so a crawler reaching one gets a redirect to a sign-in form, and an
  * index full of those is noise nobody asked for.
+ *
+ * The operator's own rules are added on top. `noindex` replaces the lot with one
+ * line, because a site that is not ready to be found should not be found through a
+ * path somebody forgot to list -- and per-path rules against a `Disallow: /` would
+ * be noise that reads like they still matter.
  */
-export function renderRobots(origin: string): string {
+export function renderRobots(origin: string, options: RobotsOptions = {}): string {
   const base = origin.replace(/\/+$/, '')
 
-  return [
-    'User-agent: *',
-    'Allow: /',
-    'Disallow: /admin',
-    'Disallow: /api/',
-    '',
-    `Sitemap: ${base}/sitemap.xml`,
-    '',
-  ].join('\n')
+  const lines = ['User-agent: *']
+
+  if (options.noindex === true) {
+    lines.push('Disallow: /')
+  } else {
+    lines.push('Allow: /')
+    lines.push('Disallow: /admin')
+    lines.push('Disallow: /api/')
+    for (const path of options.disallowPaths ?? []) lines.push(`Disallow: ${path}`)
+  }
+
+  lines.push('', `Sitemap: ${base}/sitemap.xml`, '')
+
+  return lines.join('\n')
+}
+
+export interface RobotsOptions {
+  /** Discourage every crawler, site-wide. */
+  noindex?: boolean
+  /** Extra paths to keep out, one `Disallow:` line each. */
+  disallowPaths?: string[]
 }

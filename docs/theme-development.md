@@ -97,10 +97,12 @@ there are no functions to call and nothing to fetch.
 | `site.favicon_url` | string? | The browser tab icon, already a URL. Set it in the site settings |
 | `site.language` | string | BCP 47, for the `lang` attribute |
 | `site.date_format` | string | A strftime format for `\| date`. The site's own setting |
+| `site.timezone` | string | An IANA zone for `\| date`, for example `Asia/Shanghai`. Always present; `UTC` until the operator chooses |
 | `site.nav` | array | `{ label, href }`, already in the order the operator set |
 | `site.settings.footer` | string? | |
 | `site.settings.social_links` | array? | `{ label, href }` |
 | `site.settings.cookie_notice` | string? | Present only when one is configured |
+| `site.settings.custom` | object? | The operator's own keys, so `site.settings.custom.contact_email`. Absent when there are none |
 
 ### `page`
 
@@ -139,9 +141,20 @@ all happened — a template displays, it does not calculate.
 | Field | Type | Notes |
 | :---- | :---- | :---- |
 | `seo.title` | string | The override, then the content title, then the site default |
+| `seo.document_title` | string | `seo.title` with the site's title template applied, for `<title>`. Identical to `seo.title` until one is set |
 | `seo.description` | string? | The override, then the excerpt, then the site default |
-| `seo.og_image` | string? | A URL, resolved from the media id |
+| `seo.og_image` | string? | A URL, resolved from the media id — the page's own, then the site's default |
 | `seo.json_ld` | any? | |
+
+Two of these are deliberately different from each other. A browser tab and a search
+result are better with the site's name in them; a social card already carries it in
+`og:site_name`, and a `BlogPosting` headline should be the headline — so the title
+template reaches `<title>` and nothing else.
+
+The platform also writes `<meta name="robots" content="noindex, nofollow">` into
+every page itself when the operator has asked for the site not to be indexed. It is
+injected rather than left to a template, so a theme does not need to emit it — and
+`injectRobotsMeta` leaves a page that already has one alone.
 
 ### `preview`
 
@@ -173,25 +186,29 @@ go looking in the wrong place.
 
 ### Dates
 
-Liquid's own `date` filter is available, and the format it takes is the site's to
-choose: `site.date_format` is the string the operator typed into the settings.
-The bundled theme writes it this way —
+Liquid's own `date` filter is available, and both the format and the zone are the
+site's to choose: `site.date_format` and `site.timezone` are settings. The bundled
+theme writes it this way —
 
 ```liquid
-<time datetime="{{ content.published_at }}">{{ content.published_at | date: site.date_format, 'UTC' }}</time>
+<time datetime="{{ content.published_at }}">{{ content.published_at | date: site.date_format, site.timezone }}</time>
 ```
 
 — and the second argument is worth copying. The filter formats in the runtime's
 own time zone when it is not given one: a Cloudflare Worker runs in UTC and your
 laptop does not, so a date near midnight renders as one day locally and another
-after a deploy. Passing `'UTC'` makes the two agree, and keeps the `datetime`
-attribute's ISO value and the text beside it talking about the same day.
+after a deploy. Passing `site.timezone` makes the two agree, and keeps the
+`datetime` attribute's ISO value and the text beside it talking about the same day.
+It is always present — `UTC` until the operator chooses otherwise — so there is no
+case where passing it is wrong.
 
 The operator's format string is checked before it is saved, against a fixed list
 of directives (`%Y %m %d %B %b %A %a %H %I %M %S %p`, plus `%-m` and `%-d` for no
 leading zero). A directive outside that list is refused rather than rendered —
 which matters because Liquid renders an unknown one as `"nd"` rather than
-failing, and a plausible-looking date is worse than a visible error.
+failing, and a plausible-looking date is worse than a visible error. The zone is
+checked the same way, against `Intl`: a zone that does not exist makes the filter
+throw, which would be every page with a date on it rather than one wrong date.
 
 ## Four rules that will bite you
 

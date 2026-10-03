@@ -479,3 +479,106 @@ describe('a site that is not set up', () => {
     expect(result.html).toContain('no database configured')
   })
 })
+
+describe('the settings the theme reads', () => {
+  const home = page({ title: 'Welcome', slug: 'home', isHome: true })
+
+  function siteWith(settings: Record<string, unknown>): Site {
+    return { ...SITE, settings: { ...SITE.settings, ...settings } } as unknown as Site
+  }
+
+  it('writes the page title through the site title template', async () => {
+    const { render } = setUp({
+      site: siteWith({ seo: { titleTemplate: '%s · Sample Site' } }),
+      pages: [home],
+    })
+
+    const result = await render('/')
+
+    expect(result.html).toContain('<title>Welcome · Sample Site</title>')
+    // The share card keeps the plain title: `og:site_name` already carries the
+    // brand, so branding this too would say it twice.
+    expect(result.html).toContain('<meta property="og:title" content="Welcome">')
+  })
+
+  it('uses the site share image when a page has none of its own', async () => {
+    const { render } = setUp({
+      site: siteWith({ seo: { defaultOgImageMediaId: 'og_1' } }),
+      pages: [home],
+    })
+
+    const result = await render('/')
+
+    expect(result.html).toContain(
+      '<meta property="og:image" content="https://example.com/media/og_1">',
+    )
+  })
+
+  it('hands a custom setting to a template', async () => {
+    // A page that is its own document, so the value is read by a template this test
+    // wrote rather than by one that happens to print it.
+    const { render } = setUp({
+      site: siteWith({ custom: [{ key: 'contact_email', value: 'hi@example.com' }] }),
+      pages: [
+        page({
+          title: 'Contact',
+          slug: 'contact',
+          useLayout: false,
+          customSource:
+            '<html><head><title>Contact</title></head><body>{{ site.settings.custom.contact_email }}</body></html>',
+        }),
+      ],
+    })
+
+    const result = await render('/contact')
+
+    expect(result.html).toContain('hi@example.com')
+  })
+
+  it('renders a date in the zone the site chose', async () => {
+    const { render } = setUp({
+      site: siteWith({ timezone: 'Asia/Shanghai' }),
+      // 20:00 UTC is the next day in Shanghai, which is the whole point of the
+      // setting: one instant, two different days depending on the reader.
+      posts: [post({ title: 'Late', slug: 'late', publishedAt: new Date('2026-01-01T20:00:00.000Z') })],
+    })
+
+    const result = await render('/posts/late')
+
+    expect(result.html).toContain('January 2, 2026')
+    // The machine-readable value stays the instant, so the text beside it and the
+    // attribute still agree about which posting this is.
+    expect(result.html).toContain('2026-01-01T20:00:00.000Z')
+  })
+
+  it('falls back to UTC when the stored zone cannot be rendered', async () => {
+    // Nothing in this code base writes such a value -- the schema refuses it -- but
+    // a row edited by hand must not become a 500 on every post.
+    const { render } = setUp({
+      site: siteWith({ timezone: 'Mars/Olympus' }),
+      posts: [post({ title: 'Late', slug: 'late', publishedAt: new Date('2026-01-01T20:00:00.000Z') })],
+    })
+
+    const result = await render('/posts/late')
+
+    expect(result.status).toBe(200)
+    expect(result.html).toContain('January 1, 2026')
+  })
+
+  it('asks crawlers not to index a site that has said so', async () => {
+    const { render } = setUp({
+      site: siteWith({ seo: { robots: { noindex: true } } }),
+      pages: [home],
+    })
+
+    const result = await render('/')
+
+    expect(result.html).toContain('<meta name="robots" content="noindex, nofollow">')
+  })
+
+  it('asks nothing of a site that has not', async () => {
+    const { render } = setUp({ pages: [home] })
+
+    expect((await render('/')).html).not.toContain('name="robots"')
+  })
+})

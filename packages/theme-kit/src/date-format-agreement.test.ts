@@ -12,8 +12,8 @@ import { createLiquidRuntime } from './runtime'
  *
  * Every directive is rendered through both and compared, so adding one to the
  * list without teaching both sides about it fails here rather than in somebody's
- * footer. UTC is passed to Liquid because that is what `formatDate` defaults to
- * and what the bundled theme asks for.
+ * footer. UTC is the default on both sides; a site's own zone is a setting, and
+ * the cases below check that the two agree away from UTC as well.
  */
 
 const ISO = '2026-10-02T15:04:05.000Z'
@@ -72,6 +72,19 @@ describe('the two date formatters', () => {
     expect(formatDate(undefined, '%Y')).toBe('')
   })
 
+  it('renders month names in the locale it was given, English by default', async () => {
+    // liquidjs falls back to the locale of whatever is running the engine when it is
+    // not told one, so an unpinned runtime renders `一月` in development and
+    // `January` on the edge -- the same page, two different ways. The default is
+    // pinned because the admin's preview (and `formatDate`) assume English, and the
+    // option is what a deliberate decision to follow the site's language would use.
+    const english = createLiquidRuntime()
+    const chinese = createLiquidRuntime({ locale: 'zh-CN' })
+
+    expect(await english.render("{{ t | date: '%B', 'UTC' }}", { t: ISO })).toBe('October')
+    expect(await chinese.render("{{ t | date: '%B', 'UTC' }}", { t: ISO })).toBe('十月')
+  })
+
   it('defaults to UTC rather than to the machine it runs on', async () => {
     // The reason the theme passes a zone explicitly: a Worker runs in UTC and a
     // laptop does not, so a default of "local" is a date that changes when it is
@@ -87,4 +100,21 @@ describe('the two date formatters', () => {
       expect(await render("{{ t | date: '%H', 'UTC' }}", { t: ISO })).toBe('15')
     }
   })
+
+  it.each(['Asia/Shanghai', 'America/New_York', 'Europe/London', 'Pacific/Auckland'])(
+    'agree in %s, which is now the site\'s own setting',
+    async (zone) => {
+      // The zone used to be the string `'UTC'` written into the theme; it is a
+      // setting now, so the two formatters have to agree somewhere else -- or the
+      // preview is honest about a different zone than the site renders in, which
+      // is the failure this file exists for.
+      const { render } = createLiquidRuntime()
+
+      for (const format of ['%Y-%m-%d %H:%M', '%B %-d, %Y', '%H:%M', '%a %b %-d %Y']) {
+        const liquid = await render(`{{ t | date: '${format}', '${zone}' }}`, { t: ISO })
+
+        expect(formatDate(ISO, format, { timeZone: zone })).toBe(liquid)
+      }
+    },
+  )
 })

@@ -28,6 +28,18 @@ const SAMPLE_SITE: SiteInput = {
     footer: 'Built with Typeky.',
     socialLinks: [{ label: 'GitHub', href: 'https://example.com/github' }],
     cookieNotice: 'This site uses no cookies.',
+    timezone: 'Asia/Shanghai',
+    // Declared so `site.settings.custom.<key>` is a field of the context, and so the
+    // reference lists one name an author can copy. The preview shows the key a
+    // theme would actually reach for rather than a placeholder.
+    custom: [{ key: 'contact_email', value: 'hello@example.com' }],
+    seo: {
+      defaultTitle: 'Sample Site',
+      // Declared for the same reason as the logo: with a resolver, `seo.og_image`
+      // is a field of the context even though the preview renders no image.
+      defaultOgImageMediaId: 'sample-og',
+      titleTemplate: '%s · Sample Site',
+    },
   },
   nav: [
     { label: 'Home', href: '/', order: 0 },

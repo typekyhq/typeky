@@ -1,5 +1,6 @@
-import { attributionFor, DEFAULT_DATE_FORMAT, DEFAULT_LANGUAGE } from '@typeky/core'
+import { attributionFor, DEFAULT_DATE_FORMAT, DEFAULT_LANGUAGE, DEFAULT_TIME_ZONE, isTimeZone } from '@typeky/core'
 import { structuredData } from './seo'
+import { seoImageId, seoTitleTemplate } from './seo-settings'
 import type { Block, PageKind, Pagination, RenderContext } from '@typeky/core'
 
 /**
@@ -141,6 +142,47 @@ export function contentPath(kind: PageKind, slug: string): string {
   }
 }
 
+/** A named zone this runtime can render, or UTC when the row does not hold one. */
+function usableTimeZone(value: unknown): string {
+  return typeof value === 'string' && isTimeZone(value) ? value : DEFAULT_TIME_ZONE
+}
+
+/** The page title as a browser tab and a search result show it. */
+function documentTitle(rawTitle: string, template: string | undefined, siteName: string): string {
+  // A page that has nothing to call itself still needs a name in the tab, and the
+  // site's own is the only true thing to put there. It is also what keeps a
+  // template like `%s · Example` from rendering as a bare " · Example".
+  if (rawTitle === '') return siteName
+
+  // `%s` is the whole directive language, and a template without one was refused
+  // when it was saved -- so the replace is the last thing that could go wrong here.
+  return (template ?? '%s').replaceAll('%s', rawTitle)
+}
+
+/**
+ * The operator's custom settings as one object, or nothing.
+ *
+ * A list on the way in because that is what an operator edits, an object on the way
+ * out because that is what a template reads. Absent when there are none, so
+ * `{% if site.settings.custom %}` is about whether the site has any rather than
+ * about whether Liquid treats an empty object as truthy.
+ */
+function customSettings(value: unknown): Record<string, string> | undefined {
+  if (!Array.isArray(value)) return undefined
+
+  const entries = value.filter(
+    (entry): entry is { key: string; value: string } =>
+      typeof entry === 'object' &&
+      entry !== null &&
+      typeof (entry as Record<string, unknown>).key === 'string' &&
+      typeof (entry as Record<string, unknown>).value === 'string',
+  )
+
+  if (entries.length === 0) return undefined
+
+  return Object.fromEntries(entries.map((entry) => [entry.key, entry.value]))
+}
+
 export function buildRenderContext(input: BuildContextInput): RenderContext {
   const { site, item, baseUrl, defaults, resolveMedia } = input
 
@@ -162,7 +204,12 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
   const title =
     (typeof item.seo.title === 'string' ? item.seo.title : undefined) ?? item.title ?? defaults?.title ?? ''
 
-  const ogImage = resolve(typeof item.seo.ogImageMediaId === 'string' ? item.seo.ogImageMediaId : undefined)
+  // The page's own share image, and then the site's: a page that has not thought
+  // about how it looks when it is linked still had somebody set a default, and a
+  // card with an image is one people click.
+  const ogImage =
+    resolve(typeof item.seo.ogImageMediaId === 'string' ? item.seo.ogImageMediaId : undefined) ??
+    resolve(seoImageId(site.settings))
   const canonical =
     typeof item.seo.canonical === 'string' ? item.seo.canonical : absolute(baseUrl, url)
 
@@ -183,6 +230,8 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
     ? (site.settings.socialLinks as { label: string; href: string }[])
     : undefined
 
+  const custom = customSettings(site.settings.custom)
+
   return {
     site: {
       name: site.name,
@@ -194,6 +243,12 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       language: typeof site.settings.language === 'string' ? site.settings.language : DEFAULT_LANGUAGE,
       date_format:
         typeof site.settings.dateFormat === 'string' ? site.settings.dateFormat : DEFAULT_DATE_FORMAT,
+      // A zone the runtime cannot render would throw on every page that prints a
+      // date, and Liquid's `date` filter throws rather than falling back. The
+      // setting is validated when it is saved, so this is the floor under a row
+      // somebody edited by hand: an unusable zone renders in UTC rather than
+      // taking the site down.
+      timezone: usableTimeZone(site.settings.timezone),
       nav: [...site.nav]
         .sort((left, right) => left.order - right.order)
         .map((entry) => ({ label: entry.label, href: entry.href })),
@@ -201,6 +256,7 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
         ...(typeof site.settings.footer === 'string' ? { footer: site.settings.footer } : {}),
         ...(socialLinks === undefined ? {} : { social_links: socialLinks }),
         ...(typeof site.settings.cookieNotice === 'string' ? { cookie_notice: site.settings.cookieNotice } : {}),
+        ...(custom === undefined ? {} : { custom }),
       },
       // Absent, not empty, when a licence removes it -- so a template's `{% if %}`
       // is the whole check and there is no half-rendered badge to get wrong.
@@ -223,6 +279,7 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
 
     seo: {
       title,
+      document_title: documentTitle(title, seoTitleTemplate(site.settings), site.name),
       ...(description === undefined ? {} : { description }),
       ...(ogImage === undefined ? {} : { og_image: ogImage }),
       ...(jsonLd === undefined ? {} : { json_ld: jsonLd }),

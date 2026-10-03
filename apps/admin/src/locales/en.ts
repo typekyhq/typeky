@@ -124,7 +124,7 @@ export const en: Locale = {
   'theme.subtitle.all': 'Every template is the one the {theme} theme ships.',
   'theme.subtitle.customised': '{customised} of {total} templates have been customised.',
   'settings.language.dates.hint':
-    'The site and this panel are written in their own language, and write dates their own way.',
+    'The site and this panel are written in their own language, and write dates in their own zone.',
 
   // Lists: the toolbar above every collection.
   'list.filter.all': 'All',
@@ -325,7 +325,30 @@ export const en: Locale = {
   'settings.seo.hint': 'Used when a page does not set its own.',
   'settings.seo.title': 'Default title',
   'settings.seo.description': 'Default description',
-  'settings.footer': 'Footer',
+  'settings.seo.titleTemplate': 'Title template',
+  'settings.seo.titleTemplate.hint':
+    'How a page title is written in a browser tab, with %s where the title goes — for example %s · Your site. The share cards and the structured data keep the plain title.',
+  'settings.seo.ogImage': 'Default share image',
+  'settings.seo.ogImage.hint':
+    'Used when a page has no image of its own. This is the picture a link shows when it is shared.',
+  'settings.seo.robots': 'Search engines',
+  'settings.seo.robots.hint':
+    'What robots.txt says, beyond the platform’s own rules for the panel and the API.',
+  'settings.seo.noindex': 'Ask search engines not to index this site',
+  'settings.seo.disallow': 'Paths to keep out',
+  'settings.seo.disallow.hint':
+    'One per line, each starting with / — for example /search. Added to robots.txt as Disallow lines.',
+  'settings.custom': 'Custom settings',
+  'settings.custom.hint':
+    'Your own keys and values, for your templates to read. Nothing here is used by the platform itself.',
+  'settings.custom.empty': 'No custom settings yet.',
+  'settings.custom.key': 'Key {number}',
+  'settings.custom.value': 'Value {number}',
+  'settings.custom.add': 'Add a setting',
+  'settings.custom.remove': 'Remove {key}',
+  'settings.custom.unnamed': 'this setting',
+  'settings.custom.syntax':
+    'Lower-case letters, digits and underscores, starting with a letter. A template reads one as site.settings.custom.the_key.',
   'settings.footer.hint': 'The last line of every page.',
   'settings.footer.text': 'Footer text',
   'settings.language.dates': 'Language and dates',
@@ -334,8 +357,11 @@ export const en: Locale = {
     'A BCP 47 tag such as en or zh-CN. It becomes the page’s lang attribute, which is what tells a screen reader and a search engine what the text is.',
   'settings.dateFormat': 'Site date format',
   'settings.dateFormat.directives':
-    'Directives: %Y %m %d %B %b %A %a %H %I %M %S %p, with %-m and %-d for no leading zero, and %% for a literal one. Anything else is refused rather than rendered as something else.',
+    'Common shapes, shown as they render. A format already set that is not listed is kept as an option of its own. Directives: %Y %m %d %B %b %A %a %H %I %M %S %p, with %-m and %-d for no leading zero.',
   'settings.dateFormat.preview': '{instant} → {formatted}',
+  'settings.timezone': 'Site time zone',
+  'settings.timezone.hint':
+    'An IANA zone such as Asia/Shanghai. Dates are written in it, wherever the reader is.',
   'settings.adminLanguage': 'Panel language',
   'settings.adminLanguage.hint':
     'Only the languages this panel has been translated into appear here. It ships with one.',
