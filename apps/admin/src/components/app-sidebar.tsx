@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { AdminBrand } from '@/components/admin-brand'
 import { PoweredBy } from '@/components/powered-by'
 import { useT } from '@/lib/i18n'
 import { NAVIGATION } from '@/lib/navigation'
@@ -28,7 +29,7 @@ export function AppSidebar({
 
   return (
     <nav aria-label={t('nav.sections')} className={cn('flex w-56 shrink-0 flex-col gap-1 border-r p-3', className)}>
-      <span className="px-2 py-1 text-sm font-semibold">{t('nav.brand')}</span>
+      <AdminBrand />
 
       {NAVIGATION.map((item) => (
         <NavLink

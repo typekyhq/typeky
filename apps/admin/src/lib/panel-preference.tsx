@@ -18,6 +18,20 @@ import { useApiClient } from './client-context'
  * those in UTC. The two are deliberately different and both are deliberate.
  */
 
+/**
+ * The site's own brand, as the panel shows it.
+ *
+ * The panel belongs to the site owner, so it wears their logo rather than the
+ * platform's name -- one deployment, one operator, and the same document that
+ * already carries the site's name. Null until there is a site document, and until
+ * it has a logo.
+ */
+export interface PanelBrand {
+  name: string
+  /** Already a URL this panel can serve; null when no logo is set. */
+  logoUrl: string | null
+}
+
 export interface PanelPreference {
   language: string
   dateFormat: string
@@ -25,6 +39,7 @@ export interface PanelPreference {
   format: (value: string | null | undefined) => string
   /** Called after the settings screen saves, so the shell stops using the old one. */
   refresh: () => void
+  brand: PanelBrand | null
 }
 
 const LOCAL_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -45,11 +60,13 @@ const PanelPreferenceContext = createContext<PanelPreference>({
   dateFormat: DEFAULT_ADMIN_DATE_FORMAT,
   format: (value) => formatLocal(value, DEFAULT_ADMIN_DATE_FORMAT),
   refresh: () => undefined,
+  brand: null,
 })
 
 export function PanelPreferenceProvider({ children }: { children: ReactNode }) {
   const client = useApiClient()
   const [settings, setSettings] = useState<AdminSettings>({})
+  const [brand, setBrand] = useState<PanelBrand | null>(null)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -57,7 +74,16 @@ export function PanelPreferenceProvider({ children }: { children: ReactNode }) {
 
     client.getSite().then(
       (site) => {
-        if (!cancelled) setSettings(site.settings.admin ?? {})
+        if (cancelled) return
+
+        setSettings(site.settings.admin ?? {})
+        setBrand({
+          name: site.name,
+          // Built here rather than in the sidebar: how the panel serves media is
+          // this module's business, and a screen that had to know it would be a
+          // second place to change when it moves.
+          logoUrl: site.logoMediaId === null ? null : client.mediaContentUrl(site.logoMediaId),
+        })
       },
       () => {
         // Deliberately silent. A panel that cannot read its own preference still
@@ -92,6 +118,7 @@ export function PanelPreferenceProvider({ children }: { children: ReactNode }) {
         dateFormat,
         format: (value) => formatLocal(value, dateFormat),
         refresh,
+        brand,
       }}
     >
       {children}
@@ -103,8 +130,17 @@ export function usePanelPreference(): PanelPreference {
   return useContext(PanelPreferenceContext)
 }
 
-/** For a test that needs the hook to work without a provider. */
-export function panelPreferenceFor(settings: AdminSettings): PanelPreference {
+/**
+ * For a test that needs the hook to work without a provider.
+ *
+ * `brand` is a parameter rather than a fixed null: the shell's brand is the site's
+ * logo, and a test that could only ever see the fallback would not be able to ask
+ * about the logo at all.
+ */
+export function panelPreferenceFor(
+  settings: AdminSettings,
+  brand: PanelBrand | null = null,
+): PanelPreference {
   const dateFormat = settings.dateFormat ?? DEFAULT_ADMIN_DATE_FORMAT
 
   return {
@@ -112,5 +148,6 @@ export function panelPreferenceFor(settings: AdminSettings): PanelPreference {
     dateFormat,
     format: (value) => formatLocal(value, dateFormat),
     refresh: () => undefined,
+    brand,
   }
 }
