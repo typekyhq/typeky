@@ -1,6 +1,14 @@
 import type { Page, Post } from '@typeky/db'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { edgeCacheFor, PAGE_CACHE_CONTROL, pageCacheKey, revalidateSite, servePage } from './cache'
+import {
+  DEV_CACHE_ORIGIN,
+  edgeCacheFor,
+  PAGE_CACHE_CONTROL,
+  pageCacheKey,
+  pageCacheScope,
+  revalidateSite,
+  servePage,
+} from './cache'
 import { fakeCache } from './testing/cache'
 import { stubRepositories } from './testing/repositories'
 
@@ -20,22 +28,50 @@ async function request(
   path: string,
   render: () => Promise<{ status: number; html: string }>,
   cache = fakeCache(),
+  appEnv = 'production',
 ) {
   const url = new URL(`https://example.com${path}`)
-  const response = await servePage({ url, cache, render, background: NO_BACKGROUND })
+  const response = await servePage({ url, cache, appEnv, render, background: NO_BACKGROUND })
 
   return { response, cache, html: async () => response.text() }
 }
 
 describe('the cache key', () => {
   it('is the origin and the path, so a campaign parameter is not a second page', () => {
-    expect(pageCacheKey(new URL('https://example.com/posts/hello?utm_source=x'))).toBe(
+    const url = new URL('https://example.com/posts/hello?utm_source=x')
+
+    expect(pageCacheKey(url, pageCacheScope(url.origin, 'production'))).toBe(
       'https://example.com/posts/hello',
     )
   })
 
-  it('keeps the host, because two hosts are two sites', () => {
-    expect(pageCacheKey(new URL('https://a.example/posts'))).not.toBe(pageCacheKey(new URL('https://b.example/posts')))
+  it('keeps the host in production, because two hosts are two sites', () => {
+    const a = new URL('https://a.example/posts')
+    const b = new URL('https://b.example/posts')
+
+    expect(pageCacheKey(a, pageCacheScope(a.origin, 'production'))).not.toBe(
+      pageCacheKey(b, pageCacheScope(b.origin, 'production')),
+    )
+  })
+
+  it('drops the host in development, where there is one site on one machine', () => {
+    const localhost = new URL('http://localhost:8787/posts')
+    const loopback = new URL('http://127.0.0.1:8787/posts')
+
+    // Two spellings of one machine. Keyed by origin they are two copies of one page,
+    // and whether a purge lands depends on which one somebody typed -- which is
+    // exactly how a save comes to look like it did nothing.
+    expect(pageCacheScope(localhost.origin, 'development')).toBe(DEV_CACHE_ORIGIN)
+    expect(pageCacheKey(localhost, pageCacheScope(localhost.origin, 'development'))).toBe(
+      pageCacheKey(loopback, pageCacheScope(loopback.origin, 'development')),
+    )
+  })
+
+  it('uses the production rule for anything that is not development', () => {
+    // A test run and a staging deploy are both real enough to want the rule that
+    // answers two hostnames correctly.
+    expect(pageCacheScope('https://example.com', 'test')).toBe('https://example.com')
+    expect(pageCacheScope('https://example.com', 'staging')).toBe('https://example.com')
   })
 })
 
@@ -162,7 +198,7 @@ describe('revalidating', () => {
   it('forgets every URL the site serves, under the origin it was cached with', async () => {
     const cache = fakeCache()
 
-    await revalidateSite(store(), cache, 'https://example.com')
+    await revalidateSite(store(), cache, 'https://example.com', 'production')
 
     expect(cache.purges).toContain('https://example.com/')
     expect(cache.purges).toContain('https://example.com/posts')
@@ -173,17 +209,54 @@ describe('revalidating', () => {
   it('tolerates a trailing slash on the origin instead of double-slashed keys', async () => {
     const cache = fakeCache()
 
-    await revalidateSite(store(), cache, 'https://example.com/')
+    await revalidateSite(store(), cache, 'https://example.com/', 'production')
 
     expect(cache.purges).toContain('https://example.com/posts')
     expect(cache.purges.some((key) => key.includes('//posts'))).toBe(false)
+  })
+
+  it('reaches a page in development whichever spelling stored it', async () => {
+    const cache = fakeCache()
+
+    // Opened the way a person opens it...
+    await servePage({
+      url: new URL('http://localhost:8787/'),
+      cache,
+      appEnv: 'development',
+      render: async () => ({ status: 200, html: '<h1>Home</h1>' }),
+      background: NO_BACKGROUND,
+    })
+    // ...and saved through the admin, whose request arrives carrying the origin the
+    // dev proxy rewrote the Host to. Two origins, one machine, one page.
+    await revalidateSite(store(), cache, 'http://127.0.0.1:8787', 'development')
+
+    expect(cache.entries.size).toBe(0)
+  })
+
+  it('leaves the other host alone in production, which is the documented limit', async () => {
+    const cache = fakeCache()
+
+    // Served at one hostname...
+    await servePage({
+      url: new URL('https://www.example.com/'),
+      cache,
+      appEnv: 'production',
+      render: async () => ({ status: 200, html: '<h1>Home</h1>' }),
+      background: NO_BACKGROUND,
+    })
+    // ...and saved while the admin was open at the other. The apex keeps the old
+    // copy until `s-maxage` expires, which is a real limitation of keying by URL
+    // rather than something a dev-machine exception should quietly hide.
+    await revalidateSite(store(), cache, 'https://example.com', 'production')
+
+    expect(cache.entries.has('https://www.example.com/')).toBe(true)
   })
 
   it('takes the pages out of the cache rather than only noting them', async () => {
     const cache = fakeCache()
     cache.entries.set('https://example.com/posts/hello', new Response('<p>old</p>'))
 
-    await revalidateSite(store(), cache, 'https://example.com')
+    await revalidateSite(store(), cache, 'https://example.com', 'production')
 
     expect(cache.entries.has('https://example.com/posts/hello')).toBe(false)
   })

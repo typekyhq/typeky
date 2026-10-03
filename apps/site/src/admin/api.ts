@@ -131,7 +131,7 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
     const store = repositories(c.env)
     if (store === null) return
 
-    await revalidateSite(store, edgeCacheFor(), new URL(c.req.url).origin)
+    await revalidateSite(store, edgeCacheFor(), new URL(c.req.url).origin, c.env.APP_ENV)
   })
 
   // Login carries no CSRF token because there is no session yet to bind one to.

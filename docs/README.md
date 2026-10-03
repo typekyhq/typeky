@@ -36,6 +36,17 @@ password you set.
 `pnpm seed` is optional, and safe to run again: it upserts by slug. Without it you
 start with an empty site, which is also a perfectly good way to start.
 
+### Two ports, and the page cache
+
+Open the site at <http://localhost:8787> and you will be looking at the same pages
+the admin publishes. Page caching works locally, with one difference: in
+development every page is stored under a single fixed origin, because the admin
+panel is on another port and proxies its API, and because `localhost:8787` and
+`127.0.0.1:8787` are two origins for one machine. Keyed by origin, a save would
+purge whichever spelling the proxy happened to use and the page you were looking at
+would keep the old copy — which reads as "the save did nothing". In production there
+is one origin and the ordinary rule applies.
+
 ### The admin password
 
 `pnpm admin:password` asks for a password and prints the hash to store it as —

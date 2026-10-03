@@ -112,6 +112,7 @@ export function createApp(): Hono<{ Bindings: Env }> {
     return servePage({
       url,
       cache: edgeCacheFor(),
+      appEnv: c.env.APP_ENV,
       render: (pathname) =>
         renderPage(pathname, {
           repositories: repositoriesFor(c.env),

@@ -33,9 +33,41 @@ import { publishedPaths } from './render/sitemap'
  */
 export const PAGE_CACHE_CONTROL = 'public, max-age=0, s-maxage=300'
 
-/** The key a page is stored under: origin and path, no query, no method variation. */
-export function pageCacheKey(url: URL): string {
-  return `${url.origin}${url.pathname}`
+/**
+ * The origin a page is stored under.
+ *
+ * In production it is the origin the request arrived on, and it has to be: a site
+ * answering on `example.com` and `www.example.com` is two copies of one page, and a
+ * purge has to say which one it means.
+ *
+ * In development it is one fixed origin, for two reasons that belong to the dev
+ * setup rather than to a site. The admin panel runs on its own port and proxies the
+ * API, so a save arrives carrying the *proxy's* origin rather than the origin being
+ * looked at. And `localhost:8787` and `127.0.0.1:8787` are two origins for one
+ * machine, so whether a purge lands depends on which spelling somebody typed.
+ * Either way the symptom is identical, and it looks exactly like a save that did
+ * nothing: the admin list is right and the site is not.
+ *
+ * The cache is still a cache in development -- it fills, it hits, it is purged --
+ * which is the part worth being able to try locally. Answering two hostnames is
+ * not, so that is the part left to production.
+ *
+ * The reserved `.invalid` suffix is deliberate: this must never collide with an
+ * origin a real site could have.
+ */
+export const DEV_CACHE_ORIGIN = 'http://typeky.invalid'
+
+export function pageCacheScope(requestOrigin: string, appEnv: string): string {
+  // Only `development` is the exception, rather than "anything that is not
+  // production": a test run and a staging deploy are both real enough to want the
+  // production rule, and a rule written the other way round would quietly change
+  // what every one of them caches.
+  return appEnv === 'development' ? DEV_CACHE_ORIGIN : requestOrigin.replace(/\/+$/, '')
+}
+
+/** The key a page is stored under: scope and path, no query, no method variation. */
+export function pageCacheKey(url: URL, scope: string): string {
+  return `${scope}${url.pathname}`
 }
 
 export interface PageResult {
@@ -46,6 +78,12 @@ export interface PageResult {
 export interface ServePageInput {
   url: URL
   cache: CachePort
+  /**
+   * What `APP_ENV` says. Passed in rather than read here, because this module has no
+   * environment -- and because the rule below should be testable without pretending
+   * to be a Worker.
+   */
+  appEnv: string
   /** What renders the page, and the only thing here that touches the database. */
   render: (pathname: string) => Promise<PageResult>
   /**
@@ -71,8 +109,8 @@ export interface ServePageInput {
  * the point.
  */
 export async function servePage(input: ServePageInput): Promise<Response> {
-  const { url, cache, render, background } = input
-  const key = pageCacheKey(url)
+  const { url, cache, appEnv, render, background } = input
+  const key = pageCacheKey(url, pageCacheScope(url.origin, appEnv))
 
   const hit = await cache.match(key)
   if (hit !== null) return marked(hit, 'hit')
@@ -131,13 +169,22 @@ export function edgeCacheFor(): CachePort {
  * `publishedPaths` is used rather than a stored list, because publishing changes
  * the list: a new post adds a URL and an unpublished one removes it.
  *
- * `origin` is the origin the request arrived on, which is the origin the pages
- * were cached under. A site reachable at two hostnames therefore only has the one
- * that was asked for purged; that is a real limitation and it is a property of
- * keying by URL, not of this function.
+ * `origin` is the origin the request arrived on, which is the origin the pages were
+ * cached under -- see `pageCacheScope`, which is where a development machine is the
+ * exception. A site reachable at two hostnames therefore only has the one that was
+ * asked for purged in production; that is a real limitation, and a property of
+ * keying by URL rather than of this function.
  */
-export async function revalidateSite(store: Repositories, cache: CachePort, origin: string): Promise<void> {
-  const base = origin.replace(/\/+$/, '')
+export async function revalidateSite(
+  store: Repositories,
+  cache: CachePort,
+  origin: string,
+  appEnv: string,
+): Promise<void> {
+  // The same function the page was stored with: a purge that computed its own key
+  // would be a purge that misses, and missing silently is the thing this file exists
+  // to avoid.
+  const base = pageCacheScope(origin, appEnv)
   const paths = await publishedPaths(store)
 
   await cache.purgeByUrl(paths.map((path) => `${base}${path}`))
