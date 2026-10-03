@@ -252,6 +252,33 @@ describe('revalidating', () => {
     expect(cache.entries.has('https://www.example.com/')).toBe(true)
   })
 
+  it('forgets a URL that has left the set, which recomputing cannot find', async () => {
+    const cache = fakeCache()
+    cache.entries.set('https://example.com/about', new Response('<p>old</p>'))
+
+    // `/about` is gone from the set the site serves now -- unpublished, renamed or
+    // deleted -- and that is exactly the URL a recomputation cannot name. It is also
+    // the one that must not be served: the cached 200 would outlive the row.
+    await revalidateSite(store(), cache, 'https://example.com', 'production', [
+      '/',
+      '/about',
+      '/posts',
+    ])
+
+    expect(cache.entries.has('https://example.com/about')).toBe(false)
+  })
+
+  it('answers with the set in force, for the next purge to be given back', async () => {
+    const cache = fakeCache()
+
+    const paths = await revalidateSite(store(), cache, 'https://example.com', 'production')
+
+    // The caller stores this and hands it back next time; without it, the URL a write
+    // removes would be the one URL nobody can name.
+    expect(paths).toContain('/posts/hello')
+    expect(paths).toContain('/')
+  })
+
   it('takes the pages out of the cache rather than only noting them', async () => {
     const cache = fakeCache()
     cache.entries.set('https://example.com/posts/hello', new Response('<p>old</p>'))

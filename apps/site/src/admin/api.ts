@@ -5,6 +5,7 @@ import type { MiddlewareHandler } from 'hono'
 import { repositoriesFor } from '../repositories'
 import { blobsFor } from '../blobs'
 import { edgeCacheFor, revalidateSite } from '../cache'
+import { readRememberedPaths, rememberPaths } from './remembered-paths'
 import { csrfTokenMatches, isSafeMethod } from './csrf'
 import { apiError, readJsonBody, type AdminEnv, type BlobResolver, type RepositoryResolver } from './errors'
 import {
@@ -131,7 +132,18 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
     const store = repositories(c.env)
     if (store === null) return
 
-    await revalidateSite(store, edgeCacheFor(), new URL(c.req.url).origin, c.env.APP_ENV)
+    // The set the site served before this write is part of what has to be forgotten: a
+    // slug that changed and a page that was unpublished are absent from the set this
+    // write produces, and absent is the state a recomputation cannot see.
+    const previous = await readRememberedPaths(c.env.CACHE)
+    const paths = await revalidateSite(
+      store,
+      edgeCacheFor(),
+      new URL(c.req.url).origin,
+      c.env.APP_ENV,
+      previous,
+    )
+    await rememberPaths(c.env.CACHE, paths)
   })
 
   // Login carries no CSRF token because there is no session yet to bind one to.

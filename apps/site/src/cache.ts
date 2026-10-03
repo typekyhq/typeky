@@ -180,12 +180,27 @@ export async function revalidateSite(
   cache: CachePort,
   origin: string,
   appEnv: string,
-): Promise<void> {
+  /**
+   * The set that was in force at the last purge. See below for why it is an argument
+   * rather than something computed here.
+   */
+  previous: readonly string[] = [],
+): Promise<string[]> {
   // The same function the page was stored with: a purge that computed its own key
   // would be a purge that misses, and missing silently is the thing this file exists
   // to avoid.
   const base = pageCacheScope(origin, appEnv)
   const paths = await publishedPaths(store)
 
-  await cache.purgeByUrl(paths.map((path) => `${base}${path}`))
+  // `publishedPaths` is the set the site serves *now*, and a URL that has just left it
+  // -- an unpublished page, a changed slug, a deleted one -- is exactly what
+  // recomputing cannot find. It is also the one that most needs forgetting: the cached
+  // 200 would outlive the row by `s-maxage`, so a page that was taken down would keep
+  // being served. Hence the union, and hence the caller handing back what the last
+  // purge was told.
+  const union = [...new Set([...paths, ...previous])]
+
+  await cache.purgeByUrl(union.map((path) => `${base}${path}`))
+
+  return paths
 }

@@ -191,6 +191,49 @@ describe('after a write that succeeded', () => {
     expect(deleted).toContain('https://example.com/products')
   })
 
+  it('forgets a URL that has left the set since the last write', async () => {
+    const cache = fakeKv()
+    // What the previous purge remembered. A page that was unpublished, renamed or
+    // deleted is absent from the set this write recomputes, so this is the only place
+    // its URL can come from -- and it is the URL that most needs forgetting.
+    await cache.kv.put('revalidate:paths', JSON.stringify(['/gone']))
+
+    const api = createAdminApi({
+      repositories: () => stubRepositories({ sites: fakeSiteRepository() }),
+    })
+    const env: AdminEnv['Bindings'] = makeTestEnv({
+      CACHE: cache.kv,
+      ADMIN_USERNAME: 'admin',
+      ADMIN_PASSWORD_HASH: passwordHash,
+    })
+
+    const signIn = await api.request(
+      new Request('https://example.com/session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password: PASSWORD }),
+      }),
+      undefined,
+      env,
+    )
+    const cookie = (signIn.headers.get('set-cookie') ?? '').split(';')[0] ?? ''
+    const { csrfToken } = (await signIn.json()) as { csrfToken: string }
+
+    const { deleted } = recordingCache()
+
+    await api.request(
+      new Request('https://example.com/site', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken, cookie },
+        body: JSON.stringify(DOCUMENT),
+      }),
+      undefined,
+      env,
+    )
+
+    expect(deleted).toContain('https://example.com/gone')
+  })
+
   it('does not wait to be asked, because the operator will not know to', async () => {
     const { signIn, put } = setup()
     const { deleted } = recordingCache()
