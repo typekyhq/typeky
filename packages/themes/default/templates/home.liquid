@@ -1,6 +1,24 @@
 {% layout 'layouts/base' %}
-{% comment %} The home page: whichever page is flagged is_home, rendered as blocks. {% endcomment %}
+{% comment %}
+  The home page: whichever page is flagged is_home.
+
+  It opens with a hero built from the site's own name and tagline -- the two things
+  a first-time visitor is here to find out -- and then the page's blocks, so the
+  operator's own copy is the body rather than something a template invented.
+
+  The heading is the site's name rather than the page's title on purpose: a home
+  page is usually titled after what it is ("Home"), while the site's name is what
+  the page is *about*. The title still reaches `<title>` and the share card, which
+  is where a title does its work.
+{% endcomment %}
+<section class="hero">
+  <h1>{{ site.name }}</h1>
+  {% if site.tagline %}<p class="lead">{{ site.tagline }}</p>{% endif %}
+  <p class="hero-actions">
+    <a class="button" href="{{ '/posts' | url }}">Read the blog</a>
+  </p>
+</section>
+
 <article class="prose">
-  <h1>{{ content.title }}</h1>
   {{ content.blocks | render_blocks }}
 </article>

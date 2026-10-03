@@ -1,60 +1,71 @@
 /*
  * The default theme's stylesheet.
  *
+ * **Light, by design.** The site used to follow `prefers-color-scheme`, and the
+ * lesson is worth keeping: a second palette is a second design, and nobody had
+ * drawn it. What a dark-mode reader saw was not the site the operator had built
+ * but a colour inversion of it -- and on the operator's own machine, which is in
+ * dark mode, *every* page was black. If this theme gets a dark palette it will be
+ * one somebody designed, and it will be opt-in rather than inferred from a
+ * setting the site never chose.
+ *
  * Written as one file with no build step, because a theme author edits this and
  * expects to see the result. Everything is mobile first: the narrow layout is the
- * base and the two media queries add columns when there is room for them.
+ * base and the media queries widen the gutters when there is room.
  *
- * Three things are treated as part of the baseline rather than as polish, because
- * a page that omits them is not merely plain:
+ * Two things are treated as part of the baseline rather than as polish, because a
+ * page that omits them is not merely plain:
  *
  *   - `:focus-visible` is never removed. A keyboard user has to be able to see
  *     where they are.
  *   - `prefers-reduced-motion` is honoured, so nothing moves for someone who
  *     asked it not to.
- *   - `prefers-color-scheme` is honoured, so the site is readable on a dark
- *     screen instead of a white rectangle.
  *
- * The measure on `main` is the one place worth defending: a line of text much
- * longer than this is measurably harder to read, and a content site is mostly
- * lines of text.
+ * The measure on the reading column is the one place worth defending: a line of
+ * text much longer than this is measurably harder to read, and a content site is
+ * mostly lines of text. Everything around it -- the header, the card grid, the
+ * product page -- is a wider container, which is what makes a page look like a
+ * site rather than a printed column.
  */
 
 :root {
+  /* The reading measure: how wide a line of body text may get. */
   --measure: 68ch;
-  --page-gutter: 1rem;
+  /* The page container: header, footer, lists and grid pages use this. */
+  --container: 72rem;
+  --page-gutter: 1.25rem;
+  /* The sticky header's height, for anchors that would otherwise land under it. */
+  --header-height: 4rem;
 
-  --ink: #1a1a19;
-  --ink-muted: #5c5c58;
-  --paper: #fdfcfa;
+  --ink: #0f172a;
+  --ink-muted: #64748b;
+  --paper: #ffffff;
+  --paper-soft: #f8fafc;
   --paper-raised: #ffffff;
-  --line: #e2ded7;
-  --accent: #1f5f8b;
+  --line: #e8edf3;
+  --line-strong: #cbd5e1;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-soft: #eff6ff;
   --accent-ink: #ffffff;
 
-  --radius: 6px;
+  --radius: 12px;
+  --radius-sm: 8px;
   --space: 1rem;
-  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", monospace;
 
-  color-scheme: light dark;
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 4%), 0 1px 3px rgb(15 23 42 / 6%);
+  --shadow-md: 0 10px 30px -12px rgb(15 23 42 / 18%);
+
+  --font-body: system-ui, -apple-system, "Segoe UI", "Noto Sans SC", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", ui-monospace, monospace;
+
+  color-scheme: light;
 }
 
 @media (min-width: 40rem) {
   :root {
     --page-gutter: 2rem;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #ece9e4;
-    --ink-muted: #a6a29b;
-    --paper: #16171a;
-    --paper-raised: #1e2024;
-    --line: #33363c;
-    --accent: #7db8e0;
-    --accent-ink: #10131a;
   }
 }
 
@@ -65,18 +76,23 @@
 }
 
 html {
-  /* The reason to set this at all: an anchor link should not hide its target
-   * under a sticky header. Where there is no sticky header it costs nothing. */
-  scroll-padding-top: 1rem;
+  /* An anchor link should not hide its target under the sticky header. The
+   * headings set the same value again, because `scroll-padding` on the root is
+   * not honoured by every engine for an in-page jump. */
+  scroll-padding-top: calc(var(--header-height) + 1rem);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 1rem;
-  line-height: 1.65;
+  line-height: 1.7;
   /* Wraps a long URL or a pasted token instead of pushing the page sideways. */
   overflow-wrap: break-word;
 }
@@ -89,9 +105,11 @@ video {
 
 a {
   color: var(--accent);
+  text-underline-offset: 3px;
 }
 
 a:hover {
+  color: var(--accent-strong);
   text-decoration-thickness: 2px;
 }
 
@@ -99,7 +117,7 @@ a:hover {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 /* One element per document, rendered for a screen reader and not for the eye.
@@ -129,6 +147,7 @@ a:hover {
   white-space: normal;
   background: var(--accent);
   color: var(--accent-ink);
+  border-radius: var(--radius-sm);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -144,103 +163,160 @@ a:hover {
 
 /* ------------------------------------------------------------- structure -- */
 
-body {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+.site-header,
+.site-footer,
+main {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
 }
 
 main {
   flex: 1;
-  width: 100%;
-  max-width: var(--measure);
-  margin-inline: auto;
-  padding: calc(var(--space) * 1.5) var(--page-gutter);
+  padding-block: clamp(2rem, 5vw, 3.5rem);
 }
 
-.site-header,
-.site-footer {
-  width: 100%;
-  max-width: var(--measure);
-  margin-inline: auto;
-  padding: var(--space) var(--page-gutter);
-}
+/* --------------------------------------------------------------- header -- */
 
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space);
+  gap: 0.75rem var(--space);
+  min-height: var(--header-height);
+  padding-block: 0.6rem;
+  /* Translucent rather than opaque: the page scrolling under it is what says the
+   * header is fixed, and a solid bar would read as a band that happens to move. */
+  background: rgb(255 255 255 / 85%);
+  backdrop-filter: saturate(180%) blur(10px);
   border-bottom: 1px solid var(--line);
 }
 
 .site-header .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   font-weight: 700;
   font-size: 1.125rem;
+  letter-spacing: -0.01em;
   text-decoration: none;
   color: inherit;
 }
 
 .site-header .brand img {
   display: block;
-  max-height: 2.5rem;
+  max-height: 2rem;
   width: auto;
 }
 
 .site-header nav ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  gap: 0.25rem 1.25rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .site-header nav a {
+  display: inline-block;
+  padding-block: 0.25rem;
   color: var(--ink-muted);
+  font-weight: 500;
   text-decoration: none;
 }
 
 .site-header nav a:hover {
   color: var(--ink);
-  text-decoration: underline;
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
-.site-footer {
-  border-top: 1px solid var(--line);
+/* ----------------------------------------------------------- hero, home -- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: center;
+  padding-block: clamp(1rem, 4vw, 3rem);
+}
+
+.hero h1 {
+  margin: 0;
+  max-width: 20ch;
+  font-size: clamp(2rem, 1.3rem + 3.2vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.hero .lead {
+  margin: 0;
+  max-width: 48ch;
   color: var(--ink-muted);
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
 }
 
-.site-footer .social {
+.hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  justify-content: center;
+  gap: 0.75rem;
   margin: 0.5rem 0 0;
-  padding: 0;
-  list-style: none;
 }
 
-
-/* The platform's own badge: quieter than the site's own text, because it is a
- * statement about the software and not about the site. The link keeps the
- * default underline so it reads as a link, which is what it is. */
-.site-footer .attribution {
-  margin-block: 0.75rem 0;
-  font-size: 0.8125rem;
+/* The one button in the theme. A link that looks like a button, rather than a
+ * `<button>`: it navigates, and a button that navigates cannot be opened in a new
+ * tab or copied as a link. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-/* --------------------------------------------------------------- content -- */
+.button:hover {
+  background: var(--accent-strong);
+  color: var(--accent-ink);
+}
 
-/* Blocks arrive as plain semantic HTML, so the styles are element selectors
- * rather than a class per block. A theme that wants classes can add them; this
- * one does not need to, and a block renderer that emitted markup would be a
- * second producer of HTML. */
-.prose > :first-child {
+.button.secondary {
+  background: var(--paper);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.button.secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------- reading text -- */
+
+/* Centred inside the wider container: the header spans the page, the column of
+ * text does not, and the difference is what makes long text readable. */
+.prose,
+.product,
+.not-found {
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+
+.prose > :first-child,
+.product > :first-child {
   margin-top: 0;
 }
 
@@ -249,21 +325,29 @@ main {
 .prose h3,
 .prose h4 {
   line-height: 1.25;
+  letter-spacing: -0.015em;
   text-wrap: balance;
+  scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 
 .prose h1 {
-  font-size: 1.75rem;
+  font-size: clamp(1.8rem, 1.4rem + 1.8vw, 2.4rem);
+  line-height: 1.15;
 }
 
 .prose h2 {
-  margin-top: 2em;
-  font-size: 1.35rem;
+  margin-top: 2.2em;
+  font-size: 1.4rem;
 }
 
 .prose h3 {
-  margin-top: 1.75em;
-  font-size: 1.125rem;
+  margin-top: 1.8em;
+  font-size: 1.15rem;
+}
+
+.prose h4 {
+  margin-top: 1.6em;
+  font-size: 1rem;
 }
 
 .prose p,
@@ -277,16 +361,17 @@ main {
 
 .prose ul,
 .prose ol {
-  padding-inline-start: 1.5em;
+  padding-inline-start: 1.4em;
 }
 
 .prose li + li {
-  margin-top: 0.35em;
+  margin-top: 0.4em;
 }
 
 .prose blockquote {
-  padding-inline-start: 1em;
-  border-inline-start: 3px solid var(--line);
+  margin-inline: 0;
+  padding-inline-start: 1.1em;
+  border-inline-start: 3px solid var(--line-strong);
   color: var(--ink-muted);
 }
 
@@ -300,10 +385,10 @@ main {
 .prose pre {
   max-width: 100%;
   overflow-x: auto;
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.15rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--paper-raised);
+  border-radius: var(--radius-sm);
+  background: var(--paper-soft);
 }
 
 .prose code {
@@ -312,16 +397,16 @@ main {
 }
 
 .prose :not(pre) > code {
-  padding: 0.1em 0.35em;
-  border-radius: 4px;
-  background: var(--paper-raised);
+  padding: 0.12em 0.4em;
   border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper-soft);
 }
 
 .prose img,
 .prose video {
   display: block;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
 }
 
 .prose figure {
@@ -329,16 +414,17 @@ main {
 }
 
 .prose figcaption {
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
   color: var(--ink-muted);
-  font-size: 0.9375rem;
+  font-size: 0.9rem;
 }
 
 .prose aside {
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--line);
   border-inline-start: 3px solid var(--accent);
-  background: var(--paper-raised);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
 }
 
 .prose aside > :first-child {
@@ -353,71 +439,128 @@ main {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.post-header {
+  margin-bottom: 2rem;
+}
+
+.post-header h1 {
+  margin-block: 0 0.5rem;
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
   color: var(--ink-muted);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 
+/* A term is a chip: a soft tint rather than a border, so a row of them reads as
+ * labels instead of a row of boxes. */
 .meta .term {
-  padding: 0.05em 0.5em;
-  border: 1px solid var(--line);
+  padding: 0.1em 0.6em;
   border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
-  margin: 2em 0 0;
+  gap: 0.4rem;
+  margin: 2.5em 0 0;
   padding: 0;
   list-style: none;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .tags li {
-  padding: 0.1em 0.5em;
+  padding: 0.15em 0.65em;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--paper-raised);
+  background: var(--paper-soft);
   color: var(--ink-muted);
 }
 
 /* ------------------------------------------------------------------ list -- */
 
+.list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+}
+
 .list-header h1 {
-  font-size: 1.75rem;
+  margin: 0;
+  font-size: clamp(1.75rem, 1.3rem + 1.8vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 .post-list,
 .product-list {
   display: grid;
-  gap: calc(var(--space) * 1.5);
+  /* One column on a narrow screen, as many as fit after that. `min(100%, 17rem)`
+   * is what keeps it from overflowing the container it was given. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: clamp(1.25rem, 3vw, 2rem);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-@media (min-width: 48rem) {
-  .post-list,
-  .product-list {
-    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-  }
-}
-
 .card {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.card .card-cover {
+  display: block;
+  background: var(--paper-soft);
+}
+
+.card .card-cover img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 0.5rem;
+  padding: 1.1rem;
 }
 
 .card h2 {
   margin: 0;
-  font-size: 1.15rem;
-  line-height: 1.3;
+  font-size: 1.1rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .card h2 a {
@@ -426,24 +569,13 @@ main {
 }
 
 .card h2 a:hover {
-  text-decoration: underline;
-}
-
-.card .card-cover {
-  display: block;
-}
-
-.card .card-cover img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: var(--radius);
+  color: var(--accent);
 }
 
 .card .excerpt {
   margin: 0;
   color: var(--ink-muted);
+  font-size: 0.9375rem;
 }
 
 .card .meta,
@@ -456,6 +588,7 @@ main {
 }
 
 .empty {
+  grid-column: 1 / -1;
   color: var(--ink-muted);
 }
 
@@ -464,18 +597,49 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: var(--space);
-  margin-top: calc(var(--space) * 2);
-  padding-top: var(--space);
+  margin-top: clamp(2rem, 4vw, 3rem);
+  padding-top: 1.5rem;
   border-top: 1px solid var(--line);
+  font-size: 0.9375rem;
+}
+
+.pagination a {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.pagination a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pagination span {
+  color: var(--ink-muted);
 }
 
 /* --------------------------------------------------------------- product -- */
 
+/* Wider than the reading measure and narrower than the container: a product page
+ * is a gallery and a few facts, not a column of prose. */
+.product {
+  max-width: min(100%, 52rem);
+}
+
+.product-header .price {
+  margin-block: 0.75rem 0;
+  font-size: 1.375rem;
+  letter-spacing: -0.01em;
+}
+
 .product .gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.5rem;
-  margin: 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  gap: 0.75rem;
+  margin-block: 2rem;
   padding: 0;
   list-style: none;
 }
@@ -485,29 +649,41 @@ main {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 }
 
 .specs {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.25rem 1rem;
-  margin-block: 2em;
-  padding: 0;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: 0.6rem 1.5rem;
+  margin-block: 2rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-soft);
 }
 
 .specs dt {
   color: var(--ink-muted);
+  font-size: 0.9375rem;
 }
 
 .specs dd {
   margin: 0;
+  font-weight: 500;
+}
+
+.cta {
+  margin-block: 2rem 0;
 }
 
 .cta a {
-  display: inline-block;
-  padding: 0.6rem 1.25rem;
-  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 600;
@@ -515,30 +691,75 @@ main {
 }
 
 .cta a:hover {
+  background: var(--accent-strong);
+  color: var(--accent-ink);
+}
+
+/* ----------------------------------------------------------- page footer -- */
+
+.site-footer {
+  padding-block: 2.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+}
+
+.site-footer .social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer .social a {
+  text-decoration: none;
+}
+
+.site-footer .social a:hover {
   text-decoration: underline;
+}
+
+/* The platform's own badge: quieter than the site's own text, because it is a
+ * statement about the software and not about the site. The link keeps the
+ * default underline so it reads as a link, which is what it is. */
+.site-footer .attribution {
+  margin-block: 1rem 0;
+  font-size: 0.8125rem;
 }
 
 /* ------------------------------------------------------------------ misc -- */
 
 .not-found {
+  padding-block: clamp(2rem, 6vw, 4rem);
   text-align: center;
+}
+
+.not-found h1 {
+  font-size: clamp(1.8rem, 1.4rem + 1.8vw, 2.4rem);
+  letter-spacing: -0.02em;
 }
 
 /* Sits above the page until it is dismissed or accepted. `position: fixed` so it
  * does not move the content underneath it as it appears. */
 .cookie-consent {
   position: fixed;
-  inset-inline: 0;
-  bottom: 0;
+  inset-inline: var(--page-gutter);
+  bottom: 1rem;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: var(--space);
-  margin: 0;
-  padding: 0.75rem var(--page-gutter);
-  background: var(--paper-raised);
-  border-top: 1px solid var(--line);
+  justify-content: space-between;
+  gap: 0.75rem var(--space);
+  max-width: 30rem;
+  margin-inline: auto;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-md);
   font-size: 0.9375rem;
 }
 
@@ -547,12 +768,13 @@ main {
 }
 
 .cookie-consent button {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--accent-ink);
+  padding: 0.4rem 0.95rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -575,5 +797,11 @@ main {
   main {
     max-width: none;
     padding: 0;
+  }
+
+  .prose,
+  .product,
+  .not-found {
+    max-width: none;
   }
 }

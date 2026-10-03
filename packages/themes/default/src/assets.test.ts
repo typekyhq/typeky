@@ -25,10 +25,15 @@ describe('the layout', () => {
     expect(layout).toContain('name="viewport"')
   })
 
-  it('tells the browser both colour schemes are supported', () => {
-    // Without this the form controls and scrollbars stay light on a dark page.
-    expect(layout).toContain('name="color-scheme"')
-    expect(ASSETS['theme.css']?.source).toContain('prefers-color-scheme: dark')
+  it('is light by design rather than following the system', () => {
+    // It used to say `light dark` and honour `prefers-color-scheme`, which turned
+    // every page black for a reader in dark mode -- including the operator, whose
+    // own machine is in dark mode, so the site looked nothing like the one they
+    // were building. One scheme, declared, and the stylesheet built for it.
+    expect(layout).toContain('name="color-scheme" content="light">')
+    expect(layout).not.toContain('light dark')
+    expect(ASSETS['theme.css']?.source).toContain('color-scheme: light')
+    expect(ASSETS['theme.css']?.source).not.toContain('prefers-color-scheme: dark')
   })
 
   it('offers a skip link that points at the content it skips to', () => {

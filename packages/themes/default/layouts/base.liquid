@@ -4,11 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% comment %}
-      Tells the browser both schemes are supported, so form controls and
-      scrollbars follow the system setting instead of staying light on a dark page.
-      The stylesheet has the matching `prefers-color-scheme` block.
+      One scheme, declared: the theme is light, and this is what tells the browser
+      to draw form controls, scrollbars and the canvas to match. It used to declare
+      both and follow the reader's system, which turned every page black for anyone
+      in dark mode -- a palette nobody had designed.
     {% endcomment %}
-    <meta name="color-scheme" content="light dark">
+    <meta name="color-scheme" content="light">
     {% render 'snippets/seo-meta', seo: seo, page: page, site: site, content: content %}
     <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
   </head>

@@ -10,14 +10,21 @@
     </a>
   {% endif %}
 
-  <h2><a href="{{ post.url | url }}">{{ post.title }}</a></h2>
+  {% comment %}
+    The text is wrapped so the stylesheet can give the card a border and a clipped
+    cover without also padding the image: the body carries the padding, the cover
+    runs to the edge.
+  {% endcomment %}
+  <div class="card-body">
+    <h2><a href="{{ post.url | url }}">{{ post.title }}</a></h2>
 
-  <p class="meta">
-    {% if post.published_at %}
-      <time datetime="{{ post.published_at }}">{{ post.published_at | date: site.date_format, site.timezone }}</time>
-    {% endif %}
-    {% for term in post.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
-  </p>
+    <p class="meta">
+      {% if post.published_at %}
+        <time datetime="{{ post.published_at }}">{{ post.published_at | date: site.date_format, site.timezone }}</time>
+      {% endif %}
+      {% for term in post.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
+    </p>
 
-  {% if post.excerpt %}<p class="excerpt">{{ post.excerpt }}</p>{% endif %}
+    {% if post.excerpt %}<p class="excerpt">{{ post.excerpt }}</p>{% endif %}
+  </div>
 </article>
