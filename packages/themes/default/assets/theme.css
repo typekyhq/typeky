@@ -23,9 +23,10 @@
  *
  * The measure on the reading column is the one place worth defending: a line of
  * text much longer than this is measurably harder to read, and a content site is
- * mostly lines of text. Everything around it -- the header, the card grid, the
- * product page -- is a wider container, which is what makes a page look like a
- * site rather than a printed column.
+ * mostly lines of text. Everything around it -- the header, the card grid -- is a
+ * wider container, which is what makes a page look like a site rather than a
+ * printed column. Every page that *is* a column of text -- home, article, product --
+ * uses the same one, so no two pages disagree about how wide the page is.
  */
 
 :root {
@@ -435,7 +436,9 @@ main {
   margin-bottom: 0;
 }
 
-.prose .cover {
+/* Both detail pages put their image here, at the width of the text beside it: a
+ * cover that is wider than the column it belongs to is a different page. */
+.cover {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
@@ -622,12 +625,6 @@ main {
 }
 
 /* --------------------------------------------------------------- product -- */
-
-/* Wider than the reading measure and narrower than the container: a product page
- * is a gallery and a few facts, not a column of prose. */
-.product {
-  max-width: min(100%, 52rem);
-}
 
 .product-header .price {
   margin-block: 0.75rem 0;
