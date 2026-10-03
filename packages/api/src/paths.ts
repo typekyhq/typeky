@@ -16,9 +16,19 @@
  * `shop`. That is deliberately coarser than path equality -- a page can never be two
  * segments deep, so the finer rule would only ever reserve less than it means.
  *
- * Not listed, because a slug cannot spell them: `robots.txt`, `sitemap.xml` and `/`
- * itself. The content slug pattern is lowercase words joined by hyphens, and those
- * each contain something it does not allow.
+ * The list is every path the deployment already answers -- the Worker's own routes,
+ * the renderer's list paths, and the asset branches the build creates -- because the
+ * point of showing it is to answer "what is already taken" without the operator
+ * having to guess. `apps/site/src/app.test.ts` asserts it against the routes the app
+ * actually registers, so a route added and not reserved fails the build instead of
+ * becoming a page that can take it.
+ *
+ * Two things are deliberately absent. `/` is the site's own front page rather than
+ * the platform's -- a page the operator marked as home is what serves it. And
+ * `_headers`, which is a real asset but not a path a slug can spell: the content
+ * slug pattern is lowercase words joined by hyphens. `robots.txt` and
+ * `sitemap.xml` are the opposite case -- unspellable too, and listed anyway, because
+ * an incomplete list is one an operator cannot trust.
  */
 export const PLATFORM_PATHS: readonly string[] = [
   '/admin',
@@ -27,6 +37,9 @@ export const PLATFORM_PATHS: readonly string[] = [
   '/media',
   '/posts',
   '/products',
+  '/robots.txt',
+  '/sitemap.xml',
+  '/static',
   '/theme',
 ]
 

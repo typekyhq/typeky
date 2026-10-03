@@ -1,3 +1,4 @@
+import { PLATFORM_PATHS, firstPathSegment } from '@typeky/api'
 import { describe, expect, it, vi } from 'vitest'
 import { createApp } from './app'
 import type { Env } from './env'
@@ -14,6 +15,43 @@ async function send(path: string, env: Env = makeTestEnv(), init?: RequestInit):
 function silenceErrors(): void {
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
 }
+
+/**
+ * The reserved list against the routes that actually exist.
+ *
+ * The list is what the admin shows as "reserved by the platform", and what makes a
+ * page slug refused. A route that is not in it is a path a page can take -- so this
+ * is the assertion that keeps the two from drifting, and the direction it catches is
+ * the quiet one.
+ */
+describe('the reserved paths', () => {
+  it('names every path the Worker answers', () => {
+    const routes = createApp().routes
+    // The catch-all is the page renderer itself: a page is what it serves, not a path
+    // the platform claims.
+    const claimed = routes
+      .map((route) => route.path)
+      // The catch-all is spelled `/*`, and either spelling is the renderer itself.
+      .filter((path) => firstPathSegment(path) !== '*')
+      .map((path) => `/${firstPathSegment(path)}`)
+
+    const missing = [...new Set(claimed)].filter((path) => !PLATFORM_PATHS.includes(path))
+
+    expect(missing).toEqual([])
+  })
+
+  it('also names the asset branches, which the Worker never sees', () => {
+    // `public/` is served by the asset layer before this Worker runs, so these are not
+    // in the route table -- and a page at `/static` would still be fighting it.
+    expect(PLATFORM_PATHS).toContain('/static')
+  })
+
+  it('never lists the front page, which is the site\u2019s own', () => {
+    // `/` belongs to the operator, served by whichever page they marked as home.
+    // Listing it as reserved would read as "you may not have a home page".
+    expect(PLATFORM_PATHS).not.toContain('/')
+  })
+})
 
 describe('site worker', () => {
   describe('healthz', () => {
