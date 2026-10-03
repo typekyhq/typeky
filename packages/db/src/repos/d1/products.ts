@@ -80,6 +80,10 @@ function toProduct(row: ProductRow): Product {
 
 /** What a product list may be sorted by. A closed map, because a sort key becomes SQL. */
 const SORTABLE = {
+  // `published` is here for the same reason it is in posts: every content type has
+  // the column, and a sort key one repository honours and another silently ignores
+  // is a key that means two things.
+  published: 'published_at',
   order: 'sort_order',
   updated: 'updated_at',
   created: 'created_at',

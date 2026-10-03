@@ -38,6 +38,18 @@ export const en: Locale = {
   'nav.theme.description': 'Edit the Liquid templates online; changes go live as soon as they are saved.',
   'nav.settings': 'Settings',
   'nav.settings.description': 'Site name, tagline, logo, accent colour, navigation and SEO defaults.',
+  'dashboard.loading': 'Loading the overview…',
+  'dashboard.loadFailed': 'The overview could not be loaded.',
+  'dashboard.setUp.title': 'This site has not been set up yet',
+  'dashboard.setUp.description':
+    'Give it a name and a theme, and this page starts telling you what is on it.',
+  'dashboard.content': 'Content',
+  'dashboard.drafts': 'Drafts',
+  'dashboard.noDrafts': 'Nothing is waiting.',
+  'dashboard.lastPublished': 'Last published',
+  'dashboard.neverPublished': 'Nothing has been published yet.',
+  'dashboard.updatedAt': 'Updated {when}',
+
   'nav.sections': 'Sections',
   'nav.brand': 'Typeky',
 

@@ -34,6 +34,17 @@ export const zhCN: Locale = {
   'nav.theme.description': '在线编辑 Liquid 模板；保存后立即生效。',
   'nav.settings': '设置',
   'nav.settings.description': '站点名称、副标题、标志、主题色、导航和 SEO 默认值。',
+  'dashboard.loading': '正在加载概览…',
+  'dashboard.loadFailed': '无法加载概览。',
+  'dashboard.setUp.title': '这个站点还没有设置',
+  'dashboard.setUp.description': '填上名称与主题，这一页就会开始告诉你站上有什么。',
+  'dashboard.content': '内容',
+  'dashboard.drafts': '草稿',
+  'dashboard.noDrafts': '没有待处理的草稿。',
+  'dashboard.lastPublished': '上次发布',
+  'dashboard.neverPublished': '还没有发布过内容。',
+  'dashboard.updatedAt': '更新于 {when}',
+
   'nav.sections': '板块',
   'nav.brand': 'Typeky',
 

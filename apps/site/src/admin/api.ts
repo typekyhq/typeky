@@ -61,6 +61,7 @@ import {
   readSession,
 } from './session'
 import { readLicense } from './license'
+import { readOverview } from './overview'
 import { readSite, writeSite } from './site'
 import {
   createTerm,
@@ -195,6 +196,9 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.use('*', requireCsrf)
 
   api.get('/license', (c) => readLicense(c))
+
+  // The dashboard: counts and two short lists, in one request rather than four.
+  api.get('/overview', (c) => readOverview(c, repositories))
 
   api.get('/site', (c) => readSite(c, repositories))
   api.put('/site', (c) => writeSite(c, repositories))

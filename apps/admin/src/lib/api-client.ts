@@ -17,6 +17,7 @@ import {
   themePreviewResponseSchema,
   sessionSchema,
   licenseResponseSchema,
+  overviewResponseSchema,
   siteResponseSchema,
   taxonomyResponseSchema,
   termSchema,
@@ -41,6 +42,7 @@ import {
   type ProductWrite,
   type Session,
   type LicenseResponse,
+  type OverviewResponse,
   type SiteResponse,
   type SiteWrite,
   type SortDirection,
@@ -107,6 +109,9 @@ export interface ApiClient {
 
   /** The deployment's licence state. Read-only: a licence is issued elsewhere. */
   getLicense(): Promise<LicenseResponse>
+
+  /** The dashboard: counts, the drafts worth looking at, and the last publish. */
+  getOverview(): Promise<OverviewResponse>
 
   listPosts(query?: ContentQuery): Promise<PostListResponse>
   getPost(id: string): Promise<PostResponse>
@@ -314,6 +319,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
     async getSite() {
       return readContract(siteResponseSchema, await send('GET', '/site'), 'the site response did not match the contract')
+    },
+
+    async getOverview() {
+      return readContract(
+        overviewResponseSchema,
+        await send('GET', '/overview'),
+        'the overview did not match the contract',
+      )
     },
 
     async getLicense() {

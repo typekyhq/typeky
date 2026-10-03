@@ -54,6 +54,21 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     },
     saveSite: unexpected('saveSite'),
 
+    // A dashboard with nothing in it renders its empty states, which is what a
+    // component test means unless it overrides this.
+    async getOverview() {
+      return {
+        counts: {
+          page: { published: 0, draft: 0 },
+          post: { published: 0, draft: 0 },
+          product: { published: 0, draft: 0 },
+          media: 0,
+        },
+        drafts: [],
+        lastPublished: null,
+      }
+    },
+
     // A free deployment, which is what a component test means unless it says
     // otherwise: the badge is on screen.
     async getLicense() {

@@ -7,6 +7,7 @@ import { SectionPage } from '@/components/section-page'
 import { SignInScreen } from '@/components/sign-in-screen'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { DashboardPage } from '@/routes/dashboard'
 import { PageEditorPage } from '@/routes/page-editor'
 import { PagesSection } from '@/routes/pages'
 import { PostEditorPage } from '@/routes/post-editor'
@@ -40,6 +41,7 @@ import { useSession, type SessionController } from '@/lib/session'
  * navigation always leads somewhere and the missing work is visible.
  */
 const BUILT_SECTIONS: Record<string, ReactNode> = {
+  '/': <DashboardPage />,
   '/pages': <PagesSection />,
   '/posts': <PostsSection />,
   '/products': <ProductsSection />,
