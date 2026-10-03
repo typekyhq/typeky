@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import { PAGE_SIZE, PageHeader, Pager, SearchBox } from '@/components/list-chrome'
 import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
+import { UploadField } from '@/components/upload-field'
 import { Card, CardContent } from '@/components/ui/card'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useApiClient } from '@/lib/client-context'
@@ -37,6 +39,15 @@ export function MediaSection() {
 
   const [uploading, setUploading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  /**
+   * The item whose larger view is open.
+   *
+   * The grid shows a crop: `object-cover` at a fixed height is what makes a wall of
+   * thumbnails scannable, and it is also why a portrait photograph of a document is
+   * unreadable there. Looking at a file is a separate act from scanning the list, so
+   * it is a separate view.
+   */
+  const [viewing, setViewing] = useState<MediaItem | null>(null)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -116,20 +127,13 @@ export function MediaSection() {
           }}
         />
 
-        <div className="space-y-2">
-          <Label htmlFor="media-grid-upload">{t('media.upload')}</Label>
-          <Input
+          <UploadField
             id="media-grid-upload"
-            type="file"
+            label={t('media.upload')}
             accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/mp4,video/webm"
             disabled={uploading}
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (file !== undefined) void upload(file)
-            }}
+            onPick={(file) => void upload(file)}
           />
-        </div>
       </div>
 
       {uploading && <p className="text-sm text-muted-foreground">{t('media.uploading')}</p>}
@@ -148,11 +152,18 @@ export function MediaSection() {
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {items.map((item) => (
                 <li key={item.id} className="overflow-hidden rounded-md border">
-                  <img
-                    src={client.mediaContentUrl(item.id)}
-                    alt={item.altText ?? item.filename}
-                    className="h-36 w-full bg-neutral-100 object-cover"
-                  />
+                    <button
+                      type="button"
+                      onClick={() => setViewing(item)}
+                      aria-label={t('media.view', { name: item.altText ?? item.filename })}
+                      className="block w-full focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    >
+                      <img
+                        src={client.mediaContentUrl(item.id)}
+                        alt={item.altText ?? item.filename}
+                        className="h-36 w-full bg-neutral-100 object-cover"
+                      />
+                    </button>
                   <div className="space-y-1 p-2">
                     <p className="truncate text-sm font-medium" title={item.filename}>
                       {item.filename}
@@ -181,6 +192,52 @@ export function MediaSection() {
           <Pager total={total} offset={offset} shown={items.length} onOffset={setOffset} />
         </CardContent>
       </Card>
+
+      <Sheet
+        open={viewing !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewing(null)
+        }}
+      >
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl" data-testid="media-viewer">
+          <SheetHeader className="border-b">
+            <SheetTitle className="truncate">{viewing?.filename ?? ''}</SheetTitle>
+          </SheetHeader>
+
+          {viewing !== null && (
+            <div className="space-y-4 p-4">
+              {/* `object-contain` rather than a crop: this view exists to show what the
+                  thumbnail could not, which for a portrait image is most of it. */}
+              <img
+                src={client.mediaContentUrl(viewing.id)}
+                alt={viewing.altText ?? viewing.filename}
+                className="max-h-[70vh] w-full rounded-md bg-neutral-100 object-contain"
+              />
+
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt className="text-muted-foreground">{t('media.viewSize')}</dt>
+                <dd>{describeSize(viewing.byteSize)}</dd>
+
+                {viewing.width !== null && viewing.height !== null && (
+                  <>
+                    <dt className="text-muted-foreground">{t('media.viewDimensions')}</dt>
+                    <dd>
+                      {viewing.width}×{viewing.height}
+                    </dd>
+                  </>
+                )}
+
+                {viewing.altText !== null && (
+                  <>
+                    <dt className="text-muted-foreground">{t('media.viewAlt')}</dt>
+                    <dd>{viewing.altText}</dd>
+                  </>
+                )}
+              </dl>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

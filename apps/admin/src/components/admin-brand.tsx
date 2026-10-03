@@ -30,9 +30,13 @@ export function AdminBrand(): ReactNode {
         // default makes the image's box as wide as the sidebar, which is invisible
         // with `object-contain` and still not what a logo is.
         //
-        // `object-contain` stays as the floor: a logo wider than the sidebar is
+        // `px-12` is the inset the sidebar's brand asks for, and `h-9` is as tall as
+        // that inset leaves room for: the box is capped at the column's width either
+        // way, so a taller one would letterbox rather than grow.
+        //
+        // `object-contain` stays as the floor: a logo wider than the space left is
         // letterboxed rather than stretched.
-        className="h-7 w-auto max-w-full self-start object-contain"
+        className="h-9 w-auto max-w-full self-start object-contain px-12"
         data-testid="admin-brand-logo"
       />
     )

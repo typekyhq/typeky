@@ -5,6 +5,7 @@ import { ErrorState, LoadingState } from '@/components/states'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { UploadField } from '@/components/upload-field'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useApiClient } from '@/lib/client-context'
 import { useT } from '@/lib/i18n'
@@ -114,20 +115,13 @@ export function MediaPicker({ open, onOpenChange, onSelect, title }: MediaPicker
               </Button>
             </form>
 
-            <div className="space-y-2">
-              <Label htmlFor="media-upload">{t('mediaPicker.upload')}</Label>
-              <Input
+              <UploadField
                 id="media-upload"
-                type="file"
+                label={t('mediaPicker.upload')}
                 accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/mp4,video/webm"
                 disabled={uploading}
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  event.target.value = ''
-                  if (file !== undefined) void upload(file)
-                }}
+                onPick={(file) => void upload(file)}
               />
-            </div>
           </div>
 
           {uploading && <p className="text-sm text-muted-foreground">{t('mediaPicker.uploading')}</p>}
