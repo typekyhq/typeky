@@ -287,9 +287,15 @@ export const en: Locale = {
   'settings.theme.hint': 'Only the bundled default theme ships today.',
   'settings.accentColour': 'Accent colour',
   'settings.logo': 'Logo',
-  'settings.reservedPaths': 'Reserved paths',
-  'settings.reservedPaths.hint':
-    'One path per line. A page cannot take one of these addresses. {paths} are already reserved by the platform itself.',
+  'settings.paths': 'Reserved paths',
+  'settings.paths.hint':
+    'Addresses a page may not take. The platform\u2019s own are fixed; the rest are yours to keep free.',
+  'settings.paths.system': 'Reserved by the platform',
+  'settings.paths.system.hint':
+    'The Worker answers these before any page is rendered, so a page cannot have them \u2014 and they cannot be removed here. It is not a preference, it is what the software does.',
+  'settings.paths.mine': 'Reserved by you',
+  'settings.paths.mine.hint':
+    'One path per line. Keep an address free for something you have not built yet \u2014 an installer, a shop, a booking form \u2014 and no page will be able to take it.',
   'settings.favicon': 'Browser icon',
   'settings.favicon.hint': 'The tab icon. A square PNG or SVG works best.',
   'settings.logo.hint': 'Shown in the header and used as the fallback social image.',

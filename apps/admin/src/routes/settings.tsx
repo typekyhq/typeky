@@ -59,9 +59,9 @@ const TABS: FormTab[] = [
     'logoMediaId',
     'faviconMediaId',
     'settings.accentColor',
-    'settings.reservedPaths',
   ],
   },
+  { id: 'paths', labelKey: 'settings.paths', owns: ['settings.reservedPaths'] },
   { id: 'navigation', labelKey: 'settings.nav', owns: ['nav'] },
   { id: 'social', labelKey: 'settings.social', owns: ['settings.socialLinks'] },
   { id: 'seo', labelKey: 'settings.seo', owns: ['settings.seo'] },
@@ -314,26 +314,6 @@ export function SettingsPage() {
                   update((current) => ({ ...current, faviconMediaId: value === '' ? null : value }))
                 }
               />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="reservedPaths">{t('settings.reservedPaths')}</Label>
-              <Textarea
-                id="reservedPaths"
-                rows={4}
-                value={(settings.reservedPaths ?? []).join('\n')}
-                onChange={(event) =>
-                  update((current) => ({
-                    ...current,
-                    settings: { ...current.settings, reservedPaths: splitPaths(event.target.value) },
-                  }))
-                }
-              />
-              <p className="max-w-prose text-xs text-muted-foreground">
-                {t('settings.reservedPaths.hint', { paths: PLATFORM_PATHS.join(' ') })}
-              </p>
-              {issues['settings.reservedPaths'] !== undefined && (
-                <p className="text-sm text-destructive">{issues['settings.reservedPaths']}</p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -682,6 +662,46 @@ export function SettingsPage() {
         </Card>
       </TabsContent>
 
+
+      <TabsContent value="paths" forceMount hidden={tab !== 'paths'}>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('settings.paths.hint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label>{t('settings.paths.system')}</Label>
+              <ul className="flex flex-wrap gap-1" data-testid="platform-paths">
+                {PLATFORM_PATHS.map((path) => (
+                  <li key={path} className="rounded-md border bg-muted/40 px-1.5 py-0.5 font-mono text-xs">
+                    {path}
+                  </li>
+                ))}
+              </ul>
+              <p className="max-w-prose text-xs text-muted-foreground">{t('settings.paths.system.hint')}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reservedPaths">{t('settings.paths.mine')}</Label>
+              <Textarea
+                id="reservedPaths"
+                rows={4}
+                value={(settings.reservedPaths ?? []).join('\n')}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, reservedPaths: splitPaths(event.target.value) },
+                  }))
+                }
+              />
+              <p className="max-w-prose text-xs text-muted-foreground">{t('settings.paths.mine.hint')}</p>
+              {issues['settings.reservedPaths'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.reservedPaths']}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       <TabsContent value="licence" forceMount hidden={tab !== 'licence'}>
         <Card>

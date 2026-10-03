@@ -277,9 +277,14 @@ export const zhCN: Locale = {
   'settings.theme.hint': '目前只有内置的默认主题。',
   'settings.accentColour': '主题色',
   'settings.logo': '标志',
-  'settings.reservedPaths': '保留路径',
-  'settings.reservedPaths.hint':
-    '每行一个地址。页面不能占用这些地址。{paths} 已由平台自己保留。',
+  'settings.paths': '保留路径',
+  'settings.paths.hint': '页面不能占用的地址。平台自己那部分是固定的，其余由你保留。',
+  'settings.paths.system': '平台保留',
+  'settings.paths.system.hint':
+    'Worker 在渲染任何页面之前就会应答这些地址，所以页面不能占用它们 —— 也不能在这里删掉。这不是偏好设置，是软件本身的行为。',
+  'settings.paths.mine': '你保留的',
+  'settings.paths.mine.hint':
+    '每行一个地址。给还没做的东西先占个位置 —— 安装向导、商城、预约页 —— 之后就不会有页面占用它。',
   'settings.favicon': '浏览器图标',
   'settings.favicon.hint': '标签页上的图标。方形 PNG 或 SVG 最合适。',
   'settings.logo.hint': '显示在页头，并作为分享图的兜底。',

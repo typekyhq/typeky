@@ -219,11 +219,31 @@ describe('the logo', () => {
     })
   })
 
+  it('shows the platform\u2019s own paths read-only, beside the ones you keep', async () => {
+    renderPage(fakeClient())
+
+    await openTab('Reserved paths')
+
+    // The platform's half is shown rather than offered: the Worker answers these
+    // before any page is rendered, so they are not a preference to edit.
+    const system = await screen.findByTestId('platform-paths')
+    expect(within(system).getByText('/admin')).toBeTruthy()
+    expect(within(system).getByText('/posts')).toBeTruthy()
+    expect(within(system).queryByRole('textbox')).toBeNull()
+
+    // The operator's half is a field of its own, on the same screen.
+    expect(screen.getByLabelText('Reserved by you')).toBeTruthy()
+  })
+
   it('takes reserved paths as one per line, ignoring blanks and repeats', async () => {
     const saveSite = vi.fn(async (write: unknown) => ({ ...SITE, ...(write as object) }))
     renderPage(fakeClient({ saveSite }))
 
-    const field = await screen.findByLabelText('Reserved paths')
+    // Its own tab now, so a test has to go there first -- a hidden panel is as
+    // unreachable to a person as it is to `userEvent`.
+    await openTab('Reserved paths')
+
+    const field = await screen.findByLabelText('Reserved by you')
     await userEvent.click(field)
     // What a list pasted out of a note looks like: a blank line between sections,
     // and the same path twice.
@@ -420,6 +440,7 @@ describe('the tabs', () => {
 
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Identity',
+      'Reserved paths',
       'Navigation',
       'Social links',
       'SEO defaults',
@@ -438,11 +459,11 @@ describe('the tabs', () => {
     expect(screen.getByRole('tab', { name: 'Footer', selected: true })).toBeTruthy()
     expect(screen.getByRole('tabpanel', { name: 'Footer' }).hasAttribute('hidden')).toBe(false)
 
-    // Six of the seven are hidden rather than removed: the form is the document,
+    // Seven of the eight are hidden rather than removed: the form is the document,
     // and a panel that unmounted would take its fields out of it.
     const hidden = [...container.querySelectorAll('[role=tabpanel][hidden]')]
 
-    expect(hidden).toHaveLength(6)
+    expect(hidden).toHaveLength(7)
     expect(screen.getByLabelText('Name')).toBeTruthy()
   })
 
@@ -453,7 +474,7 @@ describe('the tabs', () => {
     await userEvent.click(identity)
     await userEvent.keyboard('{ArrowRight}')
 
-    expect(screen.getByRole('tab', { name: 'Navigation', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Reserved paths', selected: true })).toBeTruthy()
   })
 
   it('goes to the panel a failed save was about', async () => {
