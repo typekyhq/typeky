@@ -33,6 +33,10 @@ export function stubRepositories(partial: StubRepositories): Repositories {
     pages: { home: async () => null, list: nothing, ...partial.pages },
     posts: { list: nothing, ...partial.posts },
     products: { list: nothing, ...partial.products },
+    // A deployment with no site document yet, which is what a test means unless it
+    // says otherwise -- and which still reserves the platform's own paths, because
+    // those are a fact about the Worker rather than a setting.
+    sites: { get: async () => null, ...partial.sites },
     // Every content read and write now asks about terms: a write attaches the set
     // it was given, a read answers with the ones it has. "None" is what a test
     // means unless it says otherwise, and a test that cares overrides this rather

@@ -85,6 +85,7 @@ export const en: Locale = {
   'error.admin_password_not_configured': 'No admin password is configured on this deployment.',
   'error.database_not_configured': 'This deployment has no database configured.',
   'error.not_found': 'That endpoint does not exist yet.',
+  'error.slug_reserved': 'That slug is reserved. Choose another one.',
   'error.slug_taken': 'That slug is already in use. Choose another one.',
   'error.storage_not_configured': 'This deployment has no media storage configured.',
   'error.internal_error': 'The server could not complete the request.',
@@ -286,6 +287,9 @@ export const en: Locale = {
   'settings.theme.hint': 'Only the bundled default theme ships today.',
   'settings.accentColour': 'Accent colour',
   'settings.logo': 'Logo',
+  'settings.reservedPaths': 'Reserved paths',
+  'settings.reservedPaths.hint':
+    'One path per line. A page cannot take one of these addresses. {paths} are already reserved by the platform itself.',
   'settings.favicon': 'Browser icon',
   'settings.favicon.hint': 'The tab icon. A square PNG or SVG works best.',
   'settings.logo.hint': 'Shown in the header and used as the fallback social image.',

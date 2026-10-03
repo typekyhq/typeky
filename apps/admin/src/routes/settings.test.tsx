@@ -219,6 +219,27 @@ describe('the logo', () => {
     })
   })
 
+  it('takes reserved paths as one per line, ignoring blanks and repeats', async () => {
+    const saveSite = vi.fn(async (write: unknown) => ({ ...SITE, ...(write as object) }))
+    renderPage(fakeClient({ saveSite }))
+
+    const field = await screen.findByLabelText('Reserved paths')
+    await userEvent.click(field)
+    // What a list pasted out of a note looks like: a blank line between sections,
+    // and the same path twice.
+    await userEvent.paste('/install\n/shop\n\n/shop')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(saveSite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          settings: expect.objectContaining({ reservedPaths: ['/install', '/shop'] }),
+        }),
+      )
+    })
+  })
+
   it('has a browser icon beside it, chosen the same way', async () => {
     renderPage(fakeClient())
 

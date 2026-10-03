@@ -30,6 +30,7 @@ import { useApiClient } from '@/lib/client-context'
 import { ADMIN_LOCALES, LANGUAGE_TAGS } from '@/lib/locales'
 import { formatLocal, usePanelPreference } from '@/lib/panel-preference'
 import { describeApiError } from '@/lib/session'
+import { PLATFORM_PATHS } from '@typeky/api'
 import { useT } from '@/lib/i18n'
 import { tabOwning, type FormTab } from '@/lib/tabs'
 
@@ -51,7 +52,15 @@ const TABS: FormTab[] = [
   {
     id: 'identity',
     labelKey: 'settings.identity',
-    owns: ['name', 'tagline', 'theme', 'logoMediaId', 'faviconMediaId', 'settings.accentColor'],
+    owns: [
+    'name',
+    'tagline',
+    'theme',
+    'logoMediaId',
+    'faviconMediaId',
+    'settings.accentColor',
+    'settings.reservedPaths',
+  ],
   },
   { id: 'navigation', labelKey: 'settings.nav', owns: ['nav'] },
   { id: 'social', labelKey: 'settings.social', owns: ['settings.socialLinks'] },
@@ -305,6 +314,26 @@ export function SettingsPage() {
                   update((current) => ({ ...current, faviconMediaId: value === '' ? null : value }))
                 }
               />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="reservedPaths">{t('settings.reservedPaths')}</Label>
+              <Textarea
+                id="reservedPaths"
+                rows={4}
+                value={(settings.reservedPaths ?? []).join('\n')}
+                onChange={(event) =>
+                  update((current) => ({
+                    ...current,
+                    settings: { ...current.settings, reservedPaths: splitPaths(event.target.value) },
+                  }))
+                }
+              />
+              <p className="max-w-prose text-xs text-muted-foreground">
+                {t('settings.reservedPaths.hint', { paths: PLATFORM_PATHS.join(' ') })}
+              </p>
+              {issues['settings.reservedPaths'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.reservedPaths']}</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -705,6 +734,22 @@ function toDraft(site: SiteResponse): SiteWrite {
     },
     nav: [...site.nav].sort((left, right) => left.order - right.order),
   }
+}
+
+/**
+ * One path per line, trimmed, with the blanks and the repeats dropped.
+ *
+ * A textarea is what the operator asked for, and what that means is a list they can
+ * paste into from a note. The blanks are how they left room between sections of that
+ * note, and a repeat is not two reservations.
+ */
+function splitPaths(value: string): string[] {
+  const paths = value
+    .split('\n')
+    .map((path) => path.trim())
+    .filter((path) => path !== '')
+
+  return [...new Set(paths)]
 }
 
 function collectIssues(

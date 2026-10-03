@@ -6,6 +6,7 @@ import {
   type PageSummary,
 } from '@typeky/api'
 import { defaultContext, type Page, type Repositories } from '@typeky/db'
+import { reservedPathFor } from '@typeky/api'
 import { createLiquidRuntime } from '@typeky/theme-kit'
 import type { Context } from 'hono'
 import {
@@ -106,6 +107,20 @@ async function writePage(
 
   const owner = await slugOwner(store, body.slug, id)
   if (owner !== null) return slugTaken(c, body.slug, owner)
+
+  // A page's URL is `/<slug>`, so this is where a page can take a path the platform
+  // -- or the operator -- needs. Checked before anything is written, and before the
+  // slug-owner check would have been enough on its own: an unused slug is not the
+  // same as an available one.
+  const site = await store.sites.get(defaultContext())
+  const reserved = reservedPathFor(body.slug, site?.settings.reservedPaths ?? [])
+  if (reserved !== null) {
+    return apiError(
+      c,
+      'slug_reserved',
+      `"${reserved}" is reserved; the page would take that address.`,
+    )
+  }
 
   const useLayout = body.useLayout ?? true
   const customSource = body.customSource ?? ''

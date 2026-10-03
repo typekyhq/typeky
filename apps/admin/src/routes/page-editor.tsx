@@ -180,6 +180,9 @@ export function PageEditorPage() {
       if (thrown instanceof ApiError && thrown.code === 'slug_taken') {
         setSlugError(thrown.serverMessage ?? t('editor.slugTaken'))
         toast.error(t('editor.slugTaken'))
+      } else if (thrown instanceof ApiError && thrown.code === 'slug_reserved') {
+        setSlugError(thrown.serverMessage ?? t('error.slug_reserved'))
+        toast.error(t('error.slug_reserved'))
       } else if (thrown instanceof ApiError && !form.useLayout && thrown.serverMessage !== undefined) {
         setSourceProblem({ message: thrown.serverMessage, line: thrown.line ?? null })
         setTab('body')

@@ -37,6 +37,7 @@ const ERROR_KEYS: Record<ApiErrorCode, string> = {
   database_not_configured: 'error.database_not_configured',
   not_found: 'error.not_found',
   slug_taken: 'error.slug_taken',
+  slug_reserved: 'error.slug_reserved',
   name_taken: 'error.name_taken',
   storage_not_configured: 'error.storage_not_configured',
   internal_error: 'error.internal_error',

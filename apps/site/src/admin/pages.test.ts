@@ -325,6 +325,49 @@ describe('deleting pages', () => {
   })
 })
 
+describe('a slug the platform needs', () => {
+  it('refuses a path the Worker serves itself', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+
+    // A page at `/admin` would take the panel's own address, and the operator would
+    // have locked themselves out of their site.
+    const response = await write('POST', '/pages', { title: 'Panel', slug: 'admin' }, auth)
+
+    expect(response.status).toBe(409)
+    expect(((await response.json()) as { error: string }).error).toBe('slug_reserved')
+  })
+
+  it('refuses one the operator reserved', async () => {
+    // Both halves: a working page repository, and a site document that reserves a
+    // path of its own.
+    const store = stubRepositories({
+      pages: fakePagesRepository().repository,
+      sites: {
+        get: async () =>
+          ({ id: 'default', name: 'Site', settings: { reservedPaths: ['/install'] } }) as never,
+      },
+    })
+
+    const { signIn, write } = setup({ repositories: () => store })
+    const auth = await signIn()
+
+    const response = await write('POST', '/pages', { title: 'Installer', slug: 'install' }, auth)
+
+    expect(response.status).toBe(409)
+    expect(((await response.json()) as { message: string }).message).toContain('/install')
+  })
+
+  it('allows a slug that only looks like one', async () => {
+    const { signIn, write } = setup()
+    const auth = await signIn()
+
+    const response = await write('POST', '/pages', { title: 'Docs', slug: 'api-docs' }, auth)
+
+    expect(response.status).toBe(201)
+  })
+})
+
 describe('a page that is its own document', () => {
   it('stores the source and the flag', async () => {
     const { signIn, write, rows } = setup()

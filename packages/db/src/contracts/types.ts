@@ -43,6 +43,8 @@ export interface SiteSettings {
   socialLinks?: SocialLink[]
   seo?: { defaultTitle?: string; defaultDescription?: string }
   footer?: string
+  /** Paths kept free for something other than a page; see `PLATFORM_PATHS`. */
+  reservedPaths?: string[]
 }
 
 export interface Site {

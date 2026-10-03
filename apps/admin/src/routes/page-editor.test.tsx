@@ -140,6 +140,21 @@ describe('saving a page', () => {
     expect(await screen.findByText('The slug "about" is already used by "About".')).toBeTruthy()
     expect(screen.getByLabelText('Slug').getAttribute('aria-invalid')).toBe('true')
   })
+
+  it('reports a reserved path on the same field, with the reason', async () => {
+    const createPage = vi.fn(async () => {
+      throw new ApiError('slug_reserved', 409, '"install" is reserved; the page would take that address.')
+    })
+    renderEditor(fakeApiClient({ createPage }), '/pages/new')
+
+    await userEvent.type(await screen.findByLabelText('Title'), 'Installer')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+
+    // Naming the path is the point: "reserved" on its own leaves the operator
+    // guessing which of their own rules they hit.
+    expect(await screen.findByText('"install" is reserved; the page would take that address.')).toBeTruthy()
+    expect(screen.getByLabelText('Slug').getAttribute('aria-invalid')).toBe('true')
+  })
 })
 
 describe('the home page action', () => {

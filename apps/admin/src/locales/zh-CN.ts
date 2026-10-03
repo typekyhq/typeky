@@ -80,6 +80,7 @@ export const zhCN: Locale = {
   'error.admin_password_not_configured': '这个部署没有配置后台密码。',
   'error.database_not_configured': '这个部署没有配置数据库。',
   'error.not_found': '这个接口还不存在。',
+  'error.slug_reserved': '这个别名是保留的，请换一个。',
   'error.slug_taken': '这个别名已经被占用了，请换一个。',
   'error.storage_not_configured': '这个部署没有配置媒体存储。',
   'error.internal_error': '服务器无法完成这次请求。',
@@ -276,6 +277,9 @@ export const zhCN: Locale = {
   'settings.theme.hint': '目前只有内置的默认主题。',
   'settings.accentColour': '主题色',
   'settings.logo': '标志',
+  'settings.reservedPaths': '保留路径',
+  'settings.reservedPaths.hint':
+    '每行一个地址。页面不能占用这些地址。{paths} 已由平台自己保留。',
   'settings.favicon': '浏览器图标',
   'settings.favicon.hint': '标签页上的图标。方形 PNG 或 SVG 最合适。',
   'settings.logo.hint': '显示在页头，并作为分享图的兜底。',

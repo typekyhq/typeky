@@ -9,6 +9,8 @@
  * client infers from them.
  */
 
+export { PLATFORM_PATHS, firstPathSegment, reservedPathFor } from './paths'
+
 export {
   API_ERROR_CODES,
   API_ERROR_STATUS,

@@ -82,6 +82,14 @@ export const siteSettingsSchema = z.object({
   language: z.optional(LANGUAGE),
   /** How the site writes a date. */
   dateFormat: z.optional(DATE_FORMAT),
+  /**
+   * Paths the operator wants kept free for something else, one entry each.
+   *
+   * The platform's own paths are reserved without being listed here -- they are a
+   * fact about the Worker rather than a preference. This is for the URL somebody
+   * knows they will need: an installer, a shop, a booking flow.
+   */
+  reservedPaths: z.optional(z.array(z.string().check(z.maxLength(200))).check(z.maxLength(100))),
   /** The panel's own language and dates, which are not the site's. */
   admin: z.optional(adminSettingsSchema),
 })
