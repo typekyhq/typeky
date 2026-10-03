@@ -31,6 +31,7 @@ function fakeSiteRepository() {
         name: input.name,
         tagline: input.tagline,
         logoMediaId: input.logoMediaId,
+      faviconMediaId: null,
         theme: input.theme,
         settings: input.settings,
         nav: input.nav,

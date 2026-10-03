@@ -33,6 +33,8 @@ export interface SiteForTemplates {
   tagline?: string
   /** Resolved to a URL: a template cannot turn a media id into one. */
   logo_url?: string
+  /** The browser tab icon, also resolved. Absent when none is set. */
+  favicon_url?: string
   /** BCP 47, for the `lang` attribute. */
   language: string
   /**

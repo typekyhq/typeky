@@ -7,6 +7,14 @@
   below is what keeps that from mattering.
 {% endcomment %}
 <title>{{ seo.title }}</title>
+{% comment %}
+  The browser tab icon, when the site has one. `apple-touch-icon` is the same file:
+  iOS wants a larger square than a favicon, and a site with one image has one image.
+{% endcomment %}
+{% if site.favicon_url %}
+  <link rel="icon" href="{{ site.favicon_url }}">
+  <link rel="apple-touch-icon" href="{{ site.favicon_url }}">
+{% endif %}
 {% if seo.description %}<meta name="description" content="{{ seo.description }}">{% endif %}
 {% if page.canonical %}<link rel="canonical" href="{{ page.canonical }}">{% endif %}
 

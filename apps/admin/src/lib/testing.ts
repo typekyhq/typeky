@@ -21,6 +21,7 @@ const EMPTY_SITE = {
   name: '',
   tagline: null,
   logoMediaId: null,
+    faviconMediaId: null,
   theme: 'default',
   settings: {},
   nav: [],

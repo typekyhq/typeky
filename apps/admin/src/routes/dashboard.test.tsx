@@ -20,6 +20,7 @@ const SITE: SiteResponse = {
   name: 'Typeky Demo',
   tagline: null,
   logoMediaId: null,
+    faviconMediaId: null,
   theme: 'default',
   settings: {},
   nav: [],

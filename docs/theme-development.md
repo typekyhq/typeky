@@ -94,6 +94,7 @@ there are no functions to call and nothing to fetch.
 | `site.name` | string | |
 | `site.tagline` | string? | |
 | `site.logo_url` | string? | Already a URL; a media id would be useless here |
+| `site.favicon_url` | string? | The browser tab icon, already a URL. Set it in the site settings |
 | `site.language` | string | BCP 47, for the `lang` attribute |
 | `site.date_format` | string | A strftime format for `\| date`. The site's own setting |
 | `site.nav` | array | `{ label, href }`, already in the order the operator set |

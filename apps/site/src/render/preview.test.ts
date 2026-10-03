@@ -121,7 +121,7 @@ describe('a preview matches what saving would produce', () => {
     expect(sampleContext('templates/post').preview).toBe(true)
     expect(
       buildRenderContext({
-        site: { name: 'x', tagline: null, logoMediaId: null, settings: {}, nav: [] },
+        site: { name: 'x', tagline: null, logoMediaId: null, faviconMediaId: null, settings: {}, nav: [] },
         item: { kind: 'post', title: 'x', slug: 'x', blocks: [], seo: {} },
       }).preview,
     ).toBeUndefined()
@@ -143,7 +143,7 @@ describe('one assembly, not two', () => {
     // will the site's render. A second implementation would be the bug the
     // acceptance criterion is about.
     const context = buildRenderContext({
-      site: { name: 'Site', tagline: null, logoMediaId: null, settings: {}, nav: [] },
+      site: { name: 'Site', tagline: null, logoMediaId: null, faviconMediaId: null, settings: {}, nav: [] },
       item: {
         kind: 'post',
         title: 'Title',
@@ -162,7 +162,7 @@ describe('one assembly, not two', () => {
 
   it('lets an override win over the excerpt, which wins over the site default', () => {
     const base = {
-      site: { name: 'Site', tagline: null, logoMediaId: null, settings: {}, nav: [] },
+      site: { name: 'Site', tagline: null, logoMediaId: null, faviconMediaId: null, settings: {}, nav: [] },
       defaults: { title: 'Site default', description: 'Site default description' },
     }
     const item = { kind: 'post' as const, title: 'Title', slug: 'x', blocks: [], seo: {} }

@@ -21,6 +21,7 @@ export interface SiteInput {
   name: string
   tagline: string | null
   logoMediaId: string | null
+  faviconMediaId: string | null
   settings: Record<string, unknown>
   nav: { label: string; href: string; order: number }[]
   /**
@@ -187,6 +188,9 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       name: site.name,
       ...(site.tagline === null ? {} : { tagline: site.tagline }),
       ...(resolve(site.logoMediaId) === undefined ? {} : { logo_url: resolve(site.logoMediaId) }),
+      ...(resolve(site.faviconMediaId) === undefined
+        ? {}
+        : { favicon_url: resolve(site.faviconMediaId) }),
       language: typeof site.settings.language === 'string' ? site.settings.language : DEFAULT_LANGUAGE,
       date_format:
         typeof site.settings.dateFormat === 'string' ? site.settings.dateFormat : DEFAULT_DATE_FORMAT,

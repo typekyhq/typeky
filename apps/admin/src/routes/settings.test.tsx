@@ -12,6 +12,7 @@ const SITE: SiteResponse = {
   name: 'Typeky Demo',
   tagline: 'A small site',
   logoMediaId: 'media_logo',
+    faviconMediaId: null,
   theme: 'default',
   settings: {
     accentColor: '#111827',
@@ -215,6 +216,27 @@ describe('the logo', () => {
 
     await waitFor(() => {
       expect(saveSite).toHaveBeenCalledWith(expect.objectContaining({ logoMediaId: 'media_logo' }))
+    })
+  })
+
+  it('has a browser icon beside it, chosen the same way', async () => {
+    renderPage(fakeClient())
+
+    // A favicon is site branding like the logo is, so it is chosen from the media
+    // library rather than typed as a path or left to a theme to invent.
+    expect(await screen.findByRole('button', { name: 'Choose browser icon' })).toBeTruthy()
+  })
+
+  it('sends the browser icon through a save even while it is empty', async () => {
+    const saveSite = vi.fn(async (write: unknown) => ({ ...SITE, ...(write as object) }))
+    renderPage(fakeClient({ saveSite }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Save changes' }))
+
+    // The write replaces the row: a field the form does not send is a field the save
+    // clears.
+    await waitFor(() => {
+      expect(saveSite).toHaveBeenCalledWith(expect.objectContaining({ faviconMediaId: null }))
     })
   })
 })

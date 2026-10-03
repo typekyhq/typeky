@@ -38,6 +38,12 @@ const sites: TableDef = {
       type: 'uuid',
       references: { table: 'media', column: 'id', onDelete: 'set null' },
     },
+    {
+      name: 'favicon_media_id',
+      type: 'uuid',
+      note: 'the browser tab icon; same shape as the logo and for the same reasons',
+      references: { table: 'media', column: 'id', onDelete: 'set null' },
+    },
     { name: 'theme', type: 'text', notNull: true, defaultSql: "'default'" },
     {
       name: 'settings',

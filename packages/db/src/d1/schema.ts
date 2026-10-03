@@ -29,6 +29,7 @@ export const sites = sqliteTable('sites', {
   name: text('name').notNull(),
   tagline: text('tagline'),
   logoMediaId: text('logo_media_id').references(() => media.id, { onDelete: 'set null' }),
+  faviconMediaId: text('favicon_media_id').references(() => media.id, { onDelete: 'set null' }),
   theme: text('theme').notNull().default('default'),
   settings: text('settings').notNull().default('{}'),
   nav: text('nav').notNull().default('[]'),

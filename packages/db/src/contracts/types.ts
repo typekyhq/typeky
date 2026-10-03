@@ -50,6 +50,7 @@ export interface Site {
   name: string
   tagline: string | null
   logoMediaId: string | null
+  faviconMediaId: string | null
   theme: string
   settings: SiteSettings
   nav: NavItem[]
@@ -156,6 +157,7 @@ export interface SiteWrite {
   name: string
   tagline: string | null
   logoMediaId: string | null
+  faviconMediaId?: string | null
   theme: string
   settings: SiteSettings
   nav: NavItem[]

@@ -276,6 +276,8 @@ export const zhCN: Locale = {
   'settings.theme.hint': '目前只有内置的默认主题。',
   'settings.accentColour': '主题色',
   'settings.logo': '标志',
+  'settings.favicon': '浏览器图标',
+  'settings.favicon.hint': '标签页上的图标。方形 PNG 或 SVG 最合适。',
   'settings.logo.hint': '显示在页头，并作为分享图的兜底。',
   'settings.nav': '导航',
   'settings.nav.hint': '访客看到的菜单。这里的顺序就是站点上的顺序。',

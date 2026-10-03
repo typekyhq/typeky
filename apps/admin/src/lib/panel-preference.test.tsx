@@ -21,6 +21,7 @@ function SITE(admin: Record<string, unknown>): SiteResponse {
     name: 'Typeky Demo',
     tagline: null,
     logoMediaId: null,
+    faviconMediaId: null,
     theme: 'default',
     settings: { admin },
     nav: [],

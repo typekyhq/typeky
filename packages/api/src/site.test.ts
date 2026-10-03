@@ -5,6 +5,7 @@ const site = {
   name: 'Typeky Demo',
   tagline: 'A small site',
   logoMediaId: null,
+  faviconMediaId: null,
   theme: 'default',
   settings: {},
   nav: [],

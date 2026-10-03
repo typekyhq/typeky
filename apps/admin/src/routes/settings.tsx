@@ -51,7 +51,7 @@ const TABS: FormTab[] = [
   {
     id: 'identity',
     labelKey: 'settings.identity',
-    owns: ['name', 'tagline', 'theme', 'logoMediaId', 'settings.accentColor'],
+    owns: ['name', 'tagline', 'theme', 'logoMediaId', 'faviconMediaId', 'settings.accentColor'],
   },
   { id: 'navigation', labelKey: 'settings.nav', owns: ['nav'] },
   { id: 'social', labelKey: 'settings.social', owns: ['settings.socialLinks'] },
@@ -291,6 +291,18 @@ export function SettingsPage() {
                 hint={t('settings.logo.hint')}
                 onChange={(value) =>
                   update((current) => ({ ...current, logoMediaId: value === '' ? null : value }))
+                }
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <MediaField
+                id="faviconMediaId"
+                label={t('settings.favicon')}
+                value={draft.faviconMediaId ?? ''}
+                error={issues.faviconMediaId}
+                hint={t('settings.favicon.hint')}
+                onChange={(value) =>
+                  update((current) => ({ ...current, faviconMediaId: value === '' ? null : value }))
                 }
               />
             </div>
@@ -666,7 +678,15 @@ export function SettingsPage() {
  * the same schema the Worker will apply.
  */
 function blankDocument(): SiteWrite {
-  return { name: '', tagline: null, logoMediaId: null, theme: 'default', settings: {}, nav: [] }
+  return {
+    name: '',
+    tagline: null,
+    logoMediaId: null,
+    faviconMediaId: null,
+    theme: 'default',
+    settings: {},
+    nav: [],
+  }
 }
 
 function toDraft(site: SiteResponse): SiteWrite {
@@ -676,6 +696,7 @@ function toDraft(site: SiteResponse): SiteWrite {
     // Carried through untouched: the form has no way to edit it yet, and the
     // write replaces the whole document.
     logoMediaId: site.logoMediaId,
+    faviconMediaId: site.faviconMediaId,
     theme: site.theme,
     settings: {
       ...site.settings,

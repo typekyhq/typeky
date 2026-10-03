@@ -20,7 +20,7 @@ const SITE = {
   id: 'default',
   name: 'Sample Site',
   tagline: 'A tagline',
-  logoMediaId: null,
+  logoMediaId: null, faviconMediaId: null,
   theme: 'default',
   settings: { footer: 'Built with Typeky.', seo: { defaultTitle: 'Sample Site' } },
   nav: [{ label: 'Home', href: '/', order: 0 }],
@@ -225,6 +225,18 @@ describe('rendering content pages', () => {
     const second = await render('/posts/2')
     expect(second.status).toBe(200)
     expect(second.html).toContain('/posts')
+  })
+
+  it('puts the site icon in the head, and nothing when there is none', async () => {
+    const { render } = setUp({ site: { ...SITE, faviconMediaId: 'icon_1' } })
+
+    const filed = await render('/')
+    expect(filed.html).toContain('<link rel="icon" href="https://example.com/media/icon_1">')
+
+    // Absent rather than empty: a template's `{% if %}` is the whole check, and a
+    // link to an image the site does not have would be a broken tab icon.
+    const bare = await setUp().render('/')
+    expect(bare.html).not.toContain('rel="icon"')
   })
 
   it('prints the terms a post is filed under', async () => {

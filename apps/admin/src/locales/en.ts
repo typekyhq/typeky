@@ -286,6 +286,8 @@ export const en: Locale = {
   'settings.theme.hint': 'Only the bundled default theme ships today.',
   'settings.accentColour': 'Accent colour',
   'settings.logo': 'Logo',
+  'settings.favicon': 'Browser icon',
+  'settings.favicon.hint': 'The tab icon. A square PNG or SVG works best.',
   'settings.logo.hint': 'Shown in the header and used as the fallback social image.',
   'settings.nav': 'Navigation',
   'settings.nav.hint': 'The menu visitors see. Order here is the order on the site.',

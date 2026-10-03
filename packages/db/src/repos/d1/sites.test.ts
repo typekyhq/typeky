@@ -12,6 +12,7 @@ const ctx = defaultContext()
 const base = {
   tagline: null,
   logoMediaId: null,
+  faviconMediaId: null,
   theme: 'default',
   settings: {},
   nav: [],

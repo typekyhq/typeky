@@ -18,10 +18,11 @@ import { buildRenderContext, type SiteInput } from './context'
 const SAMPLE_SITE: SiteInput = {
   name: 'Sample Site',
   tagline: 'A site for previewing templates',
-  // A real media id, so `site.logo_url` is a field of the context -- see
-  // `contextPaths`. A preview still renders no logo, because the preview's media
-  // resolver has no bucket to resolve against.
+  // Real media ids, so `site.logo_url` and `site.favicon_url` are fields of the
+  // context -- see `contextPaths`. A preview still renders neither, because the
+  // preview's media resolver has no bucket to resolve against.
   logoMediaId: 'sample-logo',
+  faviconMediaId: 'sample-icon',
   settings: {
     language: 'en',
     footer: 'Built with Typeky.',
