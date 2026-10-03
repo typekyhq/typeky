@@ -92,6 +92,15 @@ export function ThemeSection() {
   /** The last source the server accepted, so "changed" is answerable. */
   const [saved, setSaved] = useState<string | null>(null)
   const [problem, setProblem] = useState<{ message: string; line: number | null } | null>(null)
+  /**
+   * Bumped when the source changes underneath the editor rather than inside it.
+   *
+   * Restoring the bundled template and discarding changes both replace what the editor
+   * holds, and the editor only reads its source when it is mounted -- so the way to
+   * replace it is to mount another one. Keying by path alone covered opening another
+   * file; this covers the same file becoming a different document.
+   */
+  const [editorEpoch, setEditorEpoch] = useState(0)
   const [saving, setSaving] = useState(false)
   const [view, setView] = useState<'source' | 'preview'>('source')
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
@@ -215,6 +224,7 @@ export function ThemeSection() {
       const template = await client.getThemeTemplate(openPath)
       setSource(template.source)
       setSaved(template.source)
+      setEditorEpoch((epoch) => epoch + 1)
       reload()
     } catch (thrown) {
       toast.error(describeApiError(thrown, t))
@@ -433,7 +443,7 @@ export function ThemeSection() {
                     )
                   ) : (
                     <TemplateEditorSurface
-                      key={openPath}
+                      key={`${openPath}:${String(editorEpoch)}`}
                       initialSource={source}
                       onChange={setSource}
                       errorLine={problem?.line ?? null}
@@ -462,6 +472,7 @@ export function ThemeSection() {
                         onClick={() => {
                           setSource(saved)
                           setProblem(null)
+                          setEditorEpoch((epoch) => epoch + 1)
                         }}
                         disabled={source === saved || saving}
                       >

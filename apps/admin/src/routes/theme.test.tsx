@@ -251,6 +251,28 @@ describe('the theme screen', () => {
     })
   })
 
+  it('replaces what the editor holds, rather than only the source beside it', async () => {
+    const resetThemeTemplate = vi.fn(async () => undefined)
+    const listThemeTemplates = vi.fn(async () => ({ theme: 'default', items: ITEMS }))
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderSection(withTheme({ resetThemeTemplate, listThemeTemplates }))
+
+    await openFile('post')
+    await screen.findByTestId('surface')
+
+    // Typed into, so the editor's own text differs from the source in state. This is
+    // the part the test above could not see: an editor that is not replaced keeps
+    // showing what was typed, however correct the source beside it has become.
+    await userEvent.clear(screen.getByTestId('surface'))
+    await userEvent.type(screen.getByTestId('surface'), 'mine')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Restore default' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('surface')).toHaveProperty('value', 'SOURCE OF templates/post')
+    })
+  })
+
   it('does not offer to restore a template that has no override', async () => {
     renderSection(
       withTheme({

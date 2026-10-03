@@ -45,8 +45,17 @@ export function TemplateEditorSurface({
       instance?.destroy()
       editor.current = null
     }
-    // Mount once. The source only changes when the screen keys this component.
-  }, [initialSource, autoFocus])
+    // Mounted once, and `initialSource` is deliberately not a dependency.
+    //
+    // Every screen passes its own live state here, so the prop changes on every
+    // keystroke -- and watching it rebuilt the editor under the cursor, which put the
+    // caret back at the top of the document after each letter. A different document is
+    // expressed by keying this component, which is the caller's decision and not
+    // something this can infer from a string.
+    //
+    // `autoFocus` stays: it is a literal at every call site, and a screen that wanted
+    // to change it mid-edit would be asking for a new editor anyway.
+  }, [autoFocus])
 
   useEffect(() => {
     editor.current?.markError(errorLine ?? null)
