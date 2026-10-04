@@ -525,6 +525,9 @@ export const zhCN: Locale = {
   'theme.saved': '已保存。站点会在下一次渲染时用到它。',
   'theme.restored': '已恢复为内置模板。',
   'theme.restoreConfirm': '恢复 {path} 的内置版本？你对它的修改会丢失。',
+  'theme.delete': '删除主题',
+  'theme.deleteConfirm': '删除主题「{name}」？它的文件会一并移除，站点将回到内置主题。',
+  'theme.deleted': '已删除 {name}。',
   'theme.noChanges': '没有改动。',
   'theme.unsaved': '有未保存的改动。',
 

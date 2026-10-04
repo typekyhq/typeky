@@ -540,6 +540,9 @@ export const en: Locale = {
   'theme.saved': 'Saved. The site picks this up on the next render.',
   'theme.restored': 'Restored the bundled template.',
   'theme.restoreConfirm': 'Restore the bundled version of {path}? Your changes to it are lost.',
+  'theme.delete': 'Delete theme',
+  'theme.deleteConfirm': 'Delete the theme “{name}”? Its files go with it, and the site goes back to the built-in theme.',
+  'theme.deleted': '{name} deleted.',
   'theme.noChanges': 'No changes.',
   'theme.unsaved': 'Unsaved changes.',
 

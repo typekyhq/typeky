@@ -538,6 +538,9 @@ export const ptBR: Locale = {
   'theme.saved': 'Salvo. O site pega isto na próxima renderização.',
   'theme.restored': 'Template embutido restaurado.',
   'theme.restoreConfirm': 'Restaurar a versão embutida de {path}? Suas mudanças nela serão perdidas.',
+  'theme.delete': 'Excluir tema',
+  'theme.deleteConfirm': 'Excluir o tema “{name}”? Os arquivos dele vão junto, e o site volta ao tema embutido.',
+  'theme.deleted': '{name} excluído.',
   'theme.noChanges': 'Sem mudanças.',
   'theme.unsaved': 'Mudanças não salvas.',
 

@@ -538,6 +538,9 @@ export const es: Locale = {
   'theme.saved': 'Guardado. El sitio lo toma en el próximo renderizado.',
   'theme.restored': 'Plantilla incluida restaurada.',
   'theme.restoreConfirm': '¿Restaurar la versión incluida de {path}? Tus cambios en ella se pierden.',
+  'theme.delete': 'Eliminar tema',
+  'theme.deleteConfirm': '¿Eliminar el tema «{name}»? Sus archivos se van con él, y el sitio vuelve al tema incluido.',
+  'theme.deleted': '{name} eliminado.',
   'theme.noChanges': 'Sin cambios.',
   'theme.unsaved': 'Cambios sin guardar.',
 

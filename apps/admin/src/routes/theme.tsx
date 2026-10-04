@@ -224,6 +224,14 @@ function fileDescription(path: string, t: (key: string) => string): string {
   return text === key ? '' : text
 }
 
+/**
+ * The theme that ships in code, and the only one the operator cannot delete.
+ *
+ * The deployment reserves this name, so a page showing a theme called anything else
+ * is showing an uploaded one -- which is what decides whether the remove button exists.
+ */
+const BUNDLED_THEME = 'default'
+
 export function ThemeSection() {
   const t = useT()
   const client = useApiClient()
@@ -397,6 +405,27 @@ export function ThemeSection() {
     }
   }
 
+  async function removeTheme(): Promise<void> {
+    if (!window.confirm(t('theme.deleteConfirm', { name: theme }))) return
+
+    try {
+      await client.deleteTheme(theme)
+      toast.success(t('theme.deleted', { name: theme }))
+
+      // The editor was showing a theme that no longer exists, and the site has just
+      // moved off it: close whatever was open and load the bundled theme's tree.
+      setOpenPath(null)
+      setSource(null)
+      setSaved(null)
+      setProblem(null)
+      setPreviewHtml(null)
+      setDocument(null)
+      reload()
+    } catch (thrown) {
+      toast.error(describeApiError(thrown, t))
+    }
+  }
+
   if (state === 'error') {
     return <ErrorState title={t('theme.loadFailed')} description={error} onRetry={reload} />
   }
@@ -410,13 +439,20 @@ export function ThemeSection() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold">{t('theme.title')}</h1>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          {customised === 0
-            ? t('theme.subtitle.all', { theme })
-            : t('theme.subtitle.customised', { customised, total: items.length })}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold">{t('theme.title')}</h1>
+          <p className="max-w-prose text-sm text-muted-foreground">
+            {customised === 0
+              ? t('theme.subtitle.all', { theme })
+              : t('theme.subtitle.customised', { customised, total: items.length })}
+          </p>
+        </div>
+        {theme !== BUNDLED_THEME && (
+          <Button type="button" size="sm" variant="destructive" onClick={() => void removeTheme()}>
+            {t('theme.delete')}
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">

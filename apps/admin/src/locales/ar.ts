@@ -538,6 +538,9 @@ export const ar: Locale = {
   'theme.saved': 'حُفظ. يلتقطه الموقع في العرض التالي.',
   'theme.restored': 'استُعيد القالب المضمَّن.',
   'theme.restoreConfirm': 'أأستعيد النسخة المضمَّنة من {path}؟ ستضيع تغييراتك عليه.',
+  'theme.delete': 'حذف القالب',
+  'theme.deleteConfirm': 'حذف القالب «{name}»؟ ستُحذف ملفاته معه، ويعود الموقع إلى القالب المضمَّن.',
+  'theme.deleted': 'حُذف {name}.',
   'theme.noChanges': 'لا تغييرات.',
   'theme.unsaved': 'تغييرات غير محفوظة.',
 

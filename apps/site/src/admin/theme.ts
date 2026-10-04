@@ -273,6 +273,27 @@ export async function deleteTheme(
     return apiError(c, 'not_found', 'no theme by that name')
   }
 
+  /*
+    The theme page edits whichever theme the site serves, so the theme an operator
+    can delete here is usually the one in use. Removing it without moving the site
+    off it would leave `sites.theme` naming a theme that no longer exists: the site
+    keeps rendering (it layers over the bundled one), but the setting becomes a
+    ghost the settings screen has to keep showing to avoid "fixing" it. So the site
+    falls back to the bundled theme in the same request that removes the other one.
+  */
+  const site = await store.sites.get(defaultContext())
+  if (site !== null && site.theme === name) {
+    await store.sites.save(defaultContext(), {
+      name: site.name,
+      tagline: site.tagline,
+      logoMediaId: site.logoMediaId,
+      faviconMediaId: site.faviconMediaId,
+      theme: BUNDLED_THEME,
+      settings: site.settings,
+      nav: site.nav,
+    })
+  }
+
   return c.body(null, 204)
 }
 

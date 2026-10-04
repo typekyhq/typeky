@@ -538,6 +538,9 @@ export const fr: Locale = {
   'theme.saved': 'Enregistré. Le site le prendra au prochain rendu.',
   'theme.restored': 'Le gabarit fourni a été rétabli.',
   'theme.restoreConfirm': 'Rétablir la version fournie de {path} ? Vos modifications seront perdues.',
+  'theme.delete': 'Supprimer le thème',
+  'theme.deleteConfirm': 'Supprimer le thème « {name} » ? Ses fichiers partiront avec lui, et le site reviendra au thème fourni.',
+  'theme.deleted': '{name} supprimé.',
   'theme.noChanges': 'Aucune modification.',
   'theme.unsaved': 'Modifications non enregistrées.',
 

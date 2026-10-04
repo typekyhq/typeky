@@ -538,6 +538,9 @@ export const ja: Locale = {
   'theme.saved': '保存しました。次回の描画でサイトに反映されます。',
   'theme.restored': '同梱のテンプレートに戻しました。',
   'theme.restoreConfirm': '{path} を同梱版に戻しますか？ それへの変更は失われます。',
+  'theme.delete': 'テーマを削除',
+  'theme.deleteConfirm': 'テーマ「{name}」を削除しますか？ そのファイルも一緒に消え、サイトは同梱のテーマに戻ります。',
+  'theme.deleted': '{name} を削除しました。',
   'theme.noChanges': '変更はありません。',
   'theme.unsaved': '保存されていない変更があります。',
 

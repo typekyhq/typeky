@@ -538,6 +538,9 @@ export const ko: Locale = {
   'theme.saved': '저장했습니다. 다음 번 그릴 때 사이트가 반영합니다.',
   'theme.restored': '내장 템플릿으로 되돌렸습니다.',
   'theme.restoreConfirm': '{path}을 내장 판으로 되돌릴까요? 그것에 한 변경은 사라집니다.',
+  'theme.delete': '테마 삭제',
+  'theme.deleteConfirm': '테마 “{name}”을 삭제할까요? 그 파일도 함께 사라지고 사이트는 내장 테마로 돌아갑니다.',
+  'theme.deleted': '{name}을 삭제했습니다.',
   'theme.noChanges': '변경 없음.',
   'theme.unsaved': '저장하지 않은 변경이 있습니다.',
 

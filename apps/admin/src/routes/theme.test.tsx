@@ -443,3 +443,55 @@ describe('the authoring documents', () => {
     await waitFor(() => expect(screen.queryByTestId('theme-document')).toBeNull())
   })
 })
+
+/**
+ * Removing an uploaded theme.
+ *
+ * The theme page edits whichever theme the site serves, so the only theme it can
+ * offer to remove is the one in use -- and the server moves the site back to the
+ * bundled theme when that is the one that goes. What is worth pinning here is that
+ * the offer appears only for a theme that can actually be removed, that saying yes
+ * calls the endpoint with the theme's name, and that saying no calls nothing.
+ */
+describe('removing an uploaded theme', () => {
+  it('offers removal only for a theme that can be removed', async () => {
+    renderSection(withTheme())
+    await screen.findByTestId('theme-tree')
+
+    // The bundled theme is the one the page shows with no explicit choice, and it
+    // cannot be removed -- so no button, rather than a button that fails.
+    expect(screen.queryByRole('button', { name: 'Delete theme' })).toBeNull()
+  })
+
+  it('removes the theme the page is showing, then reloads', async () => {
+    const deleteTheme = vi.fn(async () => undefined)
+    const listThemeTemplates = vi.fn(async () => ({ theme: 'minimal', items: ITEMS }))
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    renderSection(withTheme({ deleteTheme, listThemeTemplates }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete theme' }))
+
+    await waitFor(() => expect(deleteTheme).toHaveBeenCalledWith('minimal'))
+    // Reloaded rather than assumed: the site is on the bundled theme now.
+    await waitFor(() => expect(listThemeTemplates).toHaveBeenCalledTimes(2))
+  })
+
+  it('does nothing when the operator declines', async () => {
+    const deleteTheme = vi.fn(async () => undefined)
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    renderSection(
+      withTheme({
+        async listThemeTemplates() {
+          return { theme: 'minimal', items: ITEMS }
+        },
+        deleteTheme,
+      }),
+    )
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete theme' }))
+
+    expect(deleteTheme).not.toHaveBeenCalled()
+  })
+})

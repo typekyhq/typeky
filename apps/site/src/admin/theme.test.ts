@@ -27,7 +27,7 @@ beforeAll(async () => {
   passwordHash = await hashPassword(PASSWORD, FAST)
 })
 
-function fakeRepositories(overrides: ThemeTemplate[] = []) {
+function fakeRepositories(overrides: ThemeTemplate[] = [], activeTheme = 'default') {
   const rows = new Map(overrides.map((row) => [row.path, row]))
 
   const themes: ThemeTemplateRepository = {
@@ -63,26 +63,53 @@ function fakeRepositories(overrides: ThemeTemplate[] = []) {
     async restore(_ctx, _theme, path) {
       return rows.delete(path)
     },
-    async removeTheme() {
-      const before = rows.size
-      rows.clear()
-      return before
+    async removeTheme(_ctx, name) {
+      let removed = 0
+      for (const [path, row] of rows) {
+        if (row.theme === name) {
+          rows.delete(path)
+          removed += 1
+        }
+      }
+      return removed
     },
+  }
+
+  const site: Site = {
+    id: 'default',
+    name: 'Test site',
+    tagline: null,
+    logoMediaId: null,
+    faviconMediaId: null,
+    theme: activeTheme,
+    settings: {} as Site['settings'],
+    nav: [],
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   }
 
   const sites: SiteRepository = {
     async get() {
-      return { theme: 'default' } as Site
+      return site
     },
-    async save() {
-      throw new Error('not used')
+    async save(_ctx, input) {
+      Object.assign(site, {
+        name: input.name,
+        tagline: input.tagline,
+        logoMediaId: input.logoMediaId,
+        faviconMediaId: input.faviconMediaId ?? null,
+        theme: input.theme,
+        settings: input.settings,
+        nav: input.nav,
+      })
+      return site
     },
   }
 
   const list: PageResult<ThemeTemplate> = { items: [], total: 0, limit: 20, offset: 0 }
   void list
 
-  return { repository: stubRepositories({ sites, themeTemplates: themes }), rows }
+  return { repository: stubRepositories({ sites, themeTemplates: themes }), rows, site }
 }
 
 function setup(repositories?: RepositoryResolver) {
@@ -396,6 +423,68 @@ describe('uploading a theme', () => {
 
   it('refuses the bundled theme name', async () => {
     expect((await upload({ name: 'default', files: FILES })).status).toBe(400)
+  })
+})
+
+describe('removing an uploaded theme', () => {
+  const UPLOADED: ThemeTemplate[] = [
+    {
+      id: 'row_minimal',
+      theme: 'minimal',
+      path: 'templates/home',
+      source: '<h1>{{ content.title }}</h1>',
+      originalSource: '<h1>{{ content.title }}</h1>',
+      revision: 1,
+      updatedAt: new Date('2026-03-03T00:00:00.000Z'),
+    },
+  ]
+
+  async function remove(name: string, store = fakeRepositories(UPLOADED)): Promise<Response> {
+    const { send, signIn } = setup(() => store.repository)
+    const { cookie, csrfToken } = await signIn()
+
+    return send(
+      `/theme/themes?name=${encodeURIComponent(name)}`,
+      { method: 'DELETE', headers: { [CSRF_HEADER]: csrfToken } },
+      cookie,
+    )
+  }
+
+  it('removes the theme and answers 204', async () => {
+    const store = fakeRepositories(UPLOADED)
+    const response = await remove('minimal', store)
+
+    expect(response.status).toBe(204)
+    expect(store.rows.has('templates/home')).toBe(false)
+  })
+
+  it('refuses the bundled theme', async () => {
+    // The bundled theme has no rows, but the name is refused before the database is
+    // touched -- so "default" is never a removable theme whatever is stored.
+    expect((await remove('default')).status).toBe(400)
+  })
+
+  it('says so when there is no theme by that name', async () => {
+    expect((await remove('ghost')).status).toBe(404)
+  })
+
+  it('moves the site back to the bundled theme when that was the one in use', async () => {
+    // The theme page edits whichever theme the site serves, so the one an operator
+    // deletes is usually the one they were just looking at. Leaving `sites.theme`
+    // naming it would make the setting a ghost.
+    const store = fakeRepositories(UPLOADED, 'minimal')
+    const response = await remove('minimal', store)
+
+    expect(response.status).toBe(204)
+    expect(store.site.theme).toBe('default')
+  })
+
+  it('leaves the active theme alone when a different one is removed', async () => {
+    const store = fakeRepositories(UPLOADED, 'other')
+    const response = await remove('minimal', store)
+
+    expect(response.status).toBe(204)
+    expect(store.site.theme).toBe('other')
   })
 })
 
