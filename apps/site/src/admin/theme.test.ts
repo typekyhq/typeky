@@ -287,7 +287,14 @@ describe('saving one template', () => {
 
 describe('uploading a theme', () => {
   const FILES = [
+    { path: 'layouts/base', source: '<main>{% block %}{% endblock %}</main>' },
+    { path: 'templates/404', source: '<h1>Not found</h1>' },
+    { path: 'templates/home', source: '<h1>{{ content.title }}</h1>' },
+    { path: 'templates/page', source: '<h1>{{ content.title }}</h1>' },
     { path: 'templates/post', source: '<h1>{{ content.title }}</h1>' },
+    { path: 'templates/posts', source: '<h1>{{ content.title }}</h1>' },
+    { path: 'templates/product', source: '<h1>{{ content.title }}</h1>' },
+    { path: 'templates/products', source: '<h1>{{ content.title }}</h1>' },
     { path: 'assets/theme.css', source: 'body { margin: 0 }' },
   ]
 
@@ -318,7 +325,10 @@ describe('uploading a theme', () => {
 
   it('refuses a path a theme may not hold', async () => {
     // Traversal is the one that matters, and it is refused before anything is read.
-    const response = await upload({ name: 'minimal', files: [{ path: '../secrets', source: 'x' }] })
+    const response = await upload({
+        name: 'minimal',
+        files: [...FILES, { path: '../secrets', source: 'x' }],
+      })
 
     expect(response.status).toBe(400)
   })
@@ -326,7 +336,20 @@ describe('uploading a theme', () => {
   it('refuses a template that will not parse', async () => {
     // A theme that half-works fails on a page rather than at the door, so the door is
     // where it is stopped -- with the line, so the author can find it.
-    const response = await upload({ name: 'minimal', files: [{ path: 'templates/post', source: '{% if %}' }] })
+    const broken = FILES.map((file) =>
+        file.path === 'templates/post' ? { path: 'templates/post', source: '{% if %}' } : file,
+      )
+      const response = await upload({ name: 'minimal', files: broken })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid_request' })
+  })
+
+  it('refuses a theme that does not answer for every page', async () => {
+    // The platform looks these up by name, so a theme without one answers a page
+    // with an error. Refusing here is the difference between an author fixing it
+    // and a visitor finding it.
+    const response = await upload({ name: 'partial', files: [{ path: 'assets/theme.css', source: 'x' }] })
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({ error: 'invalid_request' })

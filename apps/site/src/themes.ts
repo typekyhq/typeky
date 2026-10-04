@@ -188,7 +188,27 @@ export function isUploadableThemePath(path: string): boolean {
   return /^(?:layouts|templates|snippets)\/[a-z0-9_/-]+$/.test(path)
 }
 
-export function isTemplatePath(path: string): boolean {
+/**
+ * The templates the platform looks up by name.
+ *
+ * Not a theme's whole surface -- a theme may ship any snippets it likes, and one it
+ * never renders is lean rather than wrong. These are the ones the Worker asks for
+ * directly, once per page kind, so a theme without one answers that page with an
+ * error rather than with a design. The upload refuses it there, where the author can
+ * still do something about it.
+ */
+export const REQUIRED_TEMPLATES = [
+  'layouts/base',
+  'templates/404',
+  'templates/home',
+  'templates/page',
+  'templates/post',
+  'templates/posts',
+  'templates/product',
+  'templates/products',
+] as const
+
+function isTemplatePath(path: string): boolean {
   return TEMPLATE_PREFIXES.some((prefix) => path.startsWith(prefix))
 }
 
