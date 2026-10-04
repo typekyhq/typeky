@@ -11,6 +11,8 @@
  * eventually disagree about what a missing value means.
  */
 
+import { decodeCharacterReferences } from '@typeky/core'
+
 export interface RobotsRules {
   /** Discourage every crawler, site-wide. */
   noindex: boolean
@@ -40,12 +42,15 @@ export function seoDefaults(settings: object): {
   title?: string
   description?: string
 } {
+  // Operator-written copy goes through the same reading as the site's own text:
+  // these end up in a `<title>` and a meta tag, where the page escapes them, so an
+  // entity has to be resolved here or it reaches a reader as itself.
   const title = text(settings, 'defaultTitle')
   const description = text(settings, 'defaultDescription')
 
   return {
-    ...(title === undefined ? {} : { title }),
-    ...(description === undefined ? {} : { description }),
+    ...(title === undefined ? {} : { title: decodeCharacterReferences(title) }),
+    ...(description === undefined ? {} : { description: decodeCharacterReferences(description) }),
   }
 }
 
@@ -56,7 +61,9 @@ export function seoImageId(settings: object): string | undefined {
 
 /** How the site's name joins a page title, or nothing when it is not set. */
 export function seoTitleTemplate(settings: object): string | undefined {
-  return text(settings, 'titleTemplate')
+  const template = text(settings, 'titleTemplate')
+
+  return template === undefined ? undefined : decodeCharacterReferences(template)
 }
 
 /**

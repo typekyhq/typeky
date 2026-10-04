@@ -1,5 +1,6 @@
 export * from './attribution'
 export * from './blocks'
+export * from './character-references'
 export * from './codec'
 export * from './date-format'
 export * from './html'

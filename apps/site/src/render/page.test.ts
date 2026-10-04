@@ -581,4 +581,18 @@ describe('the settings the theme reads', () => {
 
     expect((await render('/')).html).not.toContain('name="robots"')
   })
+
+  it('resolves the character references in the copy an operator wrote', async () => {
+    const { render } = setUp({
+      site: siteWith({ footer: 'Copyright &copy; 2026 typeky.com' }),
+      pages: [home],
+    })
+
+    const html = (await render('/')).html
+
+    // The operator typed an entity and means the mark. Every character a template
+    // prints is escaped, so this has to be resolved on the way in.
+    expect(html).toContain('Copyright © 2026 typeky.com')
+    expect(html).not.toContain('&amp;copy;')
+  })
 })

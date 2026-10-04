@@ -1,4 +1,11 @@
-import { attributionFor, DEFAULT_DATE_FORMAT, DEFAULT_LANGUAGE, DEFAULT_TIME_ZONE, isTimeZone } from '@typeky/core'
+import {
+  attributionFor,
+  decodeCharacterReferences,
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_LANGUAGE,
+  DEFAULT_TIME_ZONE,
+  isTimeZone,
+} from '@typeky/core'
 import { structuredData } from './seo'
 import { seoImageId, seoTitleTemplate } from './seo-settings'
 import type { Block, PageKind, Pagination, RenderContext } from '@typeky/core'
@@ -180,7 +187,9 @@ function customSettings(value: unknown): Record<string, string> | undefined {
 
   if (entries.length === 0) return undefined
 
-  return Object.fromEntries(entries.map((entry) => [entry.key, entry.value]))
+  return Object.fromEntries(
+    entries.map((entry) => [entry.key, decodeCharacterReferences(entry.value)]),
+  )
 }
 
 export function buildRenderContext(input: BuildContextInput): RenderContext {
@@ -227,7 +236,10 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
   })
 
   const socialLinks = Array.isArray(site.settings.socialLinks)
-    ? (site.settings.socialLinks as { label: string; href: string }[])
+    ? (site.settings.socialLinks as { label: string; href: string }[]).map((link) => ({
+        label: decodeCharacterReferences(link.label),
+        href: link.href,
+      }))
     : undefined
 
   const custom = customSettings(site.settings.custom)
@@ -235,7 +247,10 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
   return {
     site: {
       name: site.name,
-      ...(site.tagline === null ? {} : { tagline: site.tagline }),
+      // Operator-written copy, so character references are resolved: a theme escapes
+      // everything it prints, and `&copy;` typed into a setting has to reach a reader
+      // as the character. See `decodeCharacterReferences`.
+      ...(site.tagline === null ? {} : { tagline: decodeCharacterReferences(site.tagline) }),
       ...(resolve(site.logoMediaId) === undefined ? {} : { logo_url: resolve(site.logoMediaId) }),
       ...(resolve(site.faviconMediaId) === undefined
         ? {}
@@ -251,9 +266,11 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       timezone: usableTimeZone(site.settings.timezone),
       nav: [...site.nav]
         .sort((left, right) => left.order - right.order)
-        .map((entry) => ({ label: entry.label, href: entry.href })),
+        .map((entry) => ({ label: decodeCharacterReferences(entry.label), href: entry.href })),
       settings: {
-        ...(typeof site.settings.footer === 'string' ? { footer: site.settings.footer } : {}),
+        ...(typeof site.settings.footer === 'string'
+          ? { footer: decodeCharacterReferences(site.settings.footer) }
+          : {}),
         ...(socialLinks === undefined ? {} : { social_links: socialLinks }),
         ...(typeof site.settings.cookieNotice === 'string' ? { cookie_notice: site.settings.cookieNotice } : {}),
         ...(custom === undefined ? {} : { custom }),

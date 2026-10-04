@@ -35,6 +35,13 @@ describe('reading the seo settings', () => {
     expect(seoImageId({ seo: { defaultOgImageMediaId: '' } })).toBeUndefined()
   })
 
+  it('resolves character references in the copy', () => {
+    // These land in a `<title>` and a meta tag, where the page escapes them, so an
+    // entity has to be resolved here or it reaches a reader as itself.
+    expect(seoDefaults({ seo: { defaultTitle: 'A &mdash; B' } })).toEqual({ title: 'A — B' })
+    expect(seoTitleTemplate({ seo: { titleTemplate: '%s &middot; Site' } })).toBe('%s · Site')
+  })
+
   it('trims the disallow list and drops the blanks', () => {
     const rules = robotsRules({ seo: { robots: { disallowPaths: [' /search ', '', '  ', '/cart'] } } })
 

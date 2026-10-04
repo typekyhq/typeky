@@ -255,6 +255,13 @@ Use the filter whose output is not escaped again:
 {{ content.blocks }}                   {% comment %} escaped, and wrong {% endcomment %}
 ```
 
+A character reference an operator typed into a setting is resolved for you before
+the template sees it: the footer renders `Copyright © 2026` whether it was typed as
+`©` or as `&copy;`. That happens on the way into the context — the site's own text
+(footer, tagline, navigation and social labels, custom values, the SEO defaults) is
+read that way, while a body is markup because a block body *is* markup. A theme
+still escapes what it prints, which is what keeps a setting from becoming markup.
+
 ## Limits
 
 A theme is untrusted input, so it runs inside limits rather than being trusted to
