@@ -181,7 +181,16 @@ async function assemble(
     case 'home': {
       const page = await store.pages.home(ctx)
       if (page === null || page.status !== 'published') return null
-      return { kind: 'home', input: { ...common, item: pageInput(page, 'home') }, ...documentOf(page) }
+
+      const latest = await latestContent(store, ctx, common.resolveMedia)
+      return {
+        kind: 'home',
+        input: {
+          ...common,
+          item: { ...pageInput(page, 'home'), ...(latest === undefined ? {} : { extra: latest }) },
+        },
+        ...documentOf(page),
+      }
     }
 
     case 'page': {
@@ -217,7 +226,7 @@ async function assemble(
         kind: 'posts',
         input: {
           ...common,
-          pagination: pagination(route.page, listing.total, 'posts'),
+          pagination: pagination(route.page, listing.total, '/posts'),
           item: {
             kind: 'posts',
             title: 'Posts',
@@ -247,7 +256,7 @@ async function assemble(
         kind: 'products',
         input: {
           ...common,
-          pagination: pagination(route.page, listing.total, 'products'),
+          pagination: pagination(route.page, listing.total, '/products'),
           item: {
             kind: 'products',
             title: 'Products',
@@ -267,9 +276,49 @@ async function assemble(
   }
 }
 
-function pagination(page: number, total: number, base: 'posts' | 'products'): Pagination {
+/** How many items each home-page section shows. */
+const HOME_LATEST = 3
+
+/**
+ * The newest published posts and products, for the home page's own sections.
+ *
+ * Loaded here rather than left to the template, because a template never reaches
+ * the database. The fields are the same summaries a list page passes, so the same
+ * card snippets render both. Absent rather than empty when there is nothing:
+ * Liquid treats an empty array as truthy, so a template's `{% if %}` has to be
+ * about whether there are any.
+ */
+async function latestContent(
+  store: Repositories,
+  ctx: ReturnType<typeof defaultContext>,
+  resolve: (id: string | null | undefined) => string | null,
+): Promise<Record<string, unknown> | undefined> {
+  const [posts, products] = await Promise.all([
+    store.posts.list(ctx, { status: 'published', limit: HOME_LATEST, offset: 0 }),
+    store.products.list(ctx, { status: 'published', limit: HOME_LATEST, offset: 0 }),
+  ])
+
+  const [postTerms, productTerms] = await Promise.all([
+    termReader(store, ctx, 'post').many(posts.items.map((post) => post.id)),
+    termReader(store, ctx, 'product').many(products.items.map((product) => product.id)),
+  ])
+
+  const latestPosts = posts.items.map((post) =>
+    summaryOf(postInput(post, postTerms.get(post.id) ?? []), resolve),
+  )
+  const latestProducts = products.items.map((product) =>
+    summaryOf(productInput(product, productTerms.get(product.id) ?? []), resolve),
+  )
+
+  const extra: Record<string, unknown> = {}
+  if (latestPosts.length > 0) extra.latest_posts = latestPosts
+  if (latestProducts.length > 0) extra.latest_products = latestProducts
+  return Object.keys(extra).length === 0 ? undefined : extra
+}
+
+function pagination(page: number, total: number, basePath: string): Pagination {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const href = (n: number): string => (n === 1 ? `/${base}` : `/${base}/${String(n)}`)
+  const href = (n: number): string => (n === 1 ? basePath : `${basePath}/${String(n)}`)
 
   return {
     page,

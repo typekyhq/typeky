@@ -63,6 +63,27 @@ function post(overrides: Partial<Post> & { title: string; slug: string }): Post 
   } as Post
 }
 
+function product(overrides: Partial<Product> & { title: string; slug: string }): Product {
+  return {
+    id: overrides.slug,
+    summary: null,
+    coverMediaId: null,
+    gallery: [],
+    specs: [],
+    priceLabel: null,
+    ctaLabel: null,
+    ctaUrl: null,
+    blocks: [],
+    seo: {},
+    status: 'published',
+    revision: 1,
+    sortOrder: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  } as Product
+}
+
 function setUp(
   options: {
     pages?: Page[]
@@ -78,6 +99,7 @@ function setUp(
 ) {
   const pages = options.pages ?? []
   const posts = options.posts ?? []
+  const products = options.products ?? []
   const termsById = options.terms
   const site = options.site === undefined ? SITE : options.site
 
@@ -92,8 +114,8 @@ function setUp(
       async list() { return { items: posts, total: posts.length, limit: 10, offset: 0 } },
     },
     products: {
-      async bySlug() { return null },
-      async list() { return { items: [], total: 0, limit: 10, offset: 0 } },
+      async bySlug(_ctx: unknown, slug: string) { return products.find((entry) => entry.slug === slug) ?? null },
+      async list() { return { items: products, total: products.length, limit: 10, offset: 0 } },
     },
     media: { async byId() { return null } },
     // The taxonomy: a page prints the terms its content carries, and asks for the
@@ -174,6 +196,36 @@ describe('rendering the front page', () => {
     // The theme's own pieces resolved, which is what "rendered" means here.
     expect(result.html).toContain('site-header')
     expect(result.html).toContain('Sample Site')
+  })
+
+  it('shows the newest posts and products under the hero', async () => {
+    const { render } = setUp({
+      pages: [page({ title: 'Home', slug: 'home', isHome: true })],
+      posts: [post({ title: 'Hello world', slug: 'hello' })],
+      products: [product({ title: 'A widget', slug: 'widget' })],
+    })
+
+    const result = await render('/')
+
+    expect(result.status).toBe(200)
+    // The two sections are the platform's, not the operator's blocks, so a home
+    // page that has not been written yet still leads somewhere.
+    expect(result.html).toContain('Latest posts')
+    expect(result.html).toContain('Hello world')
+    expect(result.html).toContain('Latest products')
+    expect(result.html).toContain('A widget')
+  })
+
+  it('renders neither section when there is nothing to put in them', async () => {
+    const { render } = setUp({ pages: [page({ title: 'Home', slug: 'home', isHome: true })] })
+
+    const result = await render('/')
+
+    // Absent rather than empty: a heading over an empty grid is worse than no
+    // heading, and Liquid treats an empty array as truthy, so this is why the
+    // platform leaves the fields out instead.
+    expect(result.html).not.toContain('Latest posts')
+    expect(result.html).not.toContain('Latest products')
   })
 
   it('404s when no page is flagged as home', async () => {

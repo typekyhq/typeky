@@ -673,6 +673,40 @@ main {
   color: var(--ink-muted);
 }
 
+/* --------------------------------------------------------------- sections -- */
+
+/* A home-page section: a heading, a link to the whole list, and a grid. Spaced
+ * from what is above it rather than given a border, so the page reads as one
+ * column with quieter separations than ruled boxes. */
+.section {
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 1.2rem + 1vw, 1.8rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.section-more {
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.section-more:hover {
+  text-decoration: underline;
+}
+
 /* --------------------------------------------------------------- product -- */
 
 .product-header .price {

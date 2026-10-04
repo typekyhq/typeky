@@ -227,14 +227,38 @@ export function sampleContext(
     })
   }
 
+  const isHome = file === 'home'
+
   return buildRenderContext({
     ...base,
     item: {
-      kind: file === 'home' ? 'home' : 'page',
-      title: file === 'home' ? 'Sample Site' : 'Sample page',
-      slug: file === 'home' ? '' : 'sample-page',
+      kind: isHome ? 'home' : 'page',
+      title: isHome ? 'Sample Site' : 'Sample page',
+      slug: isHome ? '' : 'sample-page',
       blocks: SAMPLE_BLOCKS,
       seo: {},
+      // The home page's own sections read these; declared here so `contextPaths`
+      // lists them and a preview shows both sections.
+      ...(isHome
+        ? {
+            extra: {
+              latest_posts: [1, 2, 3].map((index) => ({
+                title: `Sample post ${String(index)}`,
+                slug: `sample-${String(index)}`,
+                url: `/posts/sample-${String(index)}`,
+                excerpt: 'A short summary, as it would appear in a list.',
+                published_at: `2026-01-0${String(index)}T00:00:00.000Z`,
+              })),
+              latest_products: [1, 2].map((index) => ({
+                title: `Sample product ${String(index)}`,
+                slug: `sample-${String(index)}`,
+                url: `/products/sample-${String(index)}`,
+                excerpt: 'A short summary, as it would appear in a list.',
+                price_label: 'From $20',
+              })),
+            },
+          }
+        : {}),
     },
   })
 }

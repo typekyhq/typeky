@@ -3,8 +3,10 @@
   The home page: whichever page is flagged is_home.
 
   It opens with a hero built from the site's own name and tagline -- the two things
-  a first-time visitor is here to find out -- and then the page's blocks, so the
-  operator's own copy is the body rather than something a template invented.
+  a first-time visitor is here to find out -- then the page's own blocks, and then
+  the newest posts and products the platform hands it. Those two sections are how a
+  visitor reaches a site whose home page the operator has not filled in yet, and
+  neither renders when there is nothing to show.
 
   The heading is the site's name rather than the page's title on purpose: a home
   page is usually titled after what it is ("Home"), while the site's name is what
@@ -16,9 +18,38 @@
   {% if site.tagline %}<p class="lead">{{ site.tagline }}</p>{% endif %}
   <p class="hero-actions">
     <a class="button" href="{{ '/posts' | url }}">Read the blog</a>
+    <a class="button secondary" href="{{ '/products' | url }}">Shop</a>
   </p>
 </section>
 
 <article class="prose">
   {{ content.blocks | render_blocks }}
 </article>
+
+{% if content.latest_posts.size > 0 %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Latest posts</h2>
+      <a class="section-more" href="{{ '/posts' | url }}">All posts</a>
+    </div>
+    <ul class="post-list">
+      {% for post in content.latest_posts %}
+        <li>{% render 'snippets/post-card', post: post, site: site %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+{% if content.latest_products.size > 0 %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Latest products</h2>
+      <a class="section-more" href="{{ '/products' | url }}">All products</a>
+    </div>
+    <ul class="product-list">
+      {% for product in content.latest_products %}
+        <li>{% render 'snippets/product-card', product: product %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
