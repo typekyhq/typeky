@@ -13,7 +13,7 @@ import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
 import { themeAssetVersions, themeBaseline } from '../themes'
-import { buildRenderContext, type ItemInput, type TemplateTerm } from './context'
+import { buildRenderContext, contentPath, type ItemInput, type TemplateTerm } from './context'
 import { robotsRules, seoDefaults } from './seo-settings'
 import { renderDocument, renderPageSource, themeRuntimeOptions } from './theme-runtime'
 
@@ -37,6 +37,7 @@ export type Route =
   | { kind: 'post'; slug: string }
   | { kind: 'products'; page: number }
   | { kind: 'product'; slug: string }
+  | { kind: 'term'; slug: string; page: number }
   | { kind: 'page'; slug: string }
   | { kind: 'notFound' }
 
@@ -66,6 +67,20 @@ export function resolveRoute(pathname: string): Route {
     if (Number.isInteger(page) && page > 1) return { kind: list, page }
 
     return { kind: single, slug: segments[1]! }
+  }
+
+  if (segments[0] === 'category') {
+    // `/category/news` is the term's archive, `/category/news/2` its second page.
+    // A vocabulary index would be a page of its own and is deliberately not one:
+    // a term is what a reader arrives at from a chip, not from a directory.
+    if (segments.length < 2 || segments.length > 3) return { kind: 'notFound' }
+
+    const slug = segments[1]!
+    if (segments.length === 2) return { kind: 'term', slug, page: 1 }
+
+    const page = Number(segments[2])
+    if (!Number.isInteger(page) || page < 2) return { kind: 'notFound' }
+    return { kind: 'term', slug, page }
   }
 
   if (segments.length === 1) return { kind: 'page', slug: segments[0]! }
@@ -271,6 +286,60 @@ async function assemble(
       }
     }
 
+    case 'term': {
+      const term = await store.terms.bySlug(ctx, route.slug)
+      if (term === null) return null
+
+      const vocabulary = await store.vocabularies.byId(ctx, term.vocabularyId)
+      const listing = await store.terms.content(ctx, term.id, {
+        limit: PAGE_SIZE,
+        offset: (route.page - 1) * PAGE_SIZE,
+      })
+
+      // Terms per content id, batched by type, so a page of ten items costs two
+      // term queries rather than twenty.
+      const [postTerms, productTerms] = await Promise.all([
+        termReader(store, ctx, 'post').many(
+          listing.items.filter((entry) => entry.contentType === 'post').map((entry) => entry.id),
+        ),
+        termReader(store, ctx, 'product').many(
+          listing.items.filter((entry) => entry.contentType === 'product').map((entry) => entry.id),
+        ),
+      ])
+
+      const items: Record<string, unknown>[] = []
+      for (const entry of listing.items) {
+        if (entry.contentType === 'post') {
+          const post = await store.posts.byId(ctx, entry.id)
+          if (post === null || post.status !== 'published') continue
+          items.push(summaryOf(postInput(post, postTerms.get(post.id) ?? []), common.resolveMedia))
+        } else {
+          const product = await store.products.byId(ctx, entry.id)
+          if (product === null || product.status !== 'published') continue
+          items.push(summaryOf(productInput(product, productTerms.get(product.id) ?? []), common.resolveMedia))
+        }
+      }
+
+      return {
+        kind: 'term',
+        input: {
+          ...common,
+          pagination: pagination(route.page, listing.total, `/category/${term.slug}`),
+          item: {
+            kind: 'term',
+            title: term.name,
+            slug: term.slug,
+            blocks: [],
+            seo: {},
+            // The term's own words, and failing that the vocabulary's, which is
+            // often where a site keeps the sentence describing the whole set.
+            description: term.description ?? vocabulary?.description ?? null,
+            listItems: items,
+          },
+        },
+      }
+    }
+
     case 'notFound':
       return null
   }
@@ -365,6 +434,7 @@ function termReader(store: Repositories, ctx: ReturnType<typeof defaultContext>,
     return terms.map((term) => ({
       name: term.name,
       slug: term.slug,
+      url: contentPath('term', term.slug),
       vocabulary: byId.get(term.vocabularyId) ?? '',
     }))
   }
@@ -495,6 +565,8 @@ function templateFor(kind: PageKind): string {
       return 'templates/product'
     case 'products':
       return 'templates/products'
+    case 'term':
+      return 'templates/term'
     case 'notFound':
       return 'templates/404'
   }

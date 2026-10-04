@@ -490,6 +490,7 @@ export const ru: Locale = {
   'theme.file.templates.page': 'Отдельная страница, например «О нас» или «Контакты».',
   'theme.file.templates.product': 'Один товар: обложка, галерея, текст, характеристики и внешняя ссылка.',
   'theme.file.templates.products': 'Список товаров, по десять на страницу.',
+  'theme.file.templates.term': 'Архив термина: всё опубликованное под ним.',
   'theme.file.templates.404': 'Что видит посетитель по адресу, которого нет.',
   'theme.file.snippets.header': 'Название сайта, логотип и меню сверху каждой страницы.',
   'theme.file.snippets.footer': 'Низ каждой страницы: текст подвала, ссылки на соцсети и подпись.',

@@ -29,6 +29,7 @@ import type {
   Site,
   SiteWrite,
   Term,
+  TermContent,
   TermNode,
   TermWrite,
   ThemeSummary,
@@ -153,8 +154,25 @@ export interface TermRepository {
   /** The same terms assembled into a tree, which is what the admin edits. */
   tree(ctx: TenantContext, vocabularyId: string): Promise<TermNode[]>
   byId(ctx: TenantContext, id: string): Promise<Term | null>
+  /**
+   * The first term with this slug, across every vocabulary, or null.
+   *
+   * Slugs are unique per vocabulary, not across the site, so a site with two
+   * vocabularies can hold the same slug twice. The archive URL has one segment, so
+   * this picks the first in vocabulary and term order and the other is simply not
+   * linked -- a limitation of a one-segment URL rather than of the data.
+   */
+  bySlug(ctx: TenantContext, slug: string): Promise<Term | null>
   /** The ancestry of a term, root first and the term itself last. */
   path(ctx: TenantContext, id: string): Promise<Term[]>
+  /**
+   * Published posts and products carrying this term, newest first.
+   *
+   * The archive page reads this and then loads each row by id: a post and a
+   * product are two shapes, so the join answers what exists and the content reads
+   * answer what it is.
+   */
+  content(ctx: TenantContext, termId: string, query?: { limit?: number; offset?: number }): Promise<PageResult<TermContent>>
   /** Creates when `input.id` is absent, otherwise replaces that term. */
   upsert(ctx: TenantContext, input: TermWrite): Promise<Term>
   /** Removes the term, its descendants and its assignments. */

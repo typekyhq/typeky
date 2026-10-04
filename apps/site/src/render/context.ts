@@ -47,6 +47,12 @@ export interface TemplateTerm {
   name: string
   slug: string
   /**
+   * The term's archive URL, so a chip links without the theme building a path --
+   * the same reason `url` is on a content summary: the shape of a URL is the
+   * platform's to change, and a theme that built its own would break silently.
+   */
+  url: string
+  /**
    * The vocabulary it belongs to.
    *
    * There on purpose: a site may keep more than one, and "Frontend" printed
@@ -72,6 +78,8 @@ export interface ItemInput {
    */
   listItems?: Record<string, unknown>[]
   excerpt?: string | null
+  /** A list page's own description, when it has one (a term archive's). */
+  description?: string | null
   /**
    * The terms this content carries, already shaped for a template.
    *
@@ -140,6 +148,8 @@ export function contentPath(kind: PageKind, slug: string): string {
       return `/products/${slug}`
     case 'products':
       return '/products'
+    case 'term':
+      return `/category/${slug}`
     case 'home':
       return '/'
     case 'notFound':
@@ -289,6 +299,9 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       url,
       canonical,
       ...(item.kind === 'page' || item.kind === 'home' || item.kind === 'notFound' ? {} : { title: item.title }),
+      ...(item.description === null || item.description === undefined
+        ? {}
+        : { description: item.description }),
       ...(input.pagination === undefined ? {} : { pagination: input.pagination }),
     },
 

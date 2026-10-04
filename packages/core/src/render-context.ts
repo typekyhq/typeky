@@ -15,7 +15,7 @@ import type { Attribution } from './attribution'
  * A field nothing reads is a promise the platform is not keeping.
  */
 
-export type PageKind = 'home' | 'page' | 'post' | 'posts' | 'product' | 'products' | 'notFound'
+export type PageKind = 'home' | 'page' | 'post' | 'posts' | 'product' | 'products' | 'term' | 'notFound'
 
 export interface NavItem {
   label: string
@@ -87,6 +87,11 @@ export interface PageForTemplates {
   canonical?: string
   /** The heading a list page needs and a detail page takes from its content. */
   title?: string
+  /**
+   * A list page's own description, when it has one -- a term archive's, taken from
+   * the term or its vocabulary. Absent for the lists the platform names itself.
+   */
+  description?: string
   pagination?: Pagination
 }
 

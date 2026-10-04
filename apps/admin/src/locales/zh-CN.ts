@@ -477,6 +477,7 @@ export const zhCN: Locale = {
   'theme.file.templates.page': '独立页面，例如「关于」「联系方式」。',
   'theme.file.templates.product': '一个产品：封面、图集、正文、规格与外链。',
   'theme.file.templates.products': '产品列表，每页十个。',
+  'theme.file.templates.term': '词条归档页：该词条下的全部已发布内容。',
   'theme.file.templates.404': '访客访问不存在的地址时看到的页面。',
   'theme.file.snippets.header': '每个页面顶部的站点名、标志与菜单。',
   'theme.file.snippets.footer': '每个页面的底部：页脚文字、社交链接与署名。',

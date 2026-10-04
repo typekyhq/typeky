@@ -490,6 +490,7 @@ export const es: Locale = {
   'theme.file.templates.page': 'Una página suelta, como Acerca de o Contacto.',
   'theme.file.templates.product': 'Un producto: portada, galería, cuerpo, especificaciones y el enlace hacia fuera.',
   'theme.file.templates.products': 'La lista de productos, diez por página.',
+  'theme.file.templates.term': 'El archivo de un término: todo lo publicado bajo él.',
   'theme.file.templates.404': 'Lo que ve un visitante ante una dirección que no existe.',
   'theme.file.snippets.header': 'El nombre, el logotipo y el menú del sitio arriba de cada página.',
   'theme.file.snippets.footer': 'El pie de cada página: texto del pie, redes sociales y la atribución.',

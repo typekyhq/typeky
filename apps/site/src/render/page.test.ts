@@ -94,6 +94,9 @@ function setUp(
     overrides?: { path: string; source: string }[]
     /** Terms by content id, as `terms.forContent` would answer them. */
     terms?: Record<string, Term[]>
+    /** The one term `terms.bySlug` resolves, and what it carries. */
+    term?: Term
+    termContent?: { id: string; contentType: 'post' | 'product'; updatedAt: Date }[]
     whiteLabel?: boolean
   } = {},
 ) {
@@ -110,10 +113,12 @@ function setUp(
       async bySlug(_ctx: unknown, slug: string) { return pages.find((entry) => entry.slug === slug) ?? null },
     },
     posts: {
+      async byId(_ctx: unknown, id: string) { return posts.find((entry) => entry.id === id) ?? null },
       async bySlug(_ctx: unknown, slug: string) { return posts.find((entry) => entry.slug === slug) ?? null },
       async list() { return { items: posts, total: posts.length, limit: 10, offset: 0 } },
     },
     products: {
+      async byId(_ctx: unknown, id: string) { return products.find((entry) => entry.id === id) ?? null },
       async bySlug(_ctx: unknown, slug: string) { return products.find((entry) => entry.slug === slug) ?? null },
       async list() { return { items: products, total: products.length, limit: 10, offset: 0 } },
     },
@@ -124,8 +129,18 @@ function setUp(
       async list() {
         return [{ id: 'vocab_1', name: 'Categories' }]
       },
+      async byId(_ctx: unknown, id: string) {
+        return id === 'vocab_1' ? { id: 'vocab_1', name: 'Categories', description: null } : null
+      },
     },
     terms: {
+      async bySlug(_ctx: unknown, slug: string) {
+        return options.term !== undefined && options.term.slug === slug ? options.term : null
+      },
+      async content() {
+        const content = options.termContent ?? []
+        return { items: content, total: content.length, limit: 10, offset: 0 }
+      },
       async forContent(_ctx: unknown, _type: unknown, id: string) {
         return (termsById ?? {})[id] ?? []
       },
@@ -175,9 +190,20 @@ describe('the route table', () => {
     expect(resolveRoute('/posts/a/b')).toEqual({ kind: 'notFound' })
   })
 
+  it('takes a term archive under /category, with or without a page number', () => {
+    expect(resolveRoute('/category/news')).toEqual({ kind: 'term', slug: 'news', page: 1 })
+    expect(resolveRoute('/category/news/2')).toEqual({ kind: 'term', slug: 'news', page: 2 })
+
+    // No vocabulary index, and no "page zero": both are nothing here.
+    expect(resolveRoute('/category')).toEqual({ kind: 'notFound' })
+    expect(resolveRoute('/category/news/0')).toEqual({ kind: 'notFound' })
+    expect(resolveRoute('/category/news/extra')).toEqual({ kind: 'notFound' })
+  })
+
   it('ignores a trailing slash, because both spellings are one page', () => {
     expect(resolveRoute('/about/')).toEqual({ kind: 'page', slug: 'about' })
     expect(resolveRoute('/posts/')).toEqual({ kind: 'posts', page: 1 })
+    expect(resolveRoute('/category/news/')).toEqual({ kind: 'term', slug: 'news', page: 1 })
   })
 })
 
@@ -248,6 +274,58 @@ describe('rendering the front page', () => {
   })
 })
 
+describe('rendering a term archive', () => {
+  const term = {
+    id: 'term_1',
+    vocabularyId: 'vocab_1',
+    parentId: null,
+    name: 'News',
+    slug: 'news',
+    description: 'Everything filed under News.',
+    sortOrder: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as Term
+
+  it('lists the posts and products filed under the term', async () => {
+    const { render } = setUp({
+      term,
+      termContent: [
+        { id: 'hello', contentType: 'post', updatedAt: new Date('2026-02-01T00:00:00.000Z') },
+        { id: 'widget', contentType: 'product', updatedAt: new Date('2026-01-01T00:00:00.000Z') },
+      ],
+      posts: [post({ title: 'Hello world', slug: 'hello' })],
+      products: [product({ title: 'A widget', slug: 'widget' })],
+    })
+
+    const result = await render('/category/news')
+
+    expect(result.status).toBe(200)
+    expect(result.html).toContain('<h1>News</h1>')
+    expect(result.html).toContain('Everything filed under News.')
+    expect(result.html).toContain('Hello world')
+    // A term can carry both kinds, so the archive renders whichever each row is.
+    expect(result.html).toContain('A widget')
+  })
+
+  it('404s for a term that does not exist', async () => {
+    const { render } = setUp({ posts: [post({ title: 'Hello world', slug: 'hello' })] })
+
+    expect((await render('/category/ghost')).status).toBe(404)
+  })
+
+  it('links a post\u2019s term chips to its archive', async () => {
+    const { render } = setUp({
+      posts: [post({ title: 'Filed', slug: 'filed' })],
+      terms: { filed: [term] },
+    })
+
+    const result = await render('/posts/filed')
+
+    expect(result.html).toMatch(/href="\/category\/news"/)
+  })
+})
+
 describe('rendering content pages', () => {
   it('renders a published post and 404s a draft one', async () => {
     const { render } = setUp({
@@ -314,8 +392,9 @@ describe('rendering content pages', () => {
     const result = await render('/posts/filed')
 
     expect(result.status).toBe(200)
-    // The chip carries its vocabulary as a tooltip, so the name is matched loosely.
-    expect(result.html).toMatch(/<span class="term"[^>]*>News<\/span>/)
+    // The chip is a link to the term's archive, and carries its vocabulary as a
+    // tooltip, so the name is matched loosely.
+    expect(result.html).toMatch(/<a class="term"[^>]*>News<\/a>/)
   })
 
   it('omits the field entirely when a post carries no terms', async () => {

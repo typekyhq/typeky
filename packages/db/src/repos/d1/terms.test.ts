@@ -311,3 +311,44 @@ describe('term repository', () => {
     ).rejects.toThrow()
   })
 })
+
+describe('the term archive queries', () => {
+  it('finds a term by slug, or nothing', async () => {
+    const db = createTestDatabase()
+    const { terms, vocabularies } = createD1Repositories(db)
+    const vocabulary = await vocabularies.upsert(ctx, { name: 'Categories', contentTypes: ['post'] })
+    const news = await terms.upsert(ctx, { vocabularyId: vocabulary.id, name: 'News', slug: 'news' })
+
+    expect((await terms.bySlug(ctx, 'news'))?.id).toBe(news.id)
+    expect(await terms.bySlug(ctx, 'ghost')).toBeNull()
+    expect(await terms.bySlug(ctx, '')).toBeNull()
+  })
+
+  it('lists published posts and products carrying the term, and leaves drafts out', async () => {
+    const db = createTestDatabase()
+    const { terms, vocabularies, posts, products } = createD1Repositories(db)
+    const vocabulary = await vocabularies.upsert(ctx, {
+      name: 'Categories',
+      contentTypes: ['post', 'product'],
+    })
+    const news = await terms.upsert(ctx, { vocabularyId: vocabulary.id, name: 'News', slug: 'news' })
+
+    const one = await posts.upsert(ctx, { title: 'One', slug: 'one', status: 'published' })
+    const two = await posts.upsert(ctx, { title: 'Two', slug: 'two', status: 'published' })
+    const draft = await posts.upsert(ctx, { title: 'Draft', slug: 'draft', status: 'draft' })
+    const widget = await products.upsert(ctx, { title: 'Widget', slug: 'widget', status: 'published' })
+
+    await terms.assign(ctx, 'post', one.id, [news.id])
+    await terms.assign(ctx, 'post', two.id, [news.id])
+    await terms.assign(ctx, 'post', draft.id, [news.id])
+    await terms.assign(ctx, 'product', widget.id, [news.id])
+
+    const listing = await terms.content(ctx, news.id, { limit: 10, offset: 0 })
+
+    expect(listing.total).toBe(3)
+    expect(new Set(listing.items.map((item) => item.id))).toEqual(new Set([one.id, two.id, widget.id]))
+    // Newest first, and a draft is not an archive entry.
+    expect(listing.items.some((item) => item.id === draft.id)).toBe(false)
+    expect(listing.items.map((item) => item.contentType).sort()).toEqual(['post', 'post', 'product'])
+  })
+})

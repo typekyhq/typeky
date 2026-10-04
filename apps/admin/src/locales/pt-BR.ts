@@ -490,6 +490,7 @@ export const ptBR: Locale = {
   'theme.file.templates.page': 'Uma página avulsa, como Sobre ou Contato.',
   'theme.file.templates.product': 'Um produto: capa, galeria, corpo, especificações e o link para fora.',
   'theme.file.templates.products': 'A lista de produtos, dez por página.',
+  'theme.file.templates.term': 'O arquivo de um termo: tudo publicado sob ele.',
   'theme.file.templates.404': 'O que um visitante vê num endereço que não existe.',
   'theme.file.snippets.header': 'O nome, o logo e o menu do site no topo de cada página.',
   'theme.file.snippets.footer': 'O pé de cada página: texto do rodapé, redes sociais e a atribuição.',

@@ -39,6 +39,7 @@ export {
   type SocialLink,
   type SortDirection,
   type Term,
+  type TermContent,
   type TermNode,
   type TermWrite,
   type ThemeSummary,

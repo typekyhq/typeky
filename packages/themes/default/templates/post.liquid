@@ -24,7 +24,7 @@
         The vocabulary is on the chip as a tooltip rather than printed: a site that
         keeps one vocabulary would otherwise repeat its name on every chip.
       {% endcomment %}
-      {% for term in content.terms %}<span class="term" title="{{ term.vocabulary }}">{{ term.name }}</span>{% endfor %}
+      {% for term in content.terms %}<a class="term" title="{{ term.vocabulary }}" href="{{ term.url | url }}">{{ term.name }}</a>{% endfor %}
     </p>
   </header>
 

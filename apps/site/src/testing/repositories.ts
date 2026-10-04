@@ -41,7 +41,15 @@ export function stubRepositories(partial: StubRepositories): Repositories {
     // it was given, a read answers with the ones it has. "None" is what a test
     // means unless it says otherwise, and a test that cares overrides this rather
     // than inheriting an answer it never asked for.
+    // The taxonomy: a sitemap and a revalidation walk every vocabulary and term,
+    // so the readers they use have to answer even when a test is about something
+    // else entirely. "None" is what a test means unless it says otherwise.
+    vocabularies: {
+      list: async () => [],
+      ...partial.vocabularies,
+    },
     terms: {
+      list: async () => [],
       forContent: async () => [],
       forContentMany: async () => new Map(),
       assign: async () => undefined,

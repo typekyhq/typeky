@@ -490,6 +490,7 @@ export const ar: Locale = {
   'theme.file.templates.page': 'صفحة مستقلة، مثل «من نحن» أو «اتصل بنا».',
   'theme.file.templates.product': 'منتج واحد: الغلاف، والمعرض، والمتن، والمواصفات، والرابط الخارجي.',
   'theme.file.templates.products': 'قائمة المنتجات، عشرة في الصفحة.',
+  'theme.file.templates.term': 'أرشيف المصطلح: كل ما نُشر تحته.',
   'theme.file.templates.404': 'ما يراه الزائر لعنوان غير موجود.',
   'theme.file.snippets.header': 'اسم الموقع وشعاره وقائمته في أعلى كل صفحة.',
   'theme.file.snippets.footer': 'أسفل كل صفحة: نص التذييل، وروابط التواصل، والإسناد.',

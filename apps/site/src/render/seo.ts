@@ -82,7 +82,10 @@ export function structuredData(input: StructuredDataInput): Record<string, unkno
   // Everything else is a page of the site, and a list is a collection of it.
   return {
     '@context': 'https://schema.org',
-    '@type': input.kind === 'posts' || input.kind === 'products' ? 'CollectionPage' : 'WebPage',
+    '@type':
+      input.kind === 'posts' || input.kind === 'products' || input.kind === 'term'
+        ? 'CollectionPage'
+        : 'WebPage',
     name: input.title,
     url: input.url,
     ...description,

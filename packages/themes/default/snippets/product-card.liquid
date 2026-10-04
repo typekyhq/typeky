@@ -16,7 +16,7 @@
     {% if product.terms %}
       <p class="meta">
         {% comment %} The vocabulary rides on the chip, as on a post. {% endcomment %}
-        {% for term in product.terms %}<span class="term" title="{{ term.vocabulary }}">{{ term.name }}</span>{% endfor %}
+        {% for term in product.terms %}<a class="term" title="{{ term.vocabulary }}" href="{{ term.url | url }}">{{ term.name }}</a>{% endfor %}
       </p>
     {% endif %}
     {% if product.excerpt %}<p class="excerpt">{{ product.excerpt }}</p>{% endif %}

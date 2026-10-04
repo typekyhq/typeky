@@ -33,6 +33,7 @@
 export const PLATFORM_PATHS: readonly string[] = [
   '/admin',
   '/api',
+  '/category',
   '/healthz',
   '/media',
   '/posts',

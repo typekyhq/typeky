@@ -298,6 +298,19 @@ export interface Term {
   updatedAt: Date
 }
 
+/**
+ * One piece of published content carrying a term, for the term's archive page.
+ *
+ * Only what the archive needs to load the row it points at and order the list:
+ * the content itself is read by id, because a post and a product are two shapes
+ * and flattening them here would be inventing a third.
+ */
+export interface TermContent {
+  id: string
+  contentType: ContentType
+  updatedAt: Date
+}
+
 /** A term with its children attached, which is how the admin tree renders it. */
 export interface TermNode extends Term {
   children: TermNode[]

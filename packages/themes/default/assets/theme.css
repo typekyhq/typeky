@@ -520,6 +520,14 @@ main {
   color: var(--accent-strong);
   font-size: 0.8125rem;
   font-weight: 500;
+  text-decoration: none;
+}
+
+/* A chip is a link to the term's archive; the hover is the flat accent, which is
+ * the one place the solid colour carries text besides the skip link. */
+.meta .term:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .tags {

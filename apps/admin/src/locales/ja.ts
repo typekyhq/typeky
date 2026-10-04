@@ -490,6 +490,7 @@ export const ja: Locale = {
   'theme.file.templates.page': '「私たちについて」や「お問い合わせ」のような独立したページ。',
   'theme.file.templates.product': '商品ひとつ。カバー、ギャラリー、本文、仕様、外部リンク。',
   'theme.file.templates.products': '商品一覧。1 ページ 10 件。',
+  'theme.file.templates.term': '用語のアーカイブ: その用語に分類された公開済みのすべて。',
   'theme.file.templates.404': '存在しないアドレスで訪問者が見るもの。',
   'theme.file.snippets.header': '各ページの上部にあるサイト名、ロゴ、メニュー。',
   'theme.file.snippets.footer': '各ページの下部。フッターの文言、ソーシャル、帰属表示。',

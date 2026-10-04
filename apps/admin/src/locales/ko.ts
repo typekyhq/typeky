@@ -490,6 +490,7 @@ export const ko: Locale = {
   'theme.file.templates.page': '“소개”나 “연락처” 같은 독립된 페이지.',
   'theme.file.templates.product': '상품 하나. 표지, 갤러리, 본문, 사양, 외부 링크.',
   'theme.file.templates.products': '상품 목록. 페이지당 열 개.',
+  'theme.file.templates.term': '용어 아카이브: 그 용어로 분류된 모든 발행 콘텐츠.',
   'theme.file.templates.404': '없는 주소에서 방문자가 보는 것.',
   'theme.file.snippets.header': '각 페이지 위쪽의 사이트 이름, 로고, 메뉴.',
   'theme.file.snippets.footer': '각 페이지 아래쪽. 바닥글 문구, 소셜, 출처 표시.',

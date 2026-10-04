@@ -204,6 +204,28 @@ export function sampleContext(
     })
   }
 
+  if (file === 'term') {
+    return buildRenderContext({
+      ...base,
+      item: {
+        kind: 'term',
+        title: 'News',
+        slug: 'news',
+        blocks: [],
+        seo: {},
+        description: 'Everything the site has filed under News.',
+        listItems: [1, 2].map((index) => ({
+          title: `Sample post ${String(index)}`,
+          slug: `sample-${String(index)}`,
+          url: `/posts/sample-${String(index)}`,
+          excerpt: 'A short summary, as it would appear in a list.',
+          terms: [{ name: 'News', slug: 'news', url: '/category/news', vocabulary: 'Categories' }],
+          published_at: `2026-01-0${String(index)}T00:00:00.000Z`,
+        })),
+      },
+    })
+  }
+
   if (file === 'post') {
     return buildRenderContext({
       ...base,
@@ -217,7 +239,7 @@ export function sampleContext(
         // on the sample site's logo. The preview still renders no image.
         coverMediaId: 'sample-cover',
         excerpt: 'A short summary, as it would appear in a list.',
-        terms: [{ name: 'News', slug: 'news', vocabulary: 'Categories' }],
+        terms: [{ name: 'News', slug: 'news', url: '/category/news', vocabulary: 'Categories' }],
         tags: ['sample', 'theme'],
         publishedAt: new Date('2026-01-01T00:00:00.000Z'),
         // Later than the published date, so the "Updated" line and the shape it

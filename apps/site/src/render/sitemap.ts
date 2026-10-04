@@ -117,6 +117,25 @@ async function collectEntries(store: Repositories): Promise<Entry[]> {
     pageOffset += listing.items.length
   }
 
+  // Term archives, one per term. Only the first page of each is listed: a term
+  // with enough content to paginate is rare, and the extra entries would be most
+  // of a sitemap for a large site. The path is what revalidation needs, and a
+  // publish to page two revalidates the same term either way.
+  //
+  // Slugs are unique per vocabulary, not across the site, and the archive URL has
+  // one segment -- so two vocabularies holding the same slug produce one address,
+  // which `terms.bySlug` resolves the same way. De-duplicating here keeps the
+  // sitemap from listing a path twice.
+  const vocabularies = await store.vocabularies.list(ctx)
+  const seenTermSlugs = new Set<string>()
+  for (const vocabulary of vocabularies) {
+    for (const term of await store.terms.list(ctx, vocabulary.id)) {
+      if (seenTermSlugs.has(term.slug)) continue
+      seenTermSlugs.add(term.slug)
+      entries.push({ path: `/category/${term.slug}`, lastModified: term.updatedAt })
+    }
+  }
+
   return entries
 }
 

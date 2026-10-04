@@ -14,7 +14,7 @@
     {% endcomment %}
     {% if content.terms.size > 0 %}
       <p class="meta">
-        {% for term in content.terms %}<span class="term" title="{{ term.vocabulary }}">{{ term.name }}</span>{% endfor %}
+        {% for term in content.terms %}<a class="term" title="{{ term.vocabulary }}" href="{{ term.url | url }}">{{ term.name }}</a>{% endfor %}
       </p>
     {% endif %}
     {% if content.price_label %}<p class="price">{{ content.price_label }}</p>{% endif %}

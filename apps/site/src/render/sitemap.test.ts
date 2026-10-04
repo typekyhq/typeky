@@ -1,4 +1,4 @@
-import type { Page, Post, Product, Repositories } from '@typeky/db'
+import type { Page, Post, Product, Repositories, Term } from '@typeky/db'
 import { describe, expect, it } from 'vitest'
 import { publishedPaths, renderRobots, renderSitemap } from './sitemap'
 
@@ -10,7 +10,13 @@ import { publishedPaths, renderRobots, renderSitemap } from './sitemap'
  * that a title cannot break the document it is written into.
  */
 
-function store(options: { pages?: Page[]; posts?: Post[]; products?: Product[] } = {}): Repositories {
+function store(options: {
+  pages?: Page[]
+  posts?: Post[]
+  products?: Product[]
+  vocabularies?: { id: string; name: string }[]
+  terms?: Term[]
+} = {}): Repositories {
   const pages = options.pages ?? []
   const posts = options.posts ?? []
   const products = options.products ?? []
@@ -33,6 +39,8 @@ function store(options: { pages?: Page[]; posts?: Post[]; products?: Product[] }
     },
     posts: { list: paged(posts) },
     products: { list: paged(products) },
+    vocabularies: { async list() { return options.vocabularies ?? [] } },
+    terms: { async list() { return options.terms ?? [] } },
   } as unknown as Repositories
 }
 
@@ -104,6 +112,30 @@ describe('the sitemap', () => {
     expect(xml).toContain('<loc>https://example.com/posts/2</loc>')
     expect(xml).toContain('<loc>https://example.com/posts/3</loc>')
     expect(xml).not.toContain('<loc>https://example.com/posts/4</loc>')
+  })
+
+  it('lists a term archive for every term', async () => {
+    const xml = await renderSitemap(
+      store({
+        vocabularies: [{ id: 'vocab_1', name: 'Categories' }],
+        terms: [
+          {
+            id: 'term_1',
+            vocabularyId: 'vocab_1',
+            parentId: null,
+            name: 'News',
+            slug: 'news',
+            description: null,
+            sortOrder: 0,
+            createdAt: stamp,
+            updatedAt: stamp,
+          } as Term,
+        ],
+      }),
+      'https://example.com',
+    )
+
+    expect(xml).toContain('<loc>https://example.com/category/news</loc>')
   })
 })
 

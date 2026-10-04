@@ -1,6 +1,16 @@
 import { nowIso, uuidv7 } from '@typeky/core'
 import type { DbPort, SqlParam } from '@typeky/platform'
-import type { ContentType, TenantContext, Term, TermNode, TermRepository, TermWrite } from '../../contracts'
+import {
+  resolveWindow,
+  type ContentType,
+  type PageResult,
+  type TenantContext,
+  type Term,
+  type TermContent,
+  type TermNode,
+  type TermRepository,
+  type TermWrite,
+} from '../../contracts'
 import { asDate } from './support'
 
 const NAMES = [
@@ -150,6 +160,72 @@ export function createTermRepository(db: DbPort): TermRepository {
 
     async byId(_ctx: TenantContext, id: string): Promise<Term | null> {
       return byId(id)
+    },
+
+    async bySlug(_ctx: TenantContext, slug: string): Promise<Term | null> {
+      if (slug === '') return null
+
+      // Ordered by the vocabulary and then the term, so a slug held by two
+      // vocabularies always resolves to the same one rather than to whichever row
+      // SQLite happened to return first.
+      const row = await db.first<TermRow>(
+        `SELECT ${QUALIFIED_COLUMNS} FROM terms t
+           JOIN vocabularies v ON v.id = t.vocabulary_id
+          WHERE t.slug = ?
+          ORDER BY v.sort_order ASC, v.name ASC, v.id ASC, t.sort_order ASC, t.name ASC, t.id ASC
+          LIMIT 1`,
+        [slug],
+      )
+      return row === null ? null : toTerm(row)
+    },
+
+    async content(
+      _ctx: TenantContext,
+      termId: string,
+      query: { limit?: number; offset?: number } = {},
+    ): Promise<PageResult<TermContent>> {
+      const { limit, offset } = resolveWindow(query)
+
+      const count = await db.first<{ total: number }>(
+        `SELECT count(*) AS total FROM (
+           SELECT p.id FROM posts p
+             JOIN content_terms ct ON ct.content_type = 'post' AND ct.content_id = p.id
+            WHERE ct.term_id = ? AND p.status = 'published'
+           UNION ALL
+           SELECT pr.id FROM products pr
+             JOIN content_terms ct ON ct.content_type = 'product' AND ct.content_id = pr.id
+            WHERE ct.term_id = ? AND pr.status = 'published'
+         )`,
+        [termId, termId],
+      )
+
+      const rows = await db.all<{ content_type: string; content_id: string; updated_at: string }>(
+        `SELECT content_type, content_id, updated_at FROM (
+           SELECT 'post' AS content_type, p.id AS content_id, p.updated_at AS updated_at
+             FROM posts p
+             JOIN content_terms ct ON ct.content_type = 'post' AND ct.content_id = p.id
+            WHERE ct.term_id = ? AND p.status = 'published'
+           UNION ALL
+           SELECT 'product', pr.id, pr.updated_at
+             FROM products pr
+             JOIN content_terms ct ON ct.content_type = 'product' AND ct.content_id = pr.id
+            WHERE ct.term_id = ? AND pr.status = 'published'
+         )
+         ORDER BY updated_at DESC, content_id DESC
+         LIMIT ? OFFSET ?`,
+        [termId, termId, limit, offset],
+      )
+
+      return {
+        items: rows.map((row) => ({
+          id: row.content_id,
+          contentType: row.content_type as ContentType,
+          updatedAt: asDate(row.updated_at),
+        })),
+        total: count?.total ?? 0,
+        limit,
+        offset,
+      }
     },
 
     async path(_ctx: TenantContext, id: string): Promise<Term[]> {

@@ -490,6 +490,7 @@ export const fr: Locale = {
   'theme.file.templates.page': 'Une page autonome, comme À propos ou Contact.',
   'theme.file.templates.product': 'Un produit : couverture, galerie, corps, caractéristiques et lien sortant.',
   'theme.file.templates.products': 'La liste des produits, dix par page.',
+  'theme.file.templates.term': 'L’archive d’un terme : tout ce qui est publié sous lui.',
   'theme.file.templates.404': 'Ce que voit un visiteur pour une adresse qui n’existe pas.',
   'theme.file.snippets.header': 'Le nom, le logo et le menu du site en haut de chaque page.',
   'theme.file.snippets.footer': 'Le bas de chaque page : texte de pied de page, liens sociaux et attribution.',
