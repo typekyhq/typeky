@@ -392,3 +392,54 @@ describe('the file descriptions', () => {
     expect(missing).toEqual([])
   })
 })
+
+/**
+ * The two documents, read before deciding whether to keep them.
+ *
+ * The links open a view inside the panel rather than handing the file to the
+ * downloads folder: the point of both documents is that somebody *reads* them, and
+ * the download is a button inside the view.
+ */
+describe('the authoring documents', () => {
+  it('opens one in the panel, with the text and a download', async () => {
+    const readThemeDocument = vi.fn(async () => '# Theme syntax\n\nOnly these tags exist.')
+    renderSection(withTheme({ readThemeDocument }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'theme syntax' }))
+
+    expect(readThemeDocument).toHaveBeenCalledWith('syntax')
+    const view = await screen.findByTestId('theme-document')
+    expect(within(view).getByText(/Only these tags exist/)).toBeTruthy()
+    // The download is a real link to the endpoint the API serves as an attachment.
+    expect(within(view).getByRole('link', { name: 'Download' }).getAttribute('href')).toBe(
+      '/api/admin/theme/syntax',
+    )
+  })
+
+  it('reads the other one too', async () => {
+    const readThemeDocument = vi.fn(async () => '# Prompt: write a Typeky theme template')
+    renderSection(withTheme({ readThemeDocument }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'prompt for an AI' }))
+
+    expect(readThemeDocument).toHaveBeenCalledWith('prompt')
+    const view = await screen.findByTestId('theme-document')
+    expect(within(view).getByRole('link', { name: 'Download' }).getAttribute('href')).toBe(
+      '/api/admin/theme/prompt',
+    )
+  })
+
+  it('reports a document it cannot read, rather than an empty view', async () => {
+    renderSection(
+      withTheme({
+        readThemeDocument: vi.fn(async () => {
+          throw new ApiError('internal_error', 500)
+        }),
+      }),
+    )
+
+    await userEvent.click(await screen.findByRole('button', { name: 'theme syntax' }))
+
+    await waitFor(() => expect(screen.queryByTestId('theme-document')).toBeNull())
+  })
+})

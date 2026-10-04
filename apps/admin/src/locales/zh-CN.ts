@@ -495,7 +495,8 @@ export const zhCN: Locale = {
   'theme.group.templates.hint': '每种页面一个，由被请求的网址决定用哪个。',
   'theme.group.snippets': '片段',
   'theme.group.snippets.hint': '可复用的片段，由模板和其他片段按名字引入。',
-  'theme.authoring.hint': '想用 AI 写模板？把这份提示词交给它：',
+  'theme.authoring.hint': '想用 AI 写模板？先看这份提示词：',
+  'theme.authoring.download': '下载',
   'theme.authoring.syntax': '模板语法',
   'theme.authoring.prompt': 'AI 提示词',
   'theme.upload.hint':

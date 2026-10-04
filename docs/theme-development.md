@@ -253,8 +253,11 @@ actually runs**: the tags and filters come from the sandbox's whitelists, the da
 shape from the sample context the previews use. A hand-written list would tell an
 author about something that renders nothing, and a model would believe it.
 
-- **Theme → theme syntax** — this reference as a file to keep.
+- **Theme → theme syntax** — this reference, opened in the panel.
 - **Theme → prompt for an AI** — an instruction to a model, with the same lists in it.
+
+Both open as a view with a **Download** button in it, rather than going straight to the
+downloads folder: they are things to read before deciding you want them.
 
 Hand a model the prompt and your design. A model told only "use Liquid" will reach for
 `paginate`, which this sandbox does not have, and the render fails rather than the

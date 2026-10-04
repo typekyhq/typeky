@@ -158,6 +158,8 @@ export interface ApiClient {
 
   /** Every theme the deployment can serve, and the one the site is using. */
   listThemes(): Promise<ThemeListResponse>
+  /** One of the two documents the theme page offers to read before saving one. */
+  readThemeDocument(document: 'syntax' | 'prompt'): Promise<string>
   /** Adds a theme: a name and the files read out of a folder. */
   uploadTheme(theme: ThemeUpload): Promise<ThemeListResponse>
   deleteTheme(name: string): Promise<void>
@@ -598,6 +600,19 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         await send('GET', '/theme/themes'),
         'the theme list did not match the contract',
       )
+    },
+
+    async readThemeDocument(document) {
+      // Read as text, not through the contract helpers: this is a document rather than
+      // a JSON response, and the server offers it as a download either way -- the
+      // `Content-Disposition` header is the browser's business, not this one's.
+      const response = await doFetch(`${baseUrl}/theme/${document}`, {
+        credentials: 'same-origin',
+      })
+
+      if (!response.ok) throw await toApiError(response)
+
+      return response.text()
     },
 
     async uploadTheme(theme) {

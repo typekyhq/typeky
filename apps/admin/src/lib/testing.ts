@@ -128,6 +128,9 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
         active: 'default',
       }
     },
+    async readThemeDocument() {
+      return '# document'
+    },
     uploadTheme: unexpected('uploadTheme'),
     async deleteTheme() {},
     // An empty reference renders: that is what a component test means unless it

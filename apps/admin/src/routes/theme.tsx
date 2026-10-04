@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { EmptyState, ErrorState, LoadingState } from '@/components/states'
 import { TemplateEditorSurface } from '@/components/template-editor-surface'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -253,6 +254,10 @@ export function ThemeSection() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [previewing, setPreviewing] = useState(false)
 
+  /** The document being read, if any. */
+  const [document, setDocument] = useState<{ kind: 'syntax' | 'prompt'; text: string } | null>(null)
+  const [reading, setReading] = useState(false)
+
   /** Folders start open: there are three of them and the files are the point. */
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
@@ -325,6 +330,18 @@ export function ThemeSection() {
       }
     } finally {
       setPreviewing(false)
+    }
+  }
+
+  async function readDocument(kind: 'syntax' | 'prompt'): Promise<void> {
+    setReading(true)
+
+    try {
+      setDocument({ kind, text: await client.readThemeDocument(kind) })
+    } catch (thrown) {
+      toast.error(describeApiError(thrown, t))
+    } finally {
+      setReading(false)
     }
   }
 
@@ -405,16 +422,62 @@ export function ThemeSection() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <span className="text-muted-foreground">{t('theme.authoring.hint')}</span>
         {/*
-          Plain links rather than client calls: the API answers these as downloads, and
-          `/api/admin` is where it lives even when the panel itself has moved.
+          Opened in the panel rather than sent to the downloads folder: these are things to
+          read before deciding you want them, and the download is one button inside the view.
         */}
-        <a href="/api/admin/theme/syntax" download className="underline">
+        <button
+          type="button"
+          className="underline disabled:opacity-50"
+          disabled={reading}
+          onClick={() => void readDocument('syntax')}
+        >
           {t('theme.authoring.syntax')}
-        </a>
-        <a href="/api/admin/theme/prompt" download className="underline">
+        </button>
+        <button
+          type="button"
+          className="underline disabled:opacity-50"
+          disabled={reading}
+          onClick={() => void readDocument('prompt')}
+        >
           {t('theme.authoring.prompt')}
-        </a>
+        </button>
       </div>
+
+      <Sheet
+        open={document !== null}
+        onOpenChange={(open) => {
+          if (!open) setDocument(null)
+        }}
+      >
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-3xl" data-testid="theme-document">
+          <SheetHeader className="border-b">
+            <SheetTitle>
+              {document?.kind === 'prompt' ? t('theme.authoring.prompt') : t('theme.authoring.syntax')}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="space-y-4 p-4">
+            {/*
+              A plain link rather than a button: the API answers it with
+              `Content-Disposition: attachment`, and `/api/admin` is where it lives even when
+              the panel itself has moved.
+            */}
+            <a
+              href={`/api/admin/theme/${document?.kind ?? 'syntax'}`}
+              download
+              className="inline-flex h-8 items-center rounded-lg border border-input px-2.5 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              {t('theme.authoring.download')}
+            </a>
+
+            {/* Monospace and preformatted: this is a reference of tags, filters and field
+                names, which is the one kind of prose that reads better raw. */}
+            <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap">
+              {document?.text ?? ''}
+            </pre>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <UploadTheme
 

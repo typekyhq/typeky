@@ -510,7 +510,8 @@ export const en: Locale = {
   'theme.group.templates.hint': 'One per kind of page, chosen by the URL that was asked for.',
   'theme.group.snippets': 'Snippets',
   'theme.group.snippets.hint': 'Reusable pieces, pulled in by name from the templates and each other.',
-  'theme.authoring.hint': 'Writing a template with an AI? Hand it the prompt:',
+  'theme.authoring.hint': 'Writing a template with an AI? Read the prompt first:',
+  'theme.authoring.download': 'Download',
   'theme.authoring.syntax': 'theme syntax',
   'theme.authoring.prompt': 'prompt for an AI',
   'theme.upload.hint':
