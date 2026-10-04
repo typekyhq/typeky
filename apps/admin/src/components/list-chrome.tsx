@@ -236,7 +236,7 @@ export function SelectionHead({
   }, [someSelected, allSelected])
 
   return (
-    <th scope="col" className="w-8 py-2 pr-2">
+    <th scope="col" className="w-8 py-2 pe-2">
       <input
         ref={ref}
         type="checkbox"
@@ -261,7 +261,7 @@ export function SelectionCell({
   const t = useT()
 
   return (
-    <td className="py-3 pr-2">
+    <td className="py-3 pe-2">
       <input
         type="checkbox"
         className="size-4 align-middle"

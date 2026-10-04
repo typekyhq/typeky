@@ -225,16 +225,16 @@ export function PostsSection() {
                       setSelected(next ? new Set(items.map((post) => post.id)) : new Set())
                     }
                   />
-                  <th scope="col" className="py-2 pr-3 font-medium">
+                  <th scope="col" className="py-2 pe-3 font-medium">
                     {t('content.title')}
                   </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
+                  <th scope="col" className="py-2 pe-3 font-medium">
                     {t('content.slug')}
                   </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
+                  <th scope="col" className="py-2 pe-3 font-medium">
                     {t('content.status')}
                   </th>
-                  <th scope="col" className="hidden py-2 pr-3 font-medium sm:table-cell">
+                  <th scope="col" className="hidden py-2 pe-3 font-medium sm:table-cell">
                     {t('content.updated')}
                   </th>
                   <th scope="col" className="py-2 font-medium">
@@ -257,7 +257,7 @@ export function PostsSection() {
                         })
                       }
                     />
-                    <td className="py-3 pr-3">
+                    <td className="py-3 pe-3">
                       <Link
                         to={`/posts/${post.id}`}
                         className="font-medium underline-offset-4 hover:underline focus-visible:underline"
@@ -270,11 +270,11 @@ export function PostsSection() {
                         </p>
                       )}
                     </td>
-                    <td className="py-3 pr-3 text-muted-foreground">{post.slug}</td>
-                    <td className="py-3 pr-3">
+                    <td className="py-3 pe-3 text-muted-foreground">{post.slug}</td>
+                    <td className="py-3 pe-3">
                       <StatusText status={post.status} />
                     </td>
-                    <td className="hidden py-3 pr-3 text-muted-foreground sm:table-cell">
+                    <td className="hidden py-3 pe-3 text-muted-foreground sm:table-cell">
                       {panel.format(post.updatedAt)}
                     </td>
                     <td className="py-3">

@@ -123,10 +123,12 @@ export function PanelPreferenceProvider({ children }: { children: ReactNode }) {
   //
   // `dir` is set beside it, and that is the half that is easy to forget: Arabic is
   // written right to left, and a panel that kept a left-to-right layout would put
-  // the interface in the wrong place rather than merely in the wrong words. What
-  // this does *not* do is mirror the components -- Tailwind's physical utilities
-  // (`px-`, `ml-`, and the drawn chevron on a select) still point the way they were
-  // written, so a full right-to-left pass is still owed.
+  // the interface in the wrong place rather than merely in the wrong words. The
+  // components are written with Tailwind's logical utilities rather than the
+  // physical ones (`ps-`/`pe-`, `ms-`/`me-`, `start-`/`end-`, `text-start`), which
+  // follow `dir` on their own -- so setting it here is what mirrors them. What is
+  // still owed is the sign-in screen, which mounts before this provider does: there
+  // is no panel language to read until the session exists, so it never gets `dir`.
   useEffect(() => {
     document.documentElement.lang = language
     document.documentElement.dir = isRightToLeft(language) ? 'rtl' : 'ltr'

@@ -3,6 +3,7 @@ import { en, type Locale } from './en'
 import { es } from './es'
 import { fr } from './fr'
 import { ja } from './ja'
+import { ko } from './ko'
 import { ptBR } from './pt-BR'
 import { ru } from './ru'
 import { zhCN } from './zh-CN'
@@ -16,7 +17,7 @@ export type { Locale } from './en'
  * exists to the operator exactly when it exists as a file. That is the difference
  * between offering a translation and promising one.
  */
-export const LOCALES: Record<string, Locale> = { ar, en, es, fr, ja, 'pt-BR': ptBR, ru, 'zh-CN': zhCN }
+export const LOCALES: Record<string, Locale> = { ar, en, es, fr, ja, ko, 'pt-BR': ptBR, ru, 'zh-CN': zhCN }
 
 /** The one that is always there, and the one a missing key falls back to. */
 export const DEFAULT_LOCALE = 'en'
@@ -33,6 +34,7 @@ export const LOCALE_LABELS: Record<string, string> = {
   es: 'Español',
   fr: 'Français',
   ja: '日本語',
+  ko: '한국어',
   'pt-BR': 'Português (Brasil)',
   ru: 'Русский',
   'zh-CN': '简体中文',

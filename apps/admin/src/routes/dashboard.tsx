@@ -141,7 +141,7 @@ export function DashboardPage(): ReactNode {
             {overview.lastPublished === null ? (
               <p className="text-sm text-muted-foreground">{t('dashboard.neverPublished')}</p>
             ) : (
-              <p className="space-x-2">
+              <p className="flex flex-wrap items-center gap-2">
                 <ItemLink item={overview.lastPublished} />
                 <span className="text-sm text-muted-foreground">
                   {panel.format(overview.lastPublished.publishedAt ?? '')}
@@ -193,7 +193,7 @@ function ItemLink({ item }: { item: OverviewItem }): ReactNode {
       >
         {item.title}
       </Link>
-      <span className="ml-2 text-xs text-muted-foreground">{label}</span>
+      <span className="ms-2 text-xs text-muted-foreground">{label}</span>
     </span>
   )
 }

@@ -533,7 +533,7 @@ export function ThemeSection() {
 
                   {expanded && (
                     <>
-                      <p className="px-2 pb-1 pl-7 text-xs text-muted-foreground">{t(descriptionKey)}</p>
+                      <p className="px-2 pb-1 ps-7 text-xs text-muted-foreground">{t(descriptionKey)}</p>
                       <ul className="space-y-0.5">
                         {grouped.map((item) => {
                           const isOpen = item.path === openPath
@@ -557,7 +557,7 @@ export function ThemeSection() {
                                 }
                                 onClick={() => void open(item.path)}
                                 className={cn(
-                                  'flex w-full items-center gap-2 rounded-md py-1.5 pr-2 pl-7 text-left text-sm outline-none',
+                                  'flex w-full items-center gap-2 rounded-md py-1.5 pe-2 ps-7 text-start text-sm outline-none',
                                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                                   isOpen
                                     ? 'bg-accent font-medium text-accent-foreground'
@@ -567,7 +567,7 @@ export function ThemeSection() {
                                 <span className="truncate font-mono">{leafName(item.path)}</span>
                                 {item.overridden && (
                                   <span
-                                    className="ml-auto shrink-0 rounded-full border px-2 py-0.5 text-xs"
+                                    className="ms-auto shrink-0 rounded-full border px-2 py-0.5 text-xs"
                                     data-testid="customised-marker"
                                   >
                                     {t('theme.customised')}

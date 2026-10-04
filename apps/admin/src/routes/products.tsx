@@ -217,16 +217,16 @@ export function ProductsSection() {
                       setSelected(next ? new Set(items.map((product) => product.id)) : new Set())
                     }
                   />
-                  <th scope="col" className="py-2 pr-3 font-medium">
+                  <th scope="col" className="py-2 pe-3 font-medium">
                     {t('content.title')}
                   </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
+                  <th scope="col" className="py-2 pe-3 font-medium">
                     {t('content.slug')}
                   </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
+                  <th scope="col" className="py-2 pe-3 font-medium">
                     {t('content.price')}
                   </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
+                  <th scope="col" className="py-2 pe-3 font-medium">
                     {t('content.status')}
                   </th>
                   <th scope="col" className="py-2 font-medium">
@@ -249,7 +249,7 @@ export function ProductsSection() {
                         })
                       }
                     />
-                    <td className="py-3 pr-3">
+                    <td className="py-3 pe-3">
                       <Link
                         to={`/products/${product.id}`}
                         className="font-medium underline-offset-4 hover:underline focus-visible:underline"
@@ -265,9 +265,9 @@ export function ProductsSection() {
                         <p className="max-w-prose text-xs text-muted-foreground">{product.summary}</p>
                       )}
                     </td>
-                    <td className="py-3 pr-3 text-muted-foreground">{product.slug}</td>
-                    <td className="py-3 pr-3 text-muted-foreground">{product.priceLabel ?? '—'}</td>
-                    <td className="py-3 pr-3">
+                    <td className="py-3 pe-3 text-muted-foreground">{product.slug}</td>
+                    <td className="py-3 pe-3 text-muted-foreground">{product.priceLabel ?? '—'}</td>
+                    <td className="py-3 pe-3">
                       <StatusText status={product.status} />
                     </td>
                     <td className="py-3">
