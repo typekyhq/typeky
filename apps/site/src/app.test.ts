@@ -223,6 +223,35 @@ describe('site worker', () => {
  * answers, the default stops answering, the panel's own files keep working, and the
  * way back in exists for a browser that is already signed in.
  */
+describe('theme assets', () => {
+  /** A site row served by an uploaded theme. */
+  function themeSite(theme: string): Record<string, unknown> {
+    return {
+      id: 'default',
+      name: 'Typeky Demo',
+      tagline: null,
+      logo_media_id: null,
+      favicon_media_id: null,
+      theme,
+      settings: '{}',
+      nav: '[]',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }
+  }
+
+  it('serves the bundled asset for a theme that does not ship one', async () => {
+    // A theme is layered over the default, so a stylesheet it does not ship is the
+    // bundled one: an unstyled page is not a design choice anybody made.
+    const env = makeTestEnv({ DB: fakeDatabase(async () => themeSite('minimal')) })
+
+    const response = await send('/theme/theme.css', env)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/css')
+  })
+})
+
 describe('the panel address', () => {
   /** A site row, with the panel wherever the test wants it. */
   function siteRow(path: string): Record<string, unknown> {

@@ -345,14 +345,12 @@ describe('uploading a theme', () => {
     await expect(response.json()).resolves.toMatchObject({ error: 'invalid_request' })
   })
 
-  it('refuses a theme that does not answer for every page', async () => {
-    // The platform looks these up by name, so a theme without one answers a page
-    // with an error. Refusing here is the difference between an author fixing it
-    // and a visitor finding it.
+  it('accepts a theme that leaves some files to the bundled one', async () => {
+    // A theme is layered over the default, so a partial one is not an error: the files
+    // it does not ship render with the bundled theme's.
     const response = await upload({ name: 'partial', files: [{ path: 'assets/theme.css', source: 'x' }] })
 
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toMatchObject({ error: 'invalid_request' })
+    expect(response.status).toBe(201)
   })
 
   it('refuses the bundled theme name', async () => {

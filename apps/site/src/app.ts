@@ -131,15 +131,13 @@ export function createApp(): Hono<{ Bindings: Env }> {
     const site = store === null ? null : await store.sites.get(defaultContext()).catch(() => null)
     const theme = site?.theme ?? 'default'
 
-    // The bundled theme's files are in the bundle; an uploaded theme's are rows, and
-    // a theme that does not ship the file answers 404 rather than falling back to
-    // another theme's -- a page styled by a theme it is not using is the kind of
-    // wrong that looks like a caching problem.
-    if (theme === 'default') return serveThemeAsset(name, c.req.raw)
+    // The bundled theme's files are in the bundle; an uploaded theme's are rows. A
+    // theme that does not ship a file falls back to the bundled one, the same way a
+    // missing template does: a theme is layered over the default, not instead of it.
+    const source =
+      store === null || theme === 'default' ? null : await themeAssetSource(store, theme, name)
 
-    const source = store === null ? null : await themeAssetSource(store, theme, name)
-
-    return source === null ? themeAssetNotFound() : serveUploadedThemeAsset(name, source)
+    return source === null ? serveThemeAsset(name, c.req.raw) : serveUploadedThemeAsset(name, source)
   })
 
   // `robots.txt` and `sitemap.xml` before the catch-all too: both have a file

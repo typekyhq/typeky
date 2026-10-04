@@ -1,6 +1,6 @@
 import { defaultContext, type Repositories, type ThemeSummary, type ThemeTemplate } from '@typeky/db'
 import { describe, expect, it } from 'vitest'
-import { BASELINE_NAMES } from '@typeky/theme-default'
+import { BASELINE, BASELINE_NAMES } from '@typeky/theme-default'
 import {
   BUNDLED_THEME,
   isUploadableThemePath,
@@ -98,7 +98,7 @@ describe('the templates of a theme', () => {
     expect(templates.find((entry) => entry.path === 'layouts/base')?.edited).toBe(false)
   })
 
-  it('are what an uploaded theme shipped, with its assets left out', async () => {
+  it('are what an uploaded theme ships, layered over the bundled ones', async () => {
     const templates = await themeTemplates(
       storeWith([
         row({ path: 'templates/post', source: 'edited', originalSource: 'original' }),
@@ -107,14 +107,17 @@ describe('the templates of a theme', () => {
       'uploaded',
     )
 
-    expect(templates).toEqual([
-      {
-        path: 'templates/post',
-        source: 'edited',
-        edited: true,
-        updatedAt: new Date('2026-05-05T00:00:00.000Z'),
-      },
-    ])
+    // The union of what it ships and what the bundled theme ships: the list is what
+    // the theme renders, so a file that answers a page has to be in it -- otherwise
+    // the file in force could not be edited.
+    expect(templates).toHaveLength(BASELINE_NAMES.length)
+    expect(templates.find((entry) => entry.path === 'templates/post')).toMatchObject({
+      source: 'edited',
+      edited: true,
+    })
+    expect(templates.find((entry) => entry.path === 'templates/home')?.edited).toBe(false)
+    // Assets are not templates, and are not in this list.
+    expect(templates.some((entry) => entry.path.startsWith('assets/'))).toBe(false)
   })
 })
 
@@ -134,7 +137,11 @@ describe('the baseline of a theme', () => {
       'uploaded',
     )
 
-    expect(baseline).toEqual({ 'templates/post': 'original' })
+    expect(baseline?.['templates/post']).toBe('original')
+    // Layered over the bundled theme, which is what makes a partial theme render: the
+    // files it does not ship are the bundled ones.
+    expect(Object.keys(baseline ?? {})).toHaveLength(BASELINE_NAMES.length)
+    expect(baseline?.['templates/home']).toBe(BASELINE['templates/home'])
   })
 
   it('is nothing for a theme nobody installed', async () => {

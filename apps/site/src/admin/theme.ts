@@ -14,7 +14,6 @@ import { defaultContext, type ThemeTemplate } from '@typeky/db'
 import { createD1DbPort, type DbPort } from '@typeky/platform'
 import { LIQUID_NATIVE_FILTERS, LIQUID_PLATFORM_FILTERS, LIQUID_TAGS, createLiquidRuntime } from '@typeky/theme-kit'
 import {
-  REQUIRED_TEMPLATES,
   isUploadableThemePath,
   listThemes,
   themeAssetVersions,
@@ -222,15 +221,8 @@ export async function uploadTheme(
     return apiError(c, 'name_taken', `a theme called "${name}" already exists`)
   }
 
-  // A theme answers for the pages the platform asks for by name. Checked before the
-  // parse, because it needs no parser and the message is easier to act on.
-  const missing = REQUIRED_TEMPLATES.filter(
-    (path) => !files.some((file) => file.path === path),
-  )
-  if (missing.length > 0) {
-    return apiError(c, 'invalid_request', `the theme does not ship ${missing.join(', ')}`)
-  }
-
+  // No completeness check: a theme is layered over the bundled one, so a file it does
+  // not ship is a file it did not change rather than a page that cannot render.
   for (const file of files) {
     if (!isUploadableThemePath(file.path)) {
       return apiError(c, 'invalid_request', `"${file.path}" is not a path a theme may hold`)

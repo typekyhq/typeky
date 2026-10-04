@@ -66,37 +66,34 @@ export interface ThemeFile {
 /**
  * The templates of a theme, ordered by path.
  *
- * The bundled theme's list is its baseline in code, whether or not any of it has
- * been edited; an uploaded theme's is whatever it shipped.
+ * The bundled theme's list is its baseline in code; an uploaded theme's is its own
+ * files **over** the bundled ones, because a theme is layered rather than complete: a
+ * file it does not ship is a file it did not change, and it renders with the bundled
+ * one. That is also why the list is the union -- what the operator sees here is what
+ * the theme renders, and a file that answers a page has to be visible to be edited.
  */
 export async function themeTemplates(store: Repositories, theme: string): Promise<ThemeFile[]> {
   const rows = await store.themeTemplates.list(defaultContext(), theme)
+  const byPath = new Map(rows.map((row) => [row.path, row]))
 
-  if (theme === BUNDLED_THEME) {
-    const byPath = new Map(rows.map((row) => [row.path, row]))
+  const shipped = rows.filter((row) => isTemplatePath(row.path)).map((row) => row.path)
+  const paths = [...new Set([...BASELINE_NAMES, ...shipped])].sort()
 
-    return [...BASELINE_NAMES].sort().map((path) => {
-      const row = byPath.get(path)
+  return paths.map((path) => {
+    const row = byPath.get(path)
 
-      return {
-        path,
-        source: row?.source ?? (BASELINE[path] as string),
-        edited: row !== undefined,
-        updatedAt: row?.updatedAt ?? null,
-      }
-    })
-  }
-
-  return rows
-    .filter((row) => isTemplatePath(row.path))
-    .map((row) => ({
-      path: row.path,
-      source: row.source,
-      // For an uploaded theme a row is the file, so "edited" is the difference
-      // between what it says now and what it was uploaded as.
-      edited: row.originalSource !== null && row.originalSource !== row.source,
-      updatedAt: row.updatedAt,
-    }))
+    return {
+      path,
+      source: row?.source ?? (BASELINE[path] as string | undefined) ?? '',
+      // A row with no `originalSource` is an override of a bundled file; one with an
+      // original is a file the theme shipped, edited when the two differ.
+      edited:
+        row === undefined
+          ? false
+          : row.originalSource === null || row.originalSource !== row.source,
+      updatedAt: row?.updatedAt ?? null,
+    }
+  })
 }
 
 /** The source a theme shipped a file as, or null when the theme has no such file. */
@@ -108,7 +105,12 @@ export async function themeFileOriginal(
   if (theme === BUNDLED_THEME) return (BASELINE[path] as string | undefined) ?? null
 
   const row = await store.themeTemplates.byPath(defaultContext(), theme, path)
-  return row === null ? null : (row.originalSource ?? row.source)
+  if (row !== null) return row.originalSource ?? row.source
+
+  // A file this theme leaves to the bundled one is still a file the theme renders, so
+  // it can be edited -- and restoring it drops the override, exactly as it does for a
+  // file the bundled theme ships.
+  return (BASELINE[path] as string | undefined) ?? null
 }
 
 /**
@@ -127,12 +129,15 @@ export async function themeBaseline(
   if (!(await themeExists(store, theme))) return null
 
   const rows = await store.themeTemplates.list(defaultContext(), theme)
-
-  return Object.fromEntries(
+  const own = Object.fromEntries(
     rows
       .filter((row) => isTemplatePath(row.path))
       .map((row) => [row.path, row.originalSource ?? row.source]),
   )
+
+  // Layered over the bundled theme rather than replacing it: a file this theme does
+  // not ship renders with the bundled one, so the set has to include it too.
+  return { ...BASELINE, ...own }
 }
 
 /**
@@ -146,14 +151,21 @@ export async function themeAssetVersions(
   store: Repositories,
   theme: string,
 ): Promise<Record<string, string>> {
+  // The bundled theme needs no query, and asking for one would be a read of a table it
+  // does not use -- which is also what keeps a site with no rows cheap to render.
   if (theme === BUNDLED_THEME) return { ...ASSET_VERSIONS }
 
   const rows = await store.themeTemplates.list(defaultContext(), theme)
-  const assets = rows.filter((row) => !isTemplatePath(row.path))
-
-  return Object.fromEntries(
-    assets.map((row) => [assetNameOf(row.path), String(row.updatedAt.getTime())]),
+  const own = Object.fromEntries(
+    rows
+      .filter((row) => !isTemplatePath(row.path))
+      .map((row) => [assetNameOf(row.path), String(row.updatedAt.getTime())]),
   )
+
+  // The bundled versions are the floor, for the same reason the templates are: a theme
+  // that ships no stylesheet is served the bundled one, and its URL has to be the one
+  // the bundled stylesheet's bytes are cached under.
+  return { ...ASSET_VERSIONS, ...own }
 }
 
 /** An uploaded theme's asset source, or null when it does not have that file. */
@@ -187,26 +199,6 @@ export function isUploadableThemePath(path: string): boolean {
 
   return /^(?:layouts|templates|snippets)\/[a-z0-9_/-]+$/.test(path)
 }
-
-/**
- * The templates the platform looks up by name.
- *
- * Not a theme's whole surface -- a theme may ship any snippets it likes, and one it
- * never renders is lean rather than wrong. These are the ones the Worker asks for
- * directly, once per page kind, so a theme without one answers that page with an
- * error rather than with a design. The upload refuses it there, where the author can
- * still do something about it.
- */
-export const REQUIRED_TEMPLATES = [
-  'layouts/base',
-  'templates/404',
-  'templates/home',
-  'templates/page',
-  'templates/post',
-  'templates/posts',
-  'templates/product',
-  'templates/products',
-] as const
 
 function isTemplatePath(path: string): boolean {
   return TEMPLATE_PREFIXES.some((prefix) => path.startsWith(prefix))

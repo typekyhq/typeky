@@ -235,10 +235,11 @@ my-theme/
   refused at the door, naming the file and the line, rather than on a page later.
 - A path stays inside the theme: `..`, an absolute path and a backslash are refused
   rather than normalised.
-- The theme has to answer for the pages the platform asks for by name -- `layouts/base`
-  and `templates/{home,page,post,posts,product,products,404}`. Those are looked up
-  directly, so a theme without one is refused at the upload rather than found missing
-  by a visitor. Snippets are a theme's own business.
+- A theme is **layered over the bundled one**: a file it does not ship renders with
+  the bundled theme's, and so does an asset. That makes a partial theme a normal thing
+  -- change the two files you care about and leave the rest -- and it is why the theme
+  page lists the files the bundled theme ships alongside your own. *Restore* on one of
+  those drops the override, exactly as it does for the bundled theme.
 
 Upload it from **Theme → Choose a folder**, then choose it under **Settings → Theme**.
 Editing a file of an uploaded theme works exactly as editing the bundled one, and
