@@ -337,6 +337,9 @@ function contentFor(
     ...(item.publishedAt === null || item.publishedAt === undefined
       ? {}
       : { published_at: item.publishedAt.toISOString() }),
+    ...(item.updatedAt === null || item.updatedAt === undefined
+      ? {}
+      : { updated_at: item.updatedAt.toISOString() }),
     ...item.extra,
   }
 }

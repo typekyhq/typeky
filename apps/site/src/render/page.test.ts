@@ -262,7 +262,8 @@ describe('rendering content pages', () => {
     const result = await render('/posts/filed')
 
     expect(result.status).toBe(200)
-    expect(result.html).toContain('<span class="term">News</span>')
+    // The chip carries its vocabulary as a tooltip, so the name is matched loosely.
+    expect(result.html).toMatch(/<span class="term"[^>]*>News<\/span>/)
   })
 
   it('omits the field entirely when a post carries no terms', async () => {

@@ -38,24 +38,38 @@
   /* The sticky header's height, for anchors that would otherwise land under it. */
   --header-height: 4rem;
 
-  --ink: #0f172a;
-  --ink-muted: #64748b;
+  /* Taken from the logo. The wordmark's near-black is the ink; the two brackets --
+   * teal on the left, blue on the right -- are the brand pair, and the gradient is
+   * how they appear together on buttons and other solid marks.
+   *
+   * Buttons carry ink text rather than white on purpose: the teal end of the
+   * gradient is far too light for white (about 1.9:1), while near-black on teal is
+   * about 8.5:1. `--accent`, for links and text on white, is a shade deeper than
+   * the bracket blue so it clears 4.5:1, which the pure logo colour does not. */
+  --ink: #1c2027;
+  --ink-muted: #5d6773;
   --paper: #ffffff;
-  --paper-soft: #f8fafc;
+  --paper-soft: #f5f8fa;
   --paper-raised: #ffffff;
-  --line: #e8edf3;
-  --line-strong: #cbd5e1;
-  --accent: #2563eb;
-  --accent-strong: #1d4ed8;
-  --accent-soft: #eff6ff;
+  --line: #e6ecf1;
+  --line-strong: #c9d4de;
+
+  --brand-teal: #2acfc8;
+  --brand-blue: #4f8dfc;
+  --gradient: linear-gradient(120deg, var(--brand-teal), var(--brand-blue));
+  --on-gradient: #1c2027;
+
+  --accent: #2f6fe0;
+  --accent-strong: #2559be;
+  --accent-soft: #eaf1ff;
   --accent-ink: #ffffff;
 
   --radius: 12px;
   --radius-sm: 8px;
   --space: 1rem;
 
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 4%), 0 1px 3px rgb(15 23 42 / 6%);
-  --shadow-md: 0 10px 30px -12px rgb(15 23 42 / 18%);
+  --shadow-sm: 0 1px 2px rgb(28 32 39 / 4%), 0 1px 3px rgb(28 32 39 / 6%);
+  --shadow-md: 0 10px 30px -12px rgb(28 32 39 / 18%);
 
   --font-body: system-ui, -apple-system, "Segoe UI", "Noto Sans SC", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -198,6 +212,18 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
+/* A hairline of the brand pair under the header, quiet enough to read as a rule
+ * rather than a stripe. Decorative, so it carries no text and no meaning. */
+.site-header::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--gradient);
+  opacity: 0.4;
+}
+
 .site-header .brand {
   display: inline-flex;
   align-items: center;
@@ -234,7 +260,12 @@ main {
 
 .site-header nav a:hover {
   color: var(--ink);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  /* The underline is the gradient rather than a flat accent: it is the smallest
+   * place the two brand colours can appear together without carrying text. */
+  background-image: var(--gradient);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 2px;
 }
 
 /* ----------------------------------------------------------- hero, home -- */
@@ -246,6 +277,12 @@ main {
   gap: 0.9rem;
   text-align: center;
   padding-block: clamp(1rem, 4vw, 3rem);
+  /* Two soft washes of the brand pair, one from each corner the brackets sit in.
+   * Decorative and low-opacity: the heading stays near-black and readable, and
+   * this is only what says which site this is. */
+  background:
+    radial-gradient(38rem 18rem at 8% 0%, rgb(42 207 200 / 13%), transparent 62%),
+    radial-gradient(38rem 18rem at 92% 0%, rgb(79 141 252 / 15%), transparent 62%);
 }
 
 .hero h1 {
@@ -282,16 +319,19 @@ main {
   padding: 0.6rem 1.2rem;
   border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--gradient);
+  color: var(--on-gradient);
   font-size: 0.9375rem;
   font-weight: 600;
   text-decoration: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .button:hover {
-  background: var(--accent-strong);
-  color: var(--accent-ink);
+  color: var(--on-gradient);
+  /* Brightened rather than swapped to a flat shade: the pair is the brand, and a
+   * hover that replaced it with one colour would lose the thing being hovered. */
+  filter: brightness(1.06) saturate(1.05);
 }
 
 .button.secondary {
@@ -451,6 +491,15 @@ main {
 
 .post-header h1 {
   margin-block: 0 0.5rem;
+}
+
+/* The standfirst: the summary the operator wrote, sitting under the title at a
+ * size between the heading and the body. */
+.lead {
+  margin-block: 0.75rem 0;
+  max-width: 60ch;
+  color: var(--ink-muted);
+  font-size: 1.125rem;
 }
 
 .meta {
@@ -681,15 +730,16 @@ main {
   gap: 0.5rem;
   padding: 0.6rem 1.2rem;
   border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--gradient);
+  color: var(--on-gradient);
   font-weight: 600;
   text-decoration: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .cta a:hover {
-  background: var(--accent-strong);
-  color: var(--accent-ink);
+  color: var(--on-gradient);
+  filter: brightness(1.06) saturate(1.05);
 }
 
 /* ----------------------------------------------------------- page footer -- */

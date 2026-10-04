@@ -22,7 +22,7 @@
       {% if post.published_at %}
         <time datetime="{{ post.published_at }}">{{ post.published_at | date: site.date_format, site.timezone }}</time>
       {% endif %}
-      {% for term in post.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
+      {% for term in post.terms %}<span class="term" title="{{ term.vocabulary }}">{{ term.name }}</span>{% endfor %}
     </p>
 
     {% if post.excerpt %}<p class="excerpt">{{ post.excerpt }}</p>{% endif %}

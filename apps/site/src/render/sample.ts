@@ -220,6 +220,9 @@ export function sampleContext(
         terms: [{ name: 'News', slug: 'news', vocabulary: 'Categories' }],
         tags: ['sample', 'theme'],
         publishedAt: new Date('2026-01-01T00:00:00.000Z'),
+        // Later than the published date, so the "Updated" line and the shape it
+        // prints are both part of what a preview shows.
+        updatedAt: new Date('2026-02-01T00:00:00.000Z'),
       },
     })
   }

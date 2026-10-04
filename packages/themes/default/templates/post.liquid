@@ -2,11 +2,29 @@
 <article class="prose">
   <header class="post-header">
     <h1>{{ content.title }}</h1>
+    {% comment %}
+      The excerpt is the summary the operator wrote for lists, shown here as the
+      standfirst: what a reader skims before deciding to read on, which is the same
+      job it does on a card.
+    {% endcomment %}
+    {% if content.excerpt %}<p class="lead">{{ content.excerpt }}</p>{% endif %}
     <p class="meta">
       {% if content.published_at %}
         <time datetime="{{ content.published_at }}">{{ content.published_at | date: site.date_format, site.timezone }}</time>
       {% endif %}
-      {% for term in content.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
+      {% comment %}
+        The edited time, shown only when it differs from the published one: an
+        "updated" that repeats the date beside it is noise, and one that differs is
+        the fact worth stating.
+      {% endcomment %}
+      {% if content.updated_at and content.updated_at != content.published_at %}
+        <span>Updated <time datetime="{{ content.updated_at }}">{{ content.updated_at | date: site.date_format, site.timezone }}</time></span>
+      {% endif %}
+      {% comment %}
+        The vocabulary is on the chip as a tooltip rather than printed: a site that
+        keeps one vocabulary would otherwise repeat its name on every chip.
+      {% endcomment %}
+      {% for term in content.terms %}<span class="term" title="{{ term.vocabulary }}">{{ term.name }}</span>{% endfor %}
     </p>
   </header>
 

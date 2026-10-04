@@ -3,12 +3,18 @@
   <header class="product-header">
     <h1>{{ content.title }}</h1>
     {% comment %}
+      The summary the operator wrote, shown as the standfirst -- the same field the
+      list cards use, so the description does not change between the list and the
+      page it links to.
+    {% endcomment %}
+    {% if content.excerpt %}<p class="lead">{{ content.excerpt }}</p>{% endif %}
+    {% comment %}
       The terms this product is filed under, beside the price. A product can carry
       more than one, so this iterates rather than printing a single value.
     {% endcomment %}
     {% if content.terms.size > 0 %}
       <p class="meta">
-        {% for term in content.terms %}<span class="term">{{ term.name }}</span>{% endfor %}
+        {% for term in content.terms %}<span class="term" title="{{ term.vocabulary }}">{{ term.name }}</span>{% endfor %}
       </p>
     {% endif %}
     {% if content.price_label %}<p class="price">{{ content.price_label }}</p>{% endif %}
