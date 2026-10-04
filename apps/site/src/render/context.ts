@@ -32,6 +32,8 @@ export interface SiteInput {
   faviconMediaId: string | null
   settings: Record<string, unknown>
   nav: { label: string; href: string; order: number }[]
+  /** The site's vocabularies and their terms, in the order they are shown. */
+  taxonomy?: { name: string; terms: { name: string; slug: string }[] }[]
   /**
    * Whether a licence removes the attribution.
    *
@@ -277,6 +279,18 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
       nav: [...site.nav]
         .sort((left, right) => left.order - right.order)
         .map((entry) => ({ label: decodeCharacterReferences(entry.label), href: entry.href })),
+      ...(site.taxonomy === undefined || site.taxonomy.length === 0
+        ? {}
+        : {
+            taxonomy: site.taxonomy.map((group) => ({
+              name: decodeCharacterReferences(group.name),
+              terms: group.terms.map((term) => ({
+                name: decodeCharacterReferences(term.name),
+                slug: term.slug,
+                url: contentPath('term', term.slug),
+              })),
+            })),
+          }),
       settings: {
         ...(typeof site.settings.footer === 'string'
           ? { footer: decodeCharacterReferences(site.settings.footer) }

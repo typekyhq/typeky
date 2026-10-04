@@ -84,6 +84,20 @@ function product(overrides: Partial<Product> & { title: string; slug: string }):
   } as Product
 }
 
+function term(overrides: Partial<Term> & { slug: string }): Term {
+  return {
+    id: overrides.slug,
+    vocabularyId: 'vocab_1',
+    parentId: null,
+    name: overrides.slug,
+    description: null,
+    sortOrder: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  } as Term
+}
+
 function setUp(
   options: {
     pages?: Page[]
@@ -97,6 +111,8 @@ function setUp(
     /** The one term `terms.bySlug` resolves, and what it carries. */
     term?: Term
     termContent?: { id: string; contentType: 'post' | 'product'; updatedAt: Date }[]
+    /** The terms `terms.list` answers, which is what the header menu is built from. */
+    taxonomyTerms?: Term[]
     whiteLabel?: boolean
   } = {},
 ) {
@@ -134,6 +150,9 @@ function setUp(
       },
     },
     terms: {
+      async list() {
+        return options.taxonomyTerms ?? []
+      },
       async bySlug(_ctx: unknown, slug: string) {
         return options.term !== undefined && options.term.slug === slug ? options.term : null
       },
@@ -271,6 +290,29 @@ describe('rendering the front page', () => {
     // A draft and a slug that does not exist are the same answer to a visitor:
     // saying which it was would leak which pages exist.
     expect((await render('/secret')).status).toBe(404)
+  })
+})
+
+describe('breaking the site into categories', () => {
+  it('links every category from the header', async () => {
+    const { render } = setUp({
+      pages: [page({ title: 'Home', slug: 'home', isHome: true })],
+      taxonomyTerms: [term({ slug: 'news', name: 'News' })],
+    })
+
+    const result = await render('/')
+
+    expect(result.status).toBe(200)
+    expect(result.html).toContain('category-nav')
+    // The vocabulary's name groups its terms.
+    expect(result.html).toContain('Categories')
+    expect(result.html).toMatch(/href="\/category\/news"[^>]*>News<\/a>/)
+  })
+
+  it('renders no menu when the site keeps no taxonomy', async () => {
+    const { render } = setUp({ pages: [page({ title: 'Home', slug: 'home', isHome: true })] })
+
+    expect((await render('/')).html).not.toContain('category-nav')
   })
 })
 

@@ -22,6 +22,27 @@ export interface NavItem {
   href: string
 }
 
+/** One term in `site.taxonomy`: what a site-wide category menu links to. */
+export interface TaxonomyTermForTemplates {
+  name: string
+  slug: string
+  /** The term's archive URL, so a template never builds a path itself. */
+  url: string
+}
+
+/**
+ * A vocabulary, as the site-wide menu sees it.
+ *
+ * The site's whole taxonomy, not one document's terms -- the per-document terms
+ * are on `content`. Only vocabularies that have at least one term appear, and the
+ * list is absent rather than empty when the site keeps no taxonomy, so a theme's
+ * `{% if site.taxonomy %}` is the whole check.
+ */
+export interface TaxonomyForTemplates {
+  name: string
+  terms: TaxonomyTermForTemplates[]
+}
+
 export interface SiteSettingsForTemplates {
   footer?: string
   social_links?: { label: string; href: string }[]
@@ -67,6 +88,13 @@ export interface SiteForTemplates {
   timezone: string
   nav: NavItem[]
   settings: SiteSettingsForTemplates
+  /**
+   * The site's vocabularies and their terms, for a category menu.
+   *
+   * Absent when the site keeps none. This is the whole taxonomy rather than one
+   * document's terms, which is what lets the header offer a way into every term.
+   */
+  taxonomy?: TaxonomyForTemplates[]
   /**
    * Absent when the site is licensed to run without it, which is the whole
    * difference the white-label purchase makes to the front end.

@@ -9,4 +9,27 @@
       {% endfor %}
     </ul>
   </nav>
+
+  {% comment %}
+    The site's categories, when it keeps any: a second row under the main
+    navigation, so every term's archive is one click from anywhere. The vocabulary
+    name groups its terms, and it is shown even for a site with one vocabulary,
+    because the name is what tells a reader what kind of thing the terms are.
+  {% endcomment %}
+  {% if site.taxonomy %}
+    <nav class="category-nav" aria-label="Categories">
+      <ul>
+        {% for group in site.taxonomy %}
+          <li class="category-group">
+            <span class="category-group-name">{{ group.name }}</span>
+            <ul>
+              {% for term in group.terms %}
+                <li><a href="{{ term.url | url }}">{{ term.name }}</a></li>
+              {% endfor %}
+            </ul>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
 </header>

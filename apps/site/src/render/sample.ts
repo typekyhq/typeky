@@ -46,6 +46,17 @@ const SAMPLE_SITE: SiteInput = {
     { label: 'Posts', href: '/posts', order: 1 },
     { label: 'Products', href: '/products', order: 2 },
   ],
+  // Declared so `site.taxonomy` is a field of the context the reference lists, and
+  // so a preview shows the category menu the header renders.
+  taxonomy: [
+    {
+      name: 'Categories',
+      terms: [
+        { name: 'News', slug: 'news' },
+        { name: 'Guides', slug: 'guides' },
+      ],
+    },
+  ],
 }
 
 const SAMPLE_BLOCKS: Block[] = [

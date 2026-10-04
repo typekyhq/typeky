@@ -132,7 +132,7 @@ export async function renderPage(
 
   const resolveMedia = mediaResolver(dependencies.baseUrl)
   const common = {
-    site: siteInput(site, dependencies.whiteLabel),
+    site: siteInput(site, dependencies.whiteLabel, await loadTaxonomy(store, ctx)),
     baseUrl: dependencies.baseUrl,
     resolveMedia,
     defaults: seoDefaults(site.settings),
@@ -520,7 +520,11 @@ function contentUrlFor(item: ItemInput): string {
   return `/${item.slug}`
 }
 
-function siteInput(site: Site, whiteLabel: boolean): ContextInput['site'] {
+function siteInput(
+  site: Site,
+  whiteLabel: boolean,
+  taxonomy: ContextInput['site']['taxonomy'],
+): ContextInput['site'] {
   return {
     name: site.name,
     tagline: site.tagline,
@@ -531,7 +535,36 @@ function siteInput(site: Site, whiteLabel: boolean): ContextInput['site'] {
     settings: { ...site.settings },
     nav: site.nav,
     whiteLabel,
+    ...(taxonomy === undefined ? {} : { taxonomy }),
   }
+}
+
+/**
+ * The site's vocabularies and their terms, for the theme's category menu.
+ *
+ * Loaded every render, because the menu is in the header and the header is on
+ * every page. A vocabulary with no terms is left out rather than shown as an empty
+ * heading, and the whole thing is absent when the site keeps no taxonomy -- so a
+ * template's `{% if site.taxonomy %}` is the whole check.
+ */
+async function loadTaxonomy(
+  store: Repositories,
+  ctx: ReturnType<typeof defaultContext>,
+): Promise<{ name: string; terms: { name: string; slug: string }[] }[] | undefined> {
+  const vocabularies = await store.vocabularies.list(ctx)
+  const groups: { name: string; terms: { name: string; slug: string }[] }[] = []
+
+  for (const vocabulary of vocabularies) {
+    const terms = await store.terms.list(ctx, vocabulary.id)
+    if (terms.length === 0) continue
+
+    groups.push({
+      name: vocabulary.name,
+      terms: terms.map((term) => ({ name: term.name, slug: term.slug })),
+    })
+  }
+
+  return groups.length === 0 ? undefined : groups
 }
 
 /**
