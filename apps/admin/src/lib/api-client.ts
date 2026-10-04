@@ -13,6 +13,7 @@ import {
   mediaUsageSchema,
   bulkResultSchema,
   themeContextResponseSchema,
+  themeListResponseSchema,
   themeTemplateListResponseSchema,
   themeTemplateResponseSchema,
   themePreviewResponseSchema,
@@ -29,6 +30,8 @@ import {
   type ContentSort,
   type ContentStatus,
   type BrandingResponse,
+  type ThemeListResponse,
+  type ThemeUpload,
   type LoginRequest,
   type MediaItem,
   type MediaListResponse,
@@ -152,6 +155,12 @@ export interface ApiClient {
   deleteMedia(id: string): Promise<void>
   /** Where the admin serves an item's bytes from. */
   mediaContentUrl(id: string): string
+
+  /** Every theme the deployment can serve, and the one the site is using. */
+  listThemes(): Promise<ThemeListResponse>
+  /** Adds a theme: a name and the files read out of a folder. */
+  uploadTheme(theme: ThemeUpload): Promise<ThemeListResponse>
+  deleteTheme(name: string): Promise<void>
 
   listThemeTemplates(): Promise<ThemeTemplateListResponse>
   /** What a template may read and use, derived from a real render context. */
@@ -581,6 +590,26 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
     mediaContentUrl(id) {
       return `${baseUrl}/media/${encodeURIComponent(id)}/content`
+    },
+
+    async listThemes() {
+      return readContract(
+        themeListResponseSchema,
+        await send('GET', '/theme/themes'),
+        'the theme list did not match the contract',
+      )
+    },
+
+    async uploadTheme(theme) {
+      return readContract(
+        themeListResponseSchema,
+        await send('POST', '/theme/themes', theme),
+        'the theme list did not match the contract',
+      )
+    },
+
+    async deleteTheme(name) {
+      await send('DELETE', `/theme/themes?name=${encodeURIComponent(name)}`)
     },
 
     async listThemeTemplates() {

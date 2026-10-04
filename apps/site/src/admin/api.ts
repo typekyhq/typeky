@@ -33,11 +33,14 @@ import {
 } from './pages'
 import { verifyPassword } from './password'
 import {
+  deleteTheme,
+  previewThemeTemplate,
   readThemeContext,
   readThemeTemplate,
   readThemeTemplates,
-  previewThemeTemplate,
+  readThemes,
   resetThemeTemplate,
+  uploadTheme,
   writeThemeTemplate,
 } from './theme'
 import {
@@ -288,8 +291,14 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.put('/taxonomy/terms/:id', (c) => updateTerm(c, repositories))
   api.delete('/taxonomy/terms/:id', (c) => deleteTerm(c, repositories))
 
-  // The theme's templates. Read-only for now, and deliberately without a way to
-  // create one: a site may edit what its theme ships and nothing more.
+  // The themes themselves: what is installed, adding one, removing one.
+  api.get('/theme/themes', (c) => readThemes(c, repositories))
+  api.post('/theme/themes', (c) => uploadTheme(c, repositories))
+  api.delete('/theme/themes', (c) => deleteTheme(c, repositories))
+
+  // The active theme's templates. A site may edit the files its theme ships and
+  // nothing more: there is no way to create one here, which is what keeps a stored
+  // file from being one no list can reach.
   api.get('/theme/templates', (c) => readThemeTemplates(c, repositories))
   api.get('/theme/template', (c) => readThemeTemplate(c, repositories))
   // What a template may read, derived from a real context rather than written down.

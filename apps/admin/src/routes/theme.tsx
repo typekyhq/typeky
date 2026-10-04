@@ -1,9 +1,11 @@
-import type { ThemeTemplateGroup, ThemeTemplateSummary } from '@typeky/api'
-import { useCallback, useEffect, useState } from 'react'
+import type { ThemeListResponse, ThemeTemplateGroup, ThemeTemplateSummary } from '@typeky/api'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { EmptyState, ErrorState, LoadingState } from '@/components/states'
 import { TemplateEditorSurface } from '@/components/template-editor-surface'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { ApiError } from '@/lib/api-client'
 import { useApiClient } from '@/lib/client-context'
 import { usePanelPreference } from '@/lib/panel-preference'
@@ -25,6 +27,151 @@ import { cn } from '@/lib/utils'
  */
 
 type LoadState = 'loading' | 'ready' | 'error'
+
+/**
+ * Adding a theme.
+ *
+ * A theme is a *folder*, so that is what the picker asks for: the browser reads every
+ * file in it as text and this posts them together. Nothing is decompressed on the
+ * server, which is why the shape is a folder rather than an archive.
+ *
+ * The paths are normalised here, because this is the only place that still knows
+ * which file it is holding: the folder the operator picked comes off the front, a
+ * template's `.liquid` goes, and anything a theme cannot hold is dropped rather than
+ * sent to be refused.
+ */
+const THEME_FILE = /^(layouts|templates|snippets)\/[a-z0-9][a-z0-9_/-]*\.liquid$|^assets\/[A-Za-z0-9][A-Za-z0-9._/-]*$/
+
+function UploadTheme({
+  onUploaded,
+}: {
+  onUploaded: (result: ThemeListResponse) => void
+}): ReactNode {
+  const t = useT()
+  const client = useApiClient()
+  const input = useRef<HTMLInputElement>(null)
+  const [picked, setPicked] = useState<{ folder: string; files: { path: string; source: string }[] } | null>(null)
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState<string | null>(null)
+
+  useEffect(() => {
+    // `webkitdirectory` is not in React's types, and it is what makes the picker a
+    // folder picker -- which is the whole reason no archive is involved.
+    input.current?.setAttribute('webkitdirectory', '')
+  }, [])
+
+  async function choose(list: FileList): Promise<void> {
+    setProblem(null)
+
+    const files: { path: string; source: string }[] = []
+    let folder = ''
+
+    for (const file of Array.from(list)) {
+      const relative = file.webkitRelativePath === '' ? file.name : file.webkitRelativePath
+      const segments = relative.split('/')
+      if (segments.length < 2) continue
+
+      folder = segments[0] ?? ''
+      const path = segments.slice(1).join('/')
+      if (!THEME_FILE.test(path)) continue
+
+      files.push({
+        // The name a theme calls a template has no extension; an asset keeps its own.
+        path: path.startsWith('assets/') ? path : path.slice(0, -'.liquid'.length),
+        source: await file.text(),
+      })
+    }
+
+    if (files.length === 0) {
+      setProblem(t('theme.upload.empty'))
+      return
+    }
+
+    setPicked({ folder, files })
+    // The folder's own name is the suggestion, lower-cased to the shape a theme name
+    // has: it is usually already what the author called the theme.
+    setName(folder.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, ''))
+  }
+
+  async function upload(): Promise<void> {
+    if (picked === null) return
+
+    setBusy(true)
+
+    try {
+      const result = await client.uploadTheme({ name, files: picked.files })
+      toast.success(t('theme.upload.done', { name }))
+      setPicked(null)
+      onUploaded(result)
+    } catch (thrown) {
+      setProblem(describeApiError(thrown, t))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg border border-input bg-muted/40 p-3">
+      <p className="text-sm text-muted-foreground">{t('theme.upload.hint')}</p>
+
+      <input
+        ref={input}
+        id="theme-upload"
+        type="file"
+        multiple
+        className="sr-only"
+        onChange={(event) => {
+          const list = event.target.files
+          event.target.value = ''
+          if (list !== null) void choose(list)
+        }}
+      />
+      <label
+        htmlFor="theme-upload"
+        className={cn(
+          'inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-input px-2.5 text-sm font-medium',
+          'transition-colors hover:bg-muted focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50',
+          busy && 'pointer-events-none cursor-not-allowed opacity-50',
+        )}
+      >
+        {t('theme.upload.choose')}
+      </label>
+
+      {picked !== null && (
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="theme-upload-name">{t('theme.upload.name')}</Label>
+            <Input
+              id="theme-upload-name"
+              className="max-w-xs"
+              value={name}
+              disabled={busy}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t('theme.upload.chosen', { files: picked.files.length })}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" disabled={busy} onClick={() => void upload()}>
+              {t('theme.upload.start')}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setPicked(null)}>
+              {t('theme.upload.cancel')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {problem !== null && (
+        <p role="alert" className="text-sm text-destructive">
+          {problem}
+        </p>
+      )}
+    </div>
+  )
+}
 
 const GROUPS: ReadonlyArray<{ group: ThemeTemplateGroup; titleKey: string; descriptionKey: string }> = [
   {
@@ -254,6 +401,18 @@ export function ThemeSection() {
             : t('theme.subtitle.customised', { customised, total: items.length })}
         </p>
       </div>
+
+      <UploadTheme
+
+        onUploaded={() => {
+            // The uploaded theme is not the one being served, so the tree does not
+            // change -- but reloading costs one request and keeps the screen true if
+            // somebody has just made the uploaded theme active elsewhere.
+            reload()
+          }}
+
+      />
+
 
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         {/*

@@ -122,6 +122,14 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
       return `/api/admin/media/${id}/content`
     },
     listThemeTemplates: async () => ({ theme: 'default', items: [] }),
+    async listThemes() {
+      return {
+        themes: [{ name: 'default', files: 0, updatedAt: null, bundled: true }],
+        active: 'default',
+      }
+    },
+    uploadTheme: unexpected('uploadTheme'),
+    async deleteTheme() {},
     // An empty reference renders: that is what a component test means unless it
     // says otherwise, and the panel's own test supplies a real one.
     getThemeContext: async (template: string) => ({

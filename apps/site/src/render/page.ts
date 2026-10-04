@@ -12,6 +12,7 @@ import {
 import type { BlobPort, DbPort } from '@typeky/platform'
 import { createLiquidRuntime, createRevisionCache, createTemplateLoader } from '@typeky/theme-kit'
 import { BASELINE } from '@typeky/theme-default'
+import { themeAssetVersions, themeBaseline } from '../themes'
 import { buildRenderContext, type ItemInput, type TemplateTerm } from './context'
 import { robotsRules, seoDefaults } from './seo-settings'
 import { renderDocument, renderPageSource, themeRuntimeOptions } from './theme-runtime'
@@ -107,6 +108,13 @@ export async function renderPage(
     return { status: 503, html: messagePage('This site has not been set up yet.') }
   }
 
+  // The theme's own files, read once for the whole request: a theme that was uploaded
+  // keeps them in the database, and the bundled one keeps them in code.
+  const themeFiles = {
+    baseline: (await themeBaseline(store, site.theme)) ?? BASELINE,
+    assetVersions: await themeAssetVersions(store, site.theme),
+  }
+
   const resolveMedia = mediaResolver(dependencies.baseUrl)
   const common = {
     site: siteInput(site, dependencies.whiteLabel),
@@ -120,7 +128,7 @@ export async function renderPage(
   if (assembled === null) {
     return {
       status: 404,
-      html: await renderWith(db, site, 'templates/404', {
+      html: await renderWith(db, site, themeFiles, 'templates/404', {
         ...common,
         item: { kind: 'notFound', title: 'Not found', slug: '404', blocks: [], seo: {} },
       }),
@@ -131,12 +139,15 @@ export async function renderPage(
   // itself: the same engine, the same context, so `{% render 'snippets/...' %}` and
   // `asset_url` still mean what they mean everywhere else.
   if (assembled.document !== undefined) {
-    return { status: 200, html: await renderCustom(db, site, assembled.document, assembled.input) }
+    return {
+      status: 200,
+      html: await renderCustom(db, site, themeFiles, assembled.document, assembled.input),
+    }
   }
 
   return {
     status: 200,
-    html: await renderWith(db, site, templateFor(assembled.kind), assembled.input),
+    html: await renderWith(db, site, themeFiles, templateFor(assembled.kind), assembled.input),
   }
 }
 
@@ -450,24 +461,31 @@ function templateFor(kind: PageKind): string {
  * versions and the same cache, and two of those drifting apart is the bug this
  * file already carries a comment about.
  */
-function runtimeFor(db: DbPort, site: Site) {
-  const loader = createTemplateLoader({ db, theme: site.theme, baseline: BASELINE })
+function runtimeFor(db: DbPort, site: Site, themeFiles: ThemeFiles) {
+  const loader = createTemplateLoader({ db, theme: site.theme, baseline: themeFiles.baseline })
 
   return createLiquidRuntime({
-    ...themeRuntimeOptions(loader.fs),
+    ...themeRuntimeOptions(loader.fs, themeFiles.assetVersions),
     // Keyed by the loader's revision, which is derived from the override rows --
     // so a cache filled before a save cannot answer after one, in any isolate.
     cache: createRevisionCache({ revision: () => loader.revision }),
   })
 }
 
+/** The theme's files and their versions, resolved once per request. */
+interface ThemeFiles {
+  baseline: Record<string, string>
+  assetVersions: Record<string, string>
+}
+
 async function renderWith(
   db: DbPort,
   site: Site,
+  themeFiles: ThemeFiles,
   template: string,
   input: ContextInput,
 ): Promise<string> {
-  return renderDocument(runtimeFor(db, site), template, buildRenderContext(input), {
+  return renderDocument(runtimeFor(db, site, themeFiles), template, buildRenderContext(input), {
     noindex: robotsRules(site.settings).noindex,
   })
 }
@@ -475,10 +493,11 @@ async function renderWith(
 async function renderCustom(
   db: DbPort,
   site: Site,
+  themeFiles: ThemeFiles,
   source: string,
   input: ContextInput,
 ): Promise<string> {
-  return renderPageSource(runtimeFor(db, site), source, buildRenderContext(input), {
+  return renderPageSource(runtimeFor(db, site, themeFiles), source, buildRenderContext(input), {
     noindex: robotsRules(site.settings).noindex,
   })
 }

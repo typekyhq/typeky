@@ -52,18 +52,29 @@ export interface PreviewInput {
   source: string
   /** The store to read the other overrides from, if there is one. */
   db?: DbPort
+  /** The theme being edited. Defaults to the bundled one. */
+  theme?: string
+  /**
+   * The theme's own files.
+   *
+   * Handed in rather than imported: an uploaded theme's files live in the database,
+   * and the preview has to render the same set the site would -- a preview of a
+   * different baseline is a preview of a different page.
+   */
+  baseline?: Record<string, string> | null
+  assetVersions?: Record<string, string>
 }
 
 export async function renderPreview(input: PreviewInput): Promise<string> {
   const loader = createTemplateLoader({
     db: input.db ?? NO_OVERRIDES,
-    theme: 'default',
-    baseline: BASELINE,
+    theme: input.theme ?? 'default',
+    baseline: input.baseline ?? BASELINE,
     draft: { path: input.path, source: input.source },
   })
 
   const runtime = createLiquidRuntime({
-    ...themeRuntimeOptions(loader.fs),
+    ...themeRuntimeOptions(loader.fs, input.assetVersions),
     // No cache: each preview is a different source under the same name, and a
     // cached one would show the previous preview's output.
     cache: false,

@@ -17,7 +17,8 @@ import { renderPage } from './render/page'
 import { robotsRules } from './render/seo-settings'
 import { renderRobots, renderSitemap } from './render/sitemap'
 import { repositoriesFor } from './repositories'
-import { serveThemeAsset } from './theme-assets'
+import { serveThemeAsset, serveUploadedThemeAsset, themeAssetNotFound } from './theme-assets'
+import { themeAssetSource } from './themes'
 
 /**
  * The site Worker.
@@ -124,7 +125,22 @@ export function createApp(): Hono<{ Bindings: Env }> {
   // and before `looksLikeAsset` can see them: `.css` and `.js` are exactly the
   // extensions that rule was written for, so a stylesheet would otherwise be
   // answered with a plain 404 and the page would render unstyled.
-  app.get('/theme/:name', (c) => serveThemeAsset(c.req.param('name'), c.req.raw))
+  app.get('/theme/:name', async (c) => {
+    const name = c.req.param('name')
+    const store = repositoriesFor(c.env)
+    const site = store === null ? null : await store.sites.get(defaultContext()).catch(() => null)
+    const theme = site?.theme ?? 'default'
+
+    // The bundled theme's files are in the bundle; an uploaded theme's are rows, and
+    // a theme that does not ship the file answers 404 rather than falling back to
+    // another theme's -- a page styled by a theme it is not using is the kind of
+    // wrong that looks like a caching problem.
+    if (theme === 'default') return serveThemeAsset(name, c.req.raw)
+
+    const source = store === null ? null : await themeAssetSource(store, theme, name)
+
+    return source === null ? themeAssetNotFound() : serveUploadedThemeAsset(name, source)
+  })
 
   // `robots.txt` and `sitemap.xml` before the catch-all too: both have a file
   // extension, so the catch-all would answer them with a plain 404 and a crawler

@@ -210,6 +210,37 @@ failing, and a plausible-looking date is worse than a visible error. The zone is
 checked the same way, against `Intl`: a zone that does not exist makes the filter
 throw, which would be every page with a date on it rather than one wrong date.
 
+## Packaging and uploading a theme
+
+A theme is a **folder**, and uploading one posts its files as text. There is nothing
+to archive and nothing to compile:
+
+```
+my-theme/
+  layouts/base.liquid
+  templates/*.liquid
+  snippets/*.liquid
+  assets/theme.css
+  assets/theme.js
+```
+
+- The three template directories are what the renderer reads, and a file there is
+  named **without** its extension: `templates/post.liquid` is asked for as
+  `templates/post`.
+- `assets/` is what the browser fetches; those files keep their extension, and
+  `asset_url` versions them by their revision so an edit reaches a reader.
+- At most **200 files** and **1,000,000 characters** of source, which is the ceiling
+  the loader's overrides already live under.
+- Every template is parsed before anything is stored. A theme that will not parse is
+  refused at the door, naming the file and the line, rather than on a page later.
+- A path stays inside the theme: `..`, an absolute path and a backslash are refused
+  rather than normalised.
+
+Upload it from **Theme → Choose a folder**, then choose it under **Settings → Theme**.
+Editing a file of an uploaded theme works exactly as editing the bundled one, and
+*Restore* puts back what the theme shipped -- for an uploaded theme that means
+rewriting the file, not deleting it, because the file *is* the theme.
+
 ## Four rules that will bite you
 
 These are the ones that are not obvious, in the order people hit them.

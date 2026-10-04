@@ -1,4 +1,4 @@
-import { CSRF_HEADER } from '@typeky/api'
+import { CSRF_HEADER, type ThemeListResponse } from '@typeky/api'
 import type { PageResult, Repositories, Site, SiteRepository, ThemeTemplate, ThemeTemplateRepository } from '@typeky/db'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { fakeKv, makeTestEnv } from '../testing/env'
@@ -282,6 +282,58 @@ describe('saving one template', () => {
     )
 
     expect(response.status).toBe(403)
+  })
+})
+
+describe('uploading a theme', () => {
+  const FILES = [
+    { path: 'templates/post', source: '<h1>{{ content.title }}</h1>' },
+    { path: 'assets/theme.css', source: 'body { margin: 0 }' },
+  ]
+
+  async function upload(body: unknown): Promise<Response> {
+    const store = fakeRepositories()
+    const { send, signIn } = setup(() => store.repository)
+    const auth = await signIn()
+
+    return send(
+      '/theme/themes',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: auth.csrfToken },
+        body: JSON.stringify(body),
+      },
+      auth.cookie,
+    )
+  }
+
+  it('stores every file and answers with the list', async () => {
+    const response = await upload({ name: 'minimal', files: FILES })
+
+    expect(response.status).toBe(201)
+    const body = (await response.json()) as ThemeListResponse
+    expect(body.themes.map((theme) => theme.name)).toContain('minimal')
+    expect(body.active).toBe('default')
+  })
+
+  it('refuses a path a theme may not hold', async () => {
+    // Traversal is the one that matters, and it is refused before anything is read.
+    const response = await upload({ name: 'minimal', files: [{ path: '../secrets', source: 'x' }] })
+
+    expect(response.status).toBe(400)
+  })
+
+  it('refuses a template that will not parse', async () => {
+    // A theme that half-works fails on a page rather than at the door, so the door is
+    // where it is stopped -- with the line, so the author can find it.
+    const response = await upload({ name: 'minimal', files: [{ path: 'templates/post', source: '{% if %}' }] })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: 'invalid_request' })
+  })
+
+  it('refuses the bundled theme name', async () => {
+    expect((await upload({ name: 'default', files: FILES })).status).toBe(400)
   })
 })
 

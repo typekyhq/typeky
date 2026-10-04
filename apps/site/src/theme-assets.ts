@@ -42,6 +42,38 @@ export function serveThemeAsset(name: string, request: Request): Response {
   return new Response(asset.source, { headers })
 }
 
+/**
+ * An asset of a theme that was uploaded.
+ *
+ * The bytes come from the database rather than from the bundle, and the content type
+ * from the extension, because there is no build to have written either down. No
+ * ETag: `asset_url` already puts the file's revision in the query string, so the URL
+ * changes when the bytes do and a conditional request never has to be answered.
+ */
+export function serveUploadedThemeAsset(name: string, source: string): Response {
+  return new Response(source, {
+    headers: {
+      'content-type': uploadedContentType(name),
+      'cache-control': 'public, max-age=31536000, immutable',
+      'x-content-type-options': 'nosniff',
+    },
+  })
+}
+
+function uploadedContentType(name: string): string {
+  if (name.endsWith('.css')) return 'text/css; charset=utf-8'
+  if (name.endsWith('.js') || name.endsWith('.mjs')) return 'text/javascript; charset=utf-8'
+  if (name.endsWith('.svg')) return 'image/svg+xml'
+  if (name.endsWith('.json')) return 'application/json; charset=utf-8'
+
+  return 'text/plain; charset=utf-8'
+}
+
+/** The same 404 an asset that is not in the theme answers with. */
+export function themeAssetNotFound(): Response {
+  return notFound()
+}
+
 function notFound(): Response {
   return new Response('Not Found', {
     status: 404,

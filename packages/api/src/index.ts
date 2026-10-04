@@ -143,6 +143,7 @@ export {
   themeUploadSchema,
   type ThemeContextResponse,
   type ThemePreviewResponse,
+  type ThemeListResponse,
   type ThemeSummary,
   type ThemeTemplateGroup,
   type ThemeUpload,

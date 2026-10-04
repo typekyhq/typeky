@@ -25,13 +25,21 @@ import { ASSET_VERSIONS } from '@typeky/theme-default'
  */
 export function themeRuntimeOptions(
   fs: LiquidRuntimeOptions['fs'],
+  /**
+   * Asset name to version, for `asset_url`.
+   *
+   * A parameter rather than a constant: an uploaded theme's files are in the
+   * database with no build to have hashed them, and a page of that theme must not
+   * be handed the bundled theme's versions.
+   */
+  assetVersions: Record<string, string> = ASSET_VERSIONS,
 ): Pick<LiquidRuntimeOptions, 'fs' | 'assetVersions' | 'renderBlocks'> {
   return {
     fs,
     // Passed so `asset_url` can version what it links. Without it the URL of a
     // stylesheet never changes, and a deploy that fixes a layout is invisible to
     // anyone who already has the old one.
-    assetVersions: ASSET_VERSIONS,
+    assetVersions,
     renderBlocks: (blocks) => (Array.isArray(blocks) ? blockToHtml(blocks as Block[]) : ''),
   }
 }

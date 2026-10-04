@@ -33,7 +33,7 @@ import { ADMIN_DATE_FORMATS, SITE_DATE_FORMATS, withCurrentFormat } from '@/lib/
 import { ADMIN_LOCALES, LANGUAGE_TAGS, TIME_ZONES } from '@/lib/locales'
 import { formatLocal, usePanelPreference } from '@/lib/panel-preference'
 import { describeApiError } from '@/lib/session'
-import { DEFAULT_ADMIN_PATH, PLATFORM_PATHS } from '@typeky/api'
+import { DEFAULT_ADMIN_PATH, PLATFORM_PATHS, type ThemeSummary } from '@typeky/api'
 import { useT } from '@/lib/i18n'
 import { tabOwning, type FormTab } from '@/lib/tabs'
 
@@ -122,6 +122,13 @@ export function SettingsPage() {
    */
   const [creating, setCreating] = useState(false)
   const [tab, setTab] = useState(FIRST_TAB)
+  /**
+   * The themes this deployment can serve.
+   *
+   * Read for the field rather than typed into it: a name that is not installed
+   * renders the bundled theme while telling the operator they chose something else.
+   */
+  const [installedThemes, setInstalledThemes] = useState<ThemeSummary[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -157,6 +164,24 @@ export function SettingsPage() {
       cancelled = true
     }
   }, [client, attempt])
+
+  useEffect(() => {
+    let cancelled = false
+
+    client.listThemes().then(
+      (result) => {
+        if (!cancelled) setInstalledThemes(result.themes)
+      },
+      () => {
+        // Silent: the page still works, and a failure here is reported by the save if
+        // it turns out to matter.
+      },
+    )
+
+    return () => {
+      cancelled = true
+    }
+  }, [client])
 
   const update = useCallback((change: (current: SiteWrite) => SiteWrite) => {
     setDraft((current) => (current === null ? current : change(current)))
@@ -337,14 +362,31 @@ export function SettingsPage() {
               error={issues.tagline}
               onChange={(value) => update((current) => ({ ...current, tagline: value }))}
             />
-            <Field
-              id="theme"
-              label={t('settings.theme')}
-              value={draft.theme}
-              error={issues.theme}
-              hint={t('settings.theme.hint')}
-              onChange={(value) => update((current) => ({ ...current, theme: value }))}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="theme">{t('settings.theme')}</Label>
+              <Select
+                id="theme"
+                value={draft.theme}
+                aria-invalid={issues.theme !== undefined}
+                onChange={(event) => update((current) => ({ ...current, theme: event.target.value }))}
+              >
+                {installedThemes.map((theme) => (
+                  <option key={theme.name} value={theme.name}>
+                    {theme.bundled ? `${theme.name} · ${t('settings.theme.bundled')}` : theme.name}
+                  </option>
+                ))}
+                {/*
+                  A theme the site is set to that is no longer installed stays an
+                  option: leaving it out would render the first theme as the value,
+                  and the next save would move the site without anybody asking.
+                */}
+                {!installedThemes.some((theme) => theme.name === draft.theme) && (
+                  <option value={draft.theme}>{draft.theme}</option>
+                )}
+              </Select>
+              {issues.theme !== undefined && <p className="text-sm text-destructive">{issues.theme}</p>}
+              <p className="text-xs text-muted-foreground">{t('settings.theme.hint')}</p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="accentColor">{t('settings.accentColour')}</Label>
               <Input
