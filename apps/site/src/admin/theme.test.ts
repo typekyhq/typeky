@@ -36,6 +36,15 @@ function fakeRepositories(overrides: ThemeTemplate[] = []) {
     async byPath(_ctx, _theme, path) {
       return rows.get(path) ?? null
     },
+    async themes() {
+      const byTheme = new Map<string, number>()
+      for (const row of rows.values()) byTheme.set(row.theme, (byTheme.get(row.theme) ?? 0) + 1)
+      return [...byTheme].map(([name, files]) => ({
+        name,
+        files,
+        updatedAt: new Date('2026-03-03T00:00:00.000Z'),
+      }))
+    },
     async save(_ctx, input) {
       const existing = rows.get(input.path)
       const saved: ThemeTemplate = {
@@ -43,14 +52,20 @@ function fakeRepositories(overrides: ThemeTemplate[] = []) {
         theme: input.theme ?? 'default',
         path: input.path,
         source: input.source,
+        originalSource: existing?.originalSource ?? input.originalSource ?? null,
         revision: (existing?.revision ?? 0) + 1,
         updatedAt: new Date('2026-03-03T00:00:00.000Z'),
       }
       rows.set(saved.path, saved)
       return saved
     },
-    async reset(_ctx, _theme, path) {
+    async restore(_ctx, _theme, path) {
       return rows.delete(path)
+    },
+    async removeTheme() {
+      const before = rows.size
+      rows.clear()
+      return before
     },
   }
 
@@ -131,6 +146,7 @@ describe('listing the theme', () => {
         theme: 'default',
         path: 'templates/post',
         source: '<h1>{{ content.title }}</h1>',
+        originalSource: null,
         revision: 1,
         updatedAt: new Date('2026-02-02T00:00:00.000Z'),
       },
@@ -277,6 +293,7 @@ describe('restoring the bundled template', () => {
         theme: 'default',
         path: 'templates/post',
         source: 'custom',
+        originalSource: null,
         revision: 2,
         updatedAt: new Date('2026-03-03T00:00:00.000Z'),
       },
@@ -351,6 +368,7 @@ describe('reading one template', () => {
         theme: 'default',
         path: 'templates/post',
         source: 'CUSTOM',
+        originalSource: null,
         revision: 1,
         updatedAt: new Date('2026-02-02T00:00:00.000Z'),
       },

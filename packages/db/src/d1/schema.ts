@@ -103,6 +103,7 @@ export const themeTemplates = sqliteTable('theme_templates', {
   theme: text('theme').notNull().default('default'),
   path: text('path').notNull(),
   source: text('source').notNull(),
+  originalSource: text('original_source'),
   revision: integer('revision').notNull().default(1),
   updatedAt: text('updated_at').notNull(),
 }, (t) => [

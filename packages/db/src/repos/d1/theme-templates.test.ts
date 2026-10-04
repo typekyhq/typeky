@@ -70,20 +70,72 @@ describe('theme template repository', () => {
     ])
   })
 
-  it('resets by dropping the override, which restores the baseline', async () => {
+  it('restores a bundled template by dropping the override', async () => {
     const { themeTemplates } = setup()
     await themeTemplates.save(ctx, { path: 'templates/post', source: 'custom' })
 
-    expect(await themeTemplates.reset(ctx, 'default', 'templates/post')).toBe(true)
+    expect(await themeTemplates.restore(ctx, 'default', 'templates/post')).toBe(true)
     expect(await themeTemplates.byPath(ctx, 'default', 'templates/post')).toBeNull()
-    expect(await themeTemplates.reset(ctx, 'default', 'templates/post')).toBe(false)
+    expect(await themeTemplates.restore(ctx, 'default', 'templates/post')).toBe(false)
   })
 
-  it('does not reset a different theme on the same path', async () => {
+  it('does not restore a different theme on the same path', async () => {
     const { themeTemplates } = setup()
     await themeTemplates.save(ctx, { theme: 'minimal', path: 'templates/post', source: 'custom' })
 
-    expect(await themeTemplates.reset(ctx, 'default', 'templates/post')).toBe(false)
+    expect(await themeTemplates.restore(ctx, 'default', 'templates/post')).toBe(false)
     expect(await themeTemplates.byPath(ctx, 'minimal', 'templates/post')).not.toBeNull()
+  })
+
+  it('restores an uploaded theme file in place, keeping the file', async () => {
+    // Two shapes of undo, and this is the one an uploaded theme needs: dropping the
+    // row would take the file out of the theme, because for an uploaded theme the
+    // row *is* the file.
+    const { themeTemplates } = setup()
+    await themeTemplates.save(ctx, {
+      theme: 'uploaded',
+      path: 'templates/post',
+      source: 'original',
+      originalSource: 'original',
+    })
+    await themeTemplates.save(ctx, { theme: 'uploaded', path: 'templates/post', source: 'edited' })
+
+    expect((await themeTemplates.byPath(ctx, 'uploaded', 'templates/post'))?.source).toBe('edited')
+    expect(await themeTemplates.restore(ctx, 'uploaded', 'templates/post')).toBe(true)
+
+    const restored = await themeTemplates.byPath(ctx, 'uploaded', 'templates/post')
+    expect(restored?.source).toBe('original')
+    expect(restored?.originalSource).toBe('original')
+  })
+
+  it('keeps the uploaded original through an edit', async () => {
+    // The undo depends on the difference, so an edit must not overwrite it.
+    const { themeTemplates } = setup()
+    await themeTemplates.save(ctx, { theme: 'uploaded', path: 'templates/post', source: 'v1', originalSource: 'v1' })
+    const edited = await themeTemplates.save(ctx, { theme: 'uploaded', path: 'templates/post', source: 'v2' })
+
+    expect(edited.originalSource).toBe('v1')
+  })
+
+  it('counts the themes that exist', async () => {
+    const { themeTemplates } = setup()
+    await themeTemplates.save(ctx, { path: 'templates/post', source: 'a' })
+    await themeTemplates.save(ctx, { theme: 'uploaded', path: 'templates/post', source: 'b' })
+    await themeTemplates.save(ctx, { theme: 'uploaded', path: 'layouts/base', source: 'c' })
+
+    expect(await themeTemplates.themes(ctx)).toMatchObject([
+      { name: 'default', files: 1 },
+      { name: 'uploaded', files: 2 },
+    ])
+  })
+
+  it('removes a whole theme and leaves the others alone', async () => {
+    const { themeTemplates } = setup()
+    await themeTemplates.save(ctx, { path: 'templates/post', source: 'a' })
+    await themeTemplates.save(ctx, { theme: 'uploaded', path: 'templates/post', source: 'b' })
+
+    expect(await themeTemplates.removeTheme(ctx, 'uploaded')).toBe(1)
+    expect(await themeTemplates.list(ctx, 'uploaded')).toEqual([])
+    expect(await themeTemplates.list(ctx, 'default')).toHaveLength(1)
   })
 })

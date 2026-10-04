@@ -181,8 +181,11 @@ const products: TableDef = {
 const themeTemplates: TableDef = {
   name: 'theme_templates',
   note: [
-    'Site-level template overrides. Lookup order is override, then bundled baseline.',
-    'Deleting an override row restores the theme default, so no separate version table is needed.',
+    "A theme file: either one of the site's overrides of a bundled template, or a file of an uploaded",
+    "theme. Lookup order is the row, then the theme's own original -- the bundled baseline for a theme",
+    'that ships in code, `original_source` for one that was uploaded. Deleting an override row restores',
+    "the bundled template; an uploaded theme's file is restored in place, because deleting it would take",
+    'the file out of the theme as well.',
   ].join(' '),
   columns: [
     { name: 'id', type: 'uuid', primaryKey: true },
@@ -194,6 +197,11 @@ const themeTemplates: TableDef = {
       note: "'templates/post' | 'snippets/header' | 'layouts/base'",
     },
     { name: 'source', type: 'text', notNull: true },
+    {
+      name: 'original_source',
+      type: 'text',
+      note: 'what an uploaded theme shipped this file as; null for a bundled template',
+    },
     {
       name: 'revision',
       type: 'integer',

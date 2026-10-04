@@ -30,6 +30,7 @@ import type {
   Term,
   TermNode,
   TermWrite,
+  ThemeSummary,
   ThemeTemplate,
   ThemeTemplateWrite,
   Vocabulary,
@@ -104,13 +105,27 @@ export interface MediaRepository {
 }
 
 export interface ThemeTemplateRepository {
-  /** Overrides for a theme, ordered by path. */
+  /** Every file of a theme, ordered by path. */
   list(ctx: TenantContext, theme: string): Promise<ThemeTemplate[]>
   byPath(ctx: TenantContext, theme: string, path: string): Promise<ThemeTemplate | null>
-  /** Creates or replaces the override for this path, bumping its revision. */
+  /**
+   * The themes that exist, with how many files each has.
+   *
+   * Derived from the rows rather than from a table of its own: a theme *is* its
+   * files, and the bundled one is the only theme with none of them here.
+   */
+  themes(ctx: TenantContext): Promise<ThemeSummary[]>
+  /** Creates or replaces the file for this path, bumping its revision. */
   save(ctx: TenantContext, input: ThemeTemplateWrite): Promise<ThemeTemplate>
-  /** Drops the override, which restores the bundled baseline template. */
-  reset(ctx: TenantContext, theme: string, path: string): Promise<boolean>
+  /**
+   * Puts a file back to what its theme shipped.
+   *
+   * Two shapes rather than one: a bundled template is put back by dropping the row,
+   * and an uploaded theme's file by writing `originalSource` over `source`.
+   */
+  restore(ctx: TenantContext, theme: string, path: string): Promise<boolean>
+  /** Removes a whole theme. The bundled one is not in here, so it cannot be removed. */
+  removeTheme(ctx: TenantContext, theme: string): Promise<number>
 }
 
 export interface VocabularyRepository {

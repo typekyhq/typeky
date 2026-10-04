@@ -142,7 +142,23 @@ export interface ThemeTemplate {
   /** For example `templates/post`, `snippets/header` or `layouts/base`. */
   path: string
   source: string
+  /**
+   * What an uploaded theme shipped this file as, or null for a bundled template.
+   *
+   * The original is kept so an edit can be undone in place. For the bundled theme
+   * the baseline is in code, so there is nothing to keep here and dropping the row
+   * is the undo.
+   */
+  originalSource: string | null
   revision: number
+  updatedAt: Date
+}
+
+/** One theme, as the settings screen and the theme page need it. */
+export interface ThemeSummary {
+  name: string
+  /** How many files the theme has. At least one: an empty theme is not one. */
+  files: number
   updatedAt: Date
 }
 
@@ -223,6 +239,11 @@ export interface ThemeTemplateWrite {
   theme?: string
   path: string
   source: string
+  /**
+   * The uploaded original. Only a write that is *adding* a theme sets it: an edit
+   * must leave whatever the upload recorded, or the undo would forget it.
+   */
+  originalSource?: string | null
 }
 
 /* -------------------------------------------------------------- taxonomy -- */

@@ -40,6 +40,7 @@ export {
   type Term,
   type TermNode,
   type TermWrite,
+  type ThemeSummary,
   type ThemeTemplate,
   type ThemeTemplateWrite,
   type Vocabulary,

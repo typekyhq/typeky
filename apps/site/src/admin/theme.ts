@@ -163,7 +163,7 @@ export async function resetThemeTemplate(
     return apiError(c, 'not_found', 'the theme does not ship a template by that name')
   }
 
-  const dropped = await store.themeTemplates.reset(defaultContext(), theme, path)
+  const dropped = await store.themeTemplates.restore(defaultContext(), theme, path)
   if (!dropped) return apiError(c, 'not_found', 'that template has no override to restore')
 
   return c.body(null, 204)
