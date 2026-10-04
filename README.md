@@ -4,8 +4,7 @@ A lightweight site builder for **personal blogs, business websites and niche sit
 
 Deploy to **your own Cloudflare account** with **$0 monthly cost**. Content comes in three types — **pages, posts and products**. **Theme templates can be edited right in the admin panel and take effect immediately.**
 
-> **Status: early development.** The admin panel works end to end — content, media and online theme editing — but the front end does not render pages yet, so a site cannot be hosted. That is the next milestone.
-> Progress lives in the commit log; each milestone is recorded in the [CHANGELOG](CHANGELOG.md).
+> **Status: v0.1.0 — early, but usable end to end.** The admin panel and the published site both work on your own Cloudflare account: content, media, themes you edit online, taxonomy, and the rendered front end. It has **not** yet been walked through on a blank cloud account, so treat deployment as unfinished until it has. Progress lives in the commit log; each milestone is recorded in the [CHANGELOG](CHANGELOG.md).
 
 **English** | [简体中文](README.zh-CN.md)
 
@@ -30,15 +29,17 @@ Typeky aims at the intersection of those three: **serverless hosting cost + genu
 - **Business sites / studios** — get online quickly, showcase products and services, stay able to edit it later yourself
 - **Niche site operators** — near-zero marginal cost, reusable across many sites, portable SEO assets
 
-## Planned capabilities
+## Capabilities
 
 | Capability | Description |
 | :---- | :---- |
 | Three content types | Pages, posts, and products (showcase-only: gallery, specs, price label, outbound CTA) |
 | Block editor | Paragraph, heading, list, quote, code, image, video, divider, call-to-action. Stores structured JSON, never dirty HTML |
-| **Online theme editing** | Edit `templates/*`, `snippets/*` and `layouts/*` in the admin panel; server-side validation with error line numbers; draft preview; one-click reset to default |
-| Media library | Direct-to-object-storage upload, grid browsing, search, reference checking |
-| SEO | Slugs with 301 redirects, canonical URLs, `sitemap.xml`, `robots.txt`, OpenGraph, JSON-LD |
+| **Online theme editing** | Edit `templates/*`, `snippets/*` and `layouts/*` in the admin panel; server-side validation with error line numbers; draft preview; one-click reset; upload a theme folder |
+| Media library | Uploads through the Worker into R2, grid browsing, search, reference checking, editable alt text |
+| Taxonomy | Vocabularies of nested terms, attached to posts and products, with a `/category/{slug}` archive page each |
+| SEO | Canonical URLs, per-document meta and Open Graph, `sitemap.xml`, `robots.txt`, JSON-LD |
+| Languages | The admin panel in nine languages, with right-to-left layout for Arabic |
 | Deployment | One-click deploy to an empty Cloudflare account. **Your data stays in your own account** |
 
 ## How $0 works
@@ -107,11 +108,13 @@ Read [CONTRIBUTING](CONTRIBUTING.md) before opening a pull request — it holds 
 | :---- | :---- | :---- |
 | M1 | Monorepo skeleton, data model, Liquid runtime | done |
 | M2 | Admin panel and authentication | done |
-| M3 | Block editor | in progress |
-| M4 | CRUD for the three content types, media library | planned |
-| M5 | **Online theme editing** | planned |
-| M6 | Site rendering and SEO | planned |
-| M7 | White-label licensing, one-click deploy, MVP release | planned |
+| M3 | Block editor | done |
+| M4 | CRUD for the three content types, media library | done |
+| M5 | **Online theme editing** | done |
+| M6 | Site rendering and SEO | done |
+| M7 | White-label licensing, one-click deploy, MVP release | done |
+
+Work after M7 — taxonomy, the panel's languages, theme upload and deletion, editable media alt text, the brand palette, and term archives — was appended as it was asked for, and is recorded in the [CHANGELOG](CHANGELOG.md).
 
 ## License
 

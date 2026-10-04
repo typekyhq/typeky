@@ -4,8 +4,8 @@
 
 把站点部署到**你自己的 Cloudflare 账号**，月成本从 **$0** 起。内容分**页面 / 文章 / 产品**三类，**主题模板可以在后台直接编辑，改完即时生效**。
 
-> **状态：开发中。** 当前仓库是刚打好的工程骨架，**还不能用于实际建站**。
-> 进度可以直接看提交历史；每个里程碑会登记在 [CHANGELOG](CHANGELOG.md)。
+> **状态：v0.1.0 —— 早期版本，但前后台已能端到端跑通。** 后台与发布出来的站点都能跑在你自己的 Cloudflare 账号上：内容、媒体、在线改主题、分类词条，以及渲染出的前台页面。**尚未**在空白 Cloudflare 账号上完整走一遍，所以在那之前，部署仍算未完成。
+> 进度可以直接看提交历史；每个里程碑登记在 [CHANGELOG](CHANGELOG.md)。
 
 [English](README.md) | **简体中文**
 
@@ -30,15 +30,17 @@ Typeky 想做这三者的交集：**零服务器的托管成本 + 真正可编�
 - **企业官网 / 工作室** —— 快速上线，能展示产品与服务，后续能自己改
 - **niche 站长** —— 极低边际成本、多站复用、SEO 资产可迁移
 
-## 规划中的能力
+## 能力
 
 | 能力 | 说明 |
 | :---- | :---- |
 | 三种内容类型 | 页面、文章、产品（展示型：图集、规格、价格标签、外链按钮） |
 | 块级编辑器 | 段落 / 标题 / 列表 / 引用 / 代码 / 图片 / 视频 / 分隔线 / 行动号召；存结构化 JSON，不产生脏 HTML |
-| **主题模板在线编辑** | 后台直接改 `templates/*`、`snippets/*`、`layouts/*`；服务端校验并定位错误行；草稿预览；一键还原默认 |
-| 媒体库 | 直传对象存储，网格浏览、检索、引用检查 |
-| SEO | Slug 与 301、canonical、`sitemap.xml`、`robots.txt`、OpenGraph、JSON-LD |
+| **主题模板在线编辑** | 后台直接改 `templates/*`、`snippets/*`、`layouts/*`；服务端校验并定位错误行；草稿预览；一键还原默认；可上传主题文件夹 |
+| 媒体库 | 经 Worker 上传到 R2，网格浏览、检索、引用检查、替代文本可改 |
+| 分类词条 | 可嵌套的词条表，挂到文章与产品，每个词条有 `/category/{slug}` 归档页 |
+| SEO | canonical、逐文档 meta 与 OpenGraph、`sitemap.xml`、`robots.txt`、JSON-LD |
+| 多语言 | 后台内置九种语言，阿拉伯语从右到左排版 |
 | 部署 | 一键部署到空白 Cloudflare 账号。**数据完全在你自己的账号里** |
 
 ## $0 是怎么做到的
@@ -53,16 +55,26 @@ TypeScript · Cloudflare Workers · [Hono](https://hono.dev) · [LiquidJS](https
 
 ## 快速开始
 
-> ⚠️ 尚不可用。以下为计划中的流程；渲染器完成后本段会替换为经过实测、可复制即用的步骤。
+Typeky 跑在你自己的 Cloudflare 账号上。整套部署大约十分钟，免费额度就够；可复制即用的完整步骤（含最小权限令牌清单与常见坑）见 [**部署 Typeky**](docs/quick-start.md)。
 
 ```bash
-git clone <repo>
+git clone https://github.com/typekyhq/typeky.git
+cd typeky
 pnpm install
+
 pnpm --filter @typeky/site exec wrangler d1 create typeky
 pnpm --filter @typeky/site exec wrangler r2 bucket create typeky-media
 pnpm --filter @typeky/site exec wrangler kv namespace create CACHE
-pnpm --filter @typeky/site deploy
+# 把两个 id 填进 apps/site/wrangler.jsonc
+
+pnpm db:migrate:remote
+pnpm deploy              # 先部署再设密钥：原因见指南
+pnpm admin:password      # 生成哈希，再用 `wrangler secret put` 存进去
 ```
+
+站点在填好名字之前一直返回 503：在 `/admin/` 登录，打开**设置**，保存。[指南](docs/quick-start.md)解释了原因。
+
+不想用账号的话，可以[在本地跑](docs/README.md#running-it-locally)——数据库、对象存储与缓存都跑在 Wrangler 里。
 
 ## 本地开发
 
@@ -82,11 +94,13 @@ pnpm check            # 类型检查 + 测试 + 资产边界断言
 | :---- | :---- | :---- |
 | M1 | 工程骨架、数据模型、Liquid 运行时 | 已完成 |
 | M2 | 后台管理端与登录 | 已完成 |
-| M3 | 块编辑器 | 进行中 |
-| M4 | 三种内容类型的增删改查与媒体库 | 待开始 |
-| M5 | **主题模板在线编辑** | 待开始 |
-| M6 | 前台渲染与 SEO | 待开始 |
-| M7 | 白标授权、一键部署、MVP 发布 | 待开始 |
+| M3 | 块编辑器 | 已完成 |
+| M4 | 三种内容类型的增删改查与媒体库 | 已完成 |
+| M5 | **主题模板在线编辑** | 已完成 |
+| M6 | 前台渲染与 SEO | 已完成 |
+| M7 | 白标授权、一键部署、MVP 发布 | 已完成 |
+
+M7 之后追加的工作——分类词条、后台多语言、主题上传与删除、媒体替代文本可编辑、品牌配色、词条归档页——按提出顺序陆续交付，登记在 [CHANGELOG](CHANGELOG.md)。
 
 ## 许可
 
