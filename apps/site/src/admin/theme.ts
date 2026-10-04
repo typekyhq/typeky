@@ -23,6 +23,7 @@ import {
   themeTemplates,
 } from '../themes'
 import { contextPaths } from '../render/sample'
+import { aiPromptDocument, templateSyntaxDocument } from './theme-authoring'
 import type { Context } from 'hono'
 import { apiError, describeIssues, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
 import { renderPreview } from '../render/preview'
@@ -273,6 +274,39 @@ export async function deleteTheme(
   }
 
   return c.body(null, 204)
+}
+
+/** The syntax reference, as a file to keep. */
+export async function readThemeSyntax(
+  c: Context<AdminEnv>,
+  _repositories: RepositoryResolver,
+): Promise<Response> {
+  return documentResponse('typeky-theme-syntax.md', templateSyntaxDocument())
+}
+
+/** The prompt to hand a model, as a file to keep. */
+export async function readThemePrompt(
+  c: Context<AdminEnv>,
+  _repositories: RepositoryResolver,
+): Promise<Response> {
+  return documentResponse('typeky-theme-prompt.md', aiPromptDocument())
+}
+
+/**
+ * A generated document, as a download.
+ *
+ * `attachment` rather than `inline`: both documents are meant to be saved and then
+ * pasted somewhere -- into an editor, or at a model -- and a browser that renders the
+ * Markdown instead turns that into a copy-and-paste exercise.
+ */
+function documentResponse(filename: string, body: string): Response {
+  return new Response(body, {
+    headers: {
+      'content-type': 'text/markdown; charset=utf-8',
+      'content-disposition': `attachment; filename="${filename}"`,
+      'cache-control': 'no-store',
+    },
+  })
 }
 
 async function themeListBody(

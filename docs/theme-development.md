@@ -246,6 +246,20 @@ Editing a file of an uploaded theme works exactly as editing the bundled one, an
 *Restore* puts back what the theme shipped -- for an uploaded theme that means
 rewriting the file, not deleting it, because the file *is* the theme.
 
+## Writing a template with a model
+
+The panel serves two documents, and both are **generated from what this deployment
+actually runs**: the tags and filters come from the sandbox's whitelists, the data
+shape from the sample context the previews use. A hand-written list would tell an
+author about something that renders nothing, and a model would believe it.
+
+- **Theme → theme syntax** — this reference as a file to keep.
+- **Theme → prompt for an AI** — an instruction to a model, with the same lists in it.
+
+Hand a model the prompt and your design. A model told only "use Liquid" will reach for
+`paginate`, which this sandbox does not have, and the render fails rather than the
+template simply being plain.
+
 ## Four rules that will bite you
 
 These are the ones that are not obvious, in the order people hit them.

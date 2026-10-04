@@ -6,6 +6,7 @@ import { createAdminApi } from './api'
 import type { AdminEnv, RepositoryResolver } from './errors'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
 import { BASELINE_NAMES } from '@typeky/theme-default'
+import { LIQUID_TAGS } from '@typeky/theme-kit'
 import { stubRepositories } from '../testing/repositories'
 
 /**
@@ -282,6 +283,46 @@ describe('saving one template', () => {
     )
 
     expect(response.status).toBe(403)
+  })
+})
+
+describe('the authoring documents', () => {
+  it('serves the syntax reference as a download', async () => {
+    const { send, signIn } = setup()
+    const auth = await signIn()
+
+    const response = await send('/theme/syntax', undefined, auth.cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/markdown')
+    expect(response.headers.get('content-disposition')).toContain('attachment')
+    const body = await response.text()
+    // The lists are derived, so this is really a check that they are there at all:
+    // a document that forgot the filters is one an author trusts and a model then
+    // fails against.
+    expect(body).toContain('render_blocks')
+    expect(body).toContain('templates/post')
+  })
+
+  it('serves the prompt with the sandbox own lists', async () => {
+    const { send, signIn } = setup()
+    const auth = await signIn()
+
+    const response = await send('/theme/prompt', undefined, auth.cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-disposition')).toContain('typeky-theme-prompt.md')
+    const body = await response.text()
+    // Every tag the sandbox allows, and none it does not: a model told only "use
+    // Liquid" reaches for `paginate`, and that fails the render.
+    for (const tag of LIQUID_TAGS) expect(body).toContain(`\`${tag}\``)
+    expect(body).not.toContain('`paginate`')
+  })
+
+  it('needs a session, like everything else here', async () => {
+    const { send } = setup()
+
+    expect((await send('/theme/prompt')).status).toBe(401)
   })
 })
 

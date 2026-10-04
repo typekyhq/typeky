@@ -495,6 +495,9 @@ export const zhCN: Locale = {
   'theme.group.templates.hint': '每种页面一个，由被请求的网址决定用哪个。',
   'theme.group.snippets': '片段',
   'theme.group.snippets.hint': '可复用的片段，由模板和其他片段按名字引入。',
+  'theme.authoring.hint': '想用 AI 写模板？把这份提示词交给它：',
+  'theme.authoring.syntax': '模板语法',
+  'theme.authoring.prompt': 'AI 提示词',
   'theme.upload.hint':
     '选一个主题文件夹：里面有 layouts/、templates/、snippets/、assets/。前三者下的 .liquid 是模板；assets 下的文件保留扩展名。',
   'theme.upload.choose': '选择文件夹',

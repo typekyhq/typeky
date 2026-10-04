@@ -402,6 +402,20 @@ export function ThemeSection() {
         </p>
       </div>
 
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <span className="text-muted-foreground">{t('theme.authoring.hint')}</span>
+        {/*
+          Plain links rather than client calls: the API answers these as downloads, and
+          `/api/admin` is where it lives even when the panel itself has moved.
+        */}
+        <a href="/api/admin/theme/syntax" download className="underline">
+          {t('theme.authoring.syntax')}
+        </a>
+        <a href="/api/admin/theme/prompt" download className="underline">
+          {t('theme.authoring.prompt')}
+        </a>
+      </div>
+
       <UploadTheme
 
         onUploaded={() => {

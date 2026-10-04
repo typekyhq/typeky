@@ -510,6 +510,9 @@ export const en: Locale = {
   'theme.group.templates.hint': 'One per kind of page, chosen by the URL that was asked for.',
   'theme.group.snippets': 'Snippets',
   'theme.group.snippets.hint': 'Reusable pieces, pulled in by name from the templates and each other.',
+  'theme.authoring.hint': 'Writing a template with an AI? Hand it the prompt:',
+  'theme.authoring.syntax': 'theme syntax',
+  'theme.authoring.prompt': 'prompt for an AI',
   'theme.upload.hint':
     'Pick a theme folder: layouts/, templates/, snippets/ and assets/. A .liquid file under the first three is a template; assets keep their extension.',
   'theme.upload.choose': 'Choose a folder',

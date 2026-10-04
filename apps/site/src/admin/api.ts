@@ -38,6 +38,8 @@ import {
   readThemeContext,
   readThemeTemplate,
   readThemeTemplates,
+  readThemePrompt,
+  readThemeSyntax,
   readThemes,
   resetThemeTemplate,
   uploadTheme,
@@ -295,6 +297,11 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   api.get('/theme/themes', (c) => readThemes(c, repositories))
   api.post('/theme/themes', (c) => uploadTheme(c, repositories))
   api.delete('/theme/themes', (c) => deleteTheme(c, repositories))
+
+  // What an author reads before writing a template, and what a model is handed. Both
+  // are generated from the sandbox and the sample context, so they cannot drift.
+  api.get('/theme/syntax', (c) => readThemeSyntax(c, repositories))
+  api.get('/theme/prompt', (c) => readThemePrompt(c, repositories))
 
   // The active theme's templates. A site may edit the files its theme ships and
   // nothing more: there is no way to create one here, which is what keeps a stored
