@@ -2,6 +2,7 @@ import { siteWriteSchema, type SiteResponse } from '@typeky/api'
 import { defaultContext, type Site } from '@typeky/db'
 import type { Context } from 'hono'
 import { apiError, describeIssues, readJsonBody, type AdminEnv, type RepositoryResolver } from './errors'
+import { forgetAdminPath } from '../admin-config'
 
 /**
  * The site document.
@@ -35,6 +36,17 @@ export async function writeSite(c: Context<AdminEnv>, repositories: RepositoryRe
 
   const body = parsed.data
 
+  // The panel's address is reserved in both directions. The page editor refuses a
+  // slug that is the panel's; this is the same rule read from the other side, so an
+  // operator cannot move the panel onto a URL a page already holds.
+  const requested = body.settings.admin?.path
+  if (typeof requested === 'string') {
+    const taken = await store.pages.bySlug(defaultContext(), requested)
+    if (taken !== null) {
+      return apiError(c, 'slug_reserved', `the page "${taken.title}" already uses /${requested}`)
+    }
+  }
+
   // Field by field, so a new required field on the write shape is a compile
   // error here instead of silently becoming null.
   const site = await store.sites.save(defaultContext(), {
@@ -46,6 +58,10 @@ export async function writeSite(c: Context<AdminEnv>, repositories: RepositoryRe
     settings: body.settings,
     nav: body.nav,
   })
+
+  // The operator's next request should already find the panel where they just put it,
+  // rather than waiting out the cache in front of the answer.
+  forgetAdminPath()
 
   return c.json(toResponse(site))
 }

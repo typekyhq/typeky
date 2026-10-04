@@ -9,6 +9,12 @@ import { readRememberedPaths, rememberPaths } from './remembered-paths'
 import { csrfTokenMatches, isSafeMethod } from './csrf'
 import { apiError, readJsonBody, type AdminEnv, type BlobResolver, type RepositoryResolver } from './errors'
 import {
+  clearLoginFailures,
+  loginClientKey,
+  readLoginFailures,
+  recordLoginFailure,
+} from './login-attempts'
+import {
   deleteMedia,
   readMedia,
   readMediaContent,
@@ -162,11 +168,35 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
     const parsed = loginRequestSchema.safeParse(await readJsonBody(c.req.raw))
     if (!parsed.success) return apiError(c, 'invalid_request', 'expected a username and a password')
 
+    // Checked before the password is: a client that has run out of attempts gets no
+    // work done for it, and no signal about whether a guess was close.
+    const client = loginClientKey(c.req.raw)
+    const failures = await readLoginFailures(c.env.CACHE, client)
+    if (failures.locked) {
+      c.header('retry-after', String(failures.retryAfterSeconds))
+      return apiError(c, 'too_many_attempts')
+    }
+
     // Verified even when the username is wrong, so response time does not reveal
     // whether the username was right.
     const passwordMatches = await verifyPassword(parsed.data.password, hash)
     const usernameMatches = parsed.data.username === (c.env.ADMIN_USERNAME ?? DEFAULT_ACTOR_ID)
-    if (!usernameMatches || !passwordMatches) return apiError(c, 'invalid_credentials')
+    if (!usernameMatches || !passwordMatches) {
+      // Counted per client rather than per account: the one account there is cannot
+      // be locked out by somebody guessing at it from somewhere else, and an
+      // attacker cannot spend the operator's attempts.
+      const spent = await recordLoginFailure(c.env.CACHE, client)
+      if (spent.locked) {
+        c.header('retry-after', String(spent.retryAfterSeconds))
+        return apiError(c, 'too_many_attempts')
+      }
+
+      return apiError(c, 'invalid_credentials')
+    }
+
+    // A correct password clears the window: somebody who mistyped it twice and then
+    // got it right should not be one slip away from a lockout.
+    await clearLoginFailures(c.env.CACHE, client)
 
     const { id, session } = await createSession(c.env.CACHE, DEFAULT_ACTOR_ID)
     setCookie(c, SESSION_COOKIE, id, { ...SESSION_COOKIE_OPTIONS, maxAge: SESSION_TTL_SECONDS })

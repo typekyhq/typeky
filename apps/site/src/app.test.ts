@@ -4,6 +4,8 @@ import { createApp } from './app'
 import type { Env } from './env'
 import { escapeHtml } from './pages'
 import { fakeAssets, fakeDatabase, makeTestEnv } from './testing/env'
+import { SESSION_COOKIE, createSession } from './admin/session'
+import { fakeKv } from './testing/env'
 
 /** Hono puts the bindings in the third argument, after RequestInit. */
 async function send(path: string, env: Env = makeTestEnv(), init?: RequestInit): Promise<Response> {
@@ -212,7 +214,152 @@ describe('site worker', () => {
     })
   })
 
-  describe('escaping', () => {
+  /**
+ * Where the panel is.
+ *
+ * `/admin` is the first thing a scanner tries, so the operator can move the entry
+ * point. The route table cannot know a setting, so a middleware owns the segment --
+ * which makes these the tests for the whole mechanism: the configured address
+ * answers, the default stops answering, the panel's own files keep working, and the
+ * way back in exists for a browser that is already signed in.
+ */
+describe('the panel address', () => {
+  /** A site row, with the panel wherever the test wants it. */
+  function siteRow(path: string): Record<string, unknown> {
+    return {
+      id: 'default',
+      name: 'Typeky Demo',
+      tagline: null,
+      logo_media_id: null,
+      favicon_media_id: null,
+      theme: 'default',
+      settings: JSON.stringify({ admin: { path } }),
+      nav: '[]',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }
+  }
+
+  const SHELL = { '/admin/index.html': '<!doctype html><div id="root"></div>' }
+
+  it('serves the shell at the address that was configured', async () => {
+    const env = makeTestEnv({
+      DB: fakeDatabase(async () => siteRow('x7f2k9')),
+      ASSETS: fakeAssets(SHELL),
+    })
+
+    const response = await send('/x7f2k9/settings', env)
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('id="root"')
+  })
+
+  it('stops answering at the address it moved away from', async () => {
+    // The whole point: a scanner that tries the default gets nothing that looks
+    // like a panel.
+    const env = makeTestEnv({
+      DB: fakeDatabase(async () => siteRow('x7f2k9')),
+      ASSETS: fakeAssets(SHELL),
+    })
+
+    const response = await send('/admin', env)
+
+    expect(response.status).toBe(404)
+    expect(await response.text()).not.toContain('id="root"')
+  })
+
+  it('still serves the panel files from the build directory', async () => {
+    // The entry point moves; the files it loads do not. They are a build constant,
+    // and hiding them would hide nothing -- the source is public.
+    const env = makeTestEnv({
+      DB: fakeDatabase(async () => siteRow('x7f2k9')),
+      ASSETS: fakeAssets({ '/admin/assets/app.js': 'console.log(1)' }),
+    })
+
+    const response = await send('/admin/assets/app.js', env)
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('console.log(1)')
+  })
+
+  it('forwards the old address when the browser is already signed in', async () => {
+    // Not an announcement of where the panel went: a scanner has no session, and
+    // this is the way back in for an operator who changed the setting and cannot
+    // remember what they typed.
+    const cache = fakeKv()
+    const { id } = await createSession(cache.kv, 'admin')
+    const env = makeTestEnv({
+      CACHE: cache.kv,
+      DB: fakeDatabase(async () => siteRow('x7f2k9')),
+    })
+
+    const response = await send('/admin/settings', env, {
+      headers: { cookie: `${SESSION_COOKIE}=${id}` },
+    })
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe('/x7f2k9/settings')
+  })
+
+  it('does not forward anybody else', async () => {
+    const env = makeTestEnv({ DB: fakeDatabase(async () => siteRow('x7f2k9')) })
+
+    const response = await send('/admin/settings', env)
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('answers at the default while the default is what is configured', async () => {
+    const env = makeTestEnv({ ASSETS: fakeAssets(SHELL) })
+
+    expect((await send('/admin', env)).status).toBe(200)
+  })
+})
+
+describe('/api/branding', () => {
+  const SITE_ROW = {
+    id: 'default',
+    name: 'Typeky Demo',
+    tagline: null,
+    logo_media_id: 'media_logo',
+    favicon_media_id: null,
+    theme: 'default',
+    settings: '{}',
+    nav: '[]',
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  }
+
+  it('names the site and points at its logo, without a session', async () => {
+    const response = await send('/api/branding', makeTestEnv({ DB: fakeDatabase(async () => SITE_ROW) }))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      name: 'Typeky Demo',
+      logoUrl: 'https://example.com/media/media_logo',
+    })
+  })
+
+  it('answers with the platform name when there is no site yet', async () => {
+    // A fresh deployment: the sign-in screen still has to render something.
+    const response = await send('/api/branding', makeTestEnv())
+
+    await expect(response.json()).resolves.toEqual({ name: 'Typeky', logoUrl: null })
+  })
+
+  it('carries two fields and nothing else', async () => {
+    const response = await send('/api/branding', makeTestEnv({ DB: fakeDatabase(async () => SITE_ROW) }))
+    const body = (await response.json()) as Record<string, unknown>
+
+    // The endpoint is public, so everything on it is something a visitor could
+    // already see on the site. A third field would be a decision somebody has to
+    // make rather than a fact to spread.
+    expect(Object.keys(body).sort()).toEqual(['logoUrl', 'name'])
+  })
+})
+
+describe('escaping', () => {
     it('escapes every character that matters in html', () => {
       expect(escapeHtml(`&<>"'`)).toBe('&amp;&lt;&gt;&quot;&#39;')
     })

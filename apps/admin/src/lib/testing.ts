@@ -43,6 +43,11 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     delete: unexpected('delete'),
 
     signIn: unexpected('signIn'),
+    // Read by the sign-in screen itself, so it answers rather than throwing: a
+    // deployment with no logo yet is the ordinary state, not an unexpected call.
+    async readBranding() {
+      return { name: 'Typeky', logoUrl: null }
+    },
     async signOut() {},
     loadSession: unexpected('loadSession'),
 

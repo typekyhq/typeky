@@ -7,6 +7,7 @@ import {
 } from '@typeky/api'
 import { defaultContext, type Page, type Repositories } from '@typeky/db'
 import { reservedPathFor } from '@typeky/api'
+import { adminPathOf } from '../admin-config'
 import { createLiquidRuntime } from '@typeky/theme-kit'
 import type { Context } from 'hono'
 import {
@@ -113,7 +114,13 @@ async function writePage(
   // slug-owner check would have been enough on its own: an unused slug is not the
   // same as an available one.
   const site = await store.sites.get(defaultContext())
-  const reserved = reservedPathFor(body.slug, site?.settings.reservedPaths ?? [])
+  // The panel's own segment is reserved as well, and it is not in the platform's
+  // list because the operator chose it: a page slugged with it would shadow the
+  // panel, and the panel is how they would have gone to fix that.
+  const reserved = reservedPathFor(body.slug, [
+    ...(site?.settings.reservedPaths ?? []),
+    `/${adminPathOf(site?.settings)}`,
+  ])
   if (reserved !== null) {
     return apiError(
       c,

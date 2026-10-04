@@ -33,6 +33,7 @@ const ERROR_KEYS: Record<ApiErrorCode, string> = {
   unauthorized: 'error.unauthorized',
   csrf_failed: 'error.csrf_failed',
   invalid_credentials: 'error.invalid_credentials',
+  too_many_attempts: 'error.too_many_attempts',
   admin_password_not_configured: 'error.admin_password_not_configured',
   database_not_configured: 'error.database_not_configured',
   not_found: 'error.not_found',

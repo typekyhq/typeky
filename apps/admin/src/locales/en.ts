@@ -82,6 +82,8 @@ export const en: Locale = {
   'error.unauthorized': 'Your session has ended. Sign in again.',
   'error.csrf_failed': 'The session token was rejected. Reload the page and try again.',
   'error.invalid_credentials': 'Wrong username or password.',
+  'error.too_many_attempts':
+    'Too many attempts from this address. Wait a few minutes and try again.',
   'error.admin_password_not_configured': 'No admin password is configured on this deployment.',
   'error.database_not_configured': 'This deployment has no database configured.',
   'error.not_found': 'That endpoint does not exist yet.',
@@ -304,6 +306,11 @@ export const en: Locale = {
   'settings.paths.hint':
     'Addresses a page may not take. The platform\u2019s own are fixed; the rest are yours to keep free.',
   'settings.paths.system': 'Reserved by the platform',
+  'settings.adminPath': 'Panel address',
+  'settings.adminPath.generate': 'Generate one',
+  'settings.adminPath.hint':
+    'The panel is served here, once saved. The default, admin, is the first thing a scanner tries -- use something only you know. After a change, the old address still forwards a browser that is already signed in.',
+  'settings.adminPath.moved': 'The panel now answers at {path}.',
   'settings.paths.system.hint':
     'The Worker answers these before any page is rendered, so a page cannot have them \u2014 and they cannot be removed here. It is not a preference, it is what the software does.',
   'settings.paths.mine': 'Reserved by you',

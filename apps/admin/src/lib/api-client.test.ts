@@ -83,6 +83,36 @@ describe('sign in', () => {
   })
 })
 
+describe('branding', () => {
+  it('reads the site name and logo from the one public endpoint', async () => {
+    const calls: string[] = []
+    const client = createApiClient({
+      fetch: async (input) => {
+        calls.push(String(input))
+        return new Response(JSON.stringify({ name: 'Typeky Demo', logoUrl: 'https://x/media/1' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      },
+    })
+
+    await expect(client.readBranding()).resolves.toEqual({
+      name: 'Typeky Demo',
+      logoUrl: 'https://x/media/1',
+    })
+    // Not under the admin API: this is asked for before there is a session.
+    expect(calls).toEqual(['/api/branding'])
+  })
+
+  it('throws rather than inventing a name when the response is not the contract', async () => {
+    const client = createApiClient({
+      fetch: async () => new Response(JSON.stringify({ site: 'nope' }), { status: 200 }),
+    })
+
+    await expect(client.readBranding()).rejects.toThrow()
+  })
+})
+
 describe('session loading', () => {
   it('fetches the current session and keeps its token', async () => {
     const { calls, fetch } = fakeFetch(() => json(SESSION))

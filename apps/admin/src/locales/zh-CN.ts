@@ -77,6 +77,7 @@ export const zhCN: Locale = {
   'error.unauthorized': '会话已结束，请重新登录。',
   'error.csrf_failed': '会话令牌被拒绝，请刷新页面后重试。',
   'error.invalid_credentials': '用户名或密码错误。',
+  'error.too_many_attempts': '这个地址尝试得太频繁了，请过几分钟再试。',
   'error.admin_password_not_configured': '这个部署没有配置后台密码。',
   'error.database_not_configured': '这个部署没有配置数据库。',
   'error.not_found': '这个接口还不存在。',
@@ -292,6 +293,11 @@ export const zhCN: Locale = {
   'settings.paths': '保留路径',
   'settings.paths.hint': '页面不能占用的地址。平台自己那部分是固定的，其余由你保留。',
   'settings.paths.system': '平台保留',
+  'settings.adminPath': '后台登录地址',
+  'settings.adminPath.generate': '随机生成',
+  'settings.adminPath.hint':
+    '后台就挂在这个地址上，保存后生效。默认的 admin 是扫描器第一个会试的，建议换成只有你知道的一串；改完之后，旧地址对已登录的浏览器仍会自动跳转。',
+  'settings.adminPath.moved': '后台地址已改为 {path}。',
   'settings.paths.system.hint':
     'Worker 在渲染任何页面之前就会应答这些地址，所以页面不能占用它们 —— 也不能在这里删掉。这不是偏好设置，是软件本身的行为。',
   'settings.paths.mine': '你保留的',

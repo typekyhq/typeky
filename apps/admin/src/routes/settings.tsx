@@ -33,7 +33,7 @@ import { ADMIN_DATE_FORMATS, SITE_DATE_FORMATS, withCurrentFormat } from '@/lib/
 import { ADMIN_LOCALES, LANGUAGE_TAGS, TIME_ZONES } from '@/lib/locales'
 import { formatLocal, usePanelPreference } from '@/lib/panel-preference'
 import { describeApiError } from '@/lib/session'
-import { PLATFORM_PATHS } from '@typeky/api'
+import { DEFAULT_ADMIN_PATH, PLATFORM_PATHS } from '@typeky/api'
 import { useT } from '@/lib/i18n'
 import { tabOwning, type FormTab } from '@/lib/tabs'
 
@@ -72,7 +72,11 @@ const TABS: FormTab[] = [
     'settings.footer',
   ],
   },
-  { id: 'paths', labelKey: 'settings.paths', owns: ['settings.reservedPaths'] },
+  {
+    id: 'paths',
+    labelKey: 'settings.paths',
+    owns: ['settings.reservedPaths', 'settings.admin.path'],
+  },
   { id: 'navigation', labelKey: 'settings.nav', owns: ['nav'] },
   { id: 'social', labelKey: 'settings.social', owns: ['settings.socialLinks'] },
   { id: 'seo', labelKey: 'settings.seo', owns: ['settings.seo'] },
@@ -220,7 +224,17 @@ export function SettingsPage() {
       // The shell caches this preference; without this the list and the editors
       // would keep writing dates the old way until a reload.
       panel.refresh()
-      toast.success(`Saved at ${panel.format(saved.updatedAt)}`)
+      if (saved.settings.admin?.path !== draft.settings.admin?.path) {
+        // The one save whose result the operator has to be told out loud, because
+        // everything they have bookmarked has just moved.
+        toast.success(
+          t('settings.adminPath.moved', {
+            path: `/${saved.settings.admin?.path ?? DEFAULT_ADMIN_PATH}`,
+          }),
+        )
+      } else {
+        toast.success(`Saved at ${panel.format(saved.updatedAt)}`)
+      }
     } catch (thrown) {
       toast.error(describeApiError(thrown, t))
     } finally {
@@ -244,6 +258,13 @@ export function SettingsPage() {
   const nav = [...draft.nav].sort((left, right) => left.order - right.order)
   const socialLinks = settings.socialLinks ?? []
   const custom = settings.custom ?? []
+
+  // Where the panel answers: the draft value when there is one, the default when
+  // there is not, so the chip below shows something true either way.
+  const adminPath =
+    settings.admin?.path !== undefined && settings.admin.path !== ''
+      ? settings.admin.path
+      : DEFAULT_ADMIN_PATH
 
   // The typed value can be half a zone -- `Asia/Shang` on the way to somewhere --
   // and `Intl` throws on a zone it does not know. The preview falls back to UTC
@@ -886,11 +907,55 @@ export function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
+              <Label htmlFor="adminPath">{t('settings.adminPath')}</Label>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  id="adminPath"
+                  className="max-w-xs"
+                  value={settings.admin?.path ?? ''}
+                  placeholder={DEFAULT_ADMIN_PATH}
+                  aria-invalid={issues['settings.admin.path'] !== undefined}
+                  onChange={(event) =>
+                    update((current) => ({
+                      ...current,
+                      settings: {
+                        ...current.settings,
+                        admin: { ...current.settings.admin, path: event.target.value },
+                      },
+                    }))
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    update((current) => ({
+                      ...current,
+                      settings: {
+                        ...current.settings,
+                        admin: { ...current.settings.admin, path: randomAdminPath() },
+                      },
+                    }))
+                  }
+                >
+                  {t('settings.adminPath.generate')}
+                </Button>
+              </div>
+              {issues['settings.admin.path'] !== undefined && (
+                <p className="text-sm text-destructive">{issues['settings.admin.path']}</p>
+              )}
+              <p className="max-w-prose text-xs text-muted-foreground">{t('settings.adminPath.hint')}</p>
+            </div>
+
+            <div className="space-y-2">
               <Label>{t('settings.paths.system')}</Label>
               <ul className="flex flex-wrap gap-1" data-testid="platform-paths">
-                {PLATFORM_PATHS.map((path) => (
-                  <li key={path} className="rounded-md border bg-muted/40 px-1.5 py-0.5 font-mono text-xs">
-                    {path}
+                {/* The panel's own chip is the address in force rather than the
+                    constant: the list answers "what is already taken", and a stale
+                    `/admin` would answer it wrongly. */}
+                {PLATFORM_PATHS.map((path) => (path === '/admin' ? `/${adminPath}` : path)).map((shown) => (
+                  <li key={shown} className="rounded-md border bg-muted/40 px-1.5 py-0.5 font-mono text-xs">
+                    {shown}
                   </li>
                 ))}
               </ul>
@@ -949,9 +1014,28 @@ function blankDocument(): SiteWrite {
     logoMediaId: null,
     faviconMediaId: null,
     theme: 'default',
-    settings: {},
+    settings: {
+      // A fresh deployment gets an unguessable address by default: it is reachable at
+      // `admin` until this is saved, and the operator accepts the suggestion while
+      // they are setting everything else up.
+      admin: { path: randomAdminPath() },
+    },
     nav: [],
   }
+}
+
+/**
+ * A panel address nobody arrives at by walking a list of words.
+ *
+ * Ten characters from an alphabet with no look-alikes in it, because the value gets
+ * read off one screen and typed into another.
+ */
+function randomAdminPath(): string {
+  const alphabet = 'abcdefghijkmnpqrstuvwxyz23456789'
+  const bytes = new Uint8Array(10)
+  crypto.getRandomValues(bytes)
+
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')
 }
 
 function toDraft(site: SiteResponse): SiteWrite {

@@ -1,4 +1,5 @@
 import { DATE_FORMAT_PATTERN, TIME_ZONE_PATTERN, isTimeZone } from '@typeky/core'
+import { isAdminPathSegment } from './paths'
 import * as z from 'zod/mini'
 
 /**
@@ -63,6 +64,21 @@ export const adminSettingsSchema = z.object({
   language: z.optional(LANGUAGE),
   /** How the panel writes a timestamp. */
   dateFormat: z.optional(DATE_FORMAT),
+  /**
+   * The URL segment the panel is served from.
+   *
+   * A fixed `/admin` is the first thing a scanner tries. This is the operator's
+   * answer to that -- one segment, so `/<path>` is the panel and `/<path>/settings`
+   * is a screen in it.
+   */
+  path: z.optional(
+    z.string().check(
+      z.refine(
+        isAdminPathSegment,
+        'lower-case letters, digits and hyphens; not an address the platform uses',
+      ),
+    ),
+  ),
 })
 
 export type AdminSettings = z.infer<typeof adminSettingsSchema>

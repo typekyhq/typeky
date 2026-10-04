@@ -19,6 +19,8 @@ export const API_ERROR_CODES = [
   'unauthorized',
   'csrf_failed',
   'invalid_credentials',
+  /** The client has spent its attempts for the window; see `login-attempts.ts`. */
+  'too_many_attempts',
   'admin_password_not_configured',
   'database_not_configured',
   'not_found',
@@ -44,6 +46,7 @@ export const API_ERROR_STATUS: Record<ApiErrorCode, number> = {
   unauthorized: 401,
   csrf_failed: 403,
   invalid_credentials: 401,
+  too_many_attempts: 429,
   admin_password_not_configured: 503,
   database_not_configured: 503,
   not_found: 404,

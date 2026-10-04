@@ -1,8 +1,12 @@
+import { firstPathSegment } from '@typeky/api'
 import { defaultContext } from '@typeky/db'
 import { createD1DbPort } from '@typeky/platform'
-import type { ApiErrorBody } from '@typeky/api'
-import { Hono } from 'hono'
+import type { ApiErrorBody, BrandingResponse } from '@typeky/api'
+import { Hono, type Context } from 'hono'
+import { getCookie } from 'hono/cookie'
 import { createAdminApi } from './admin/api'
+import { readSession, SESSION_COOKIE } from './admin/session'
+import { ADMIN_BUILD_SEGMENT, adminPathFor } from './admin-config'
 import { blobsFor } from './blobs'
 import { edgeCacheFor, servePage } from './cache'
 import type { Env } from './env'
@@ -43,14 +47,74 @@ export function createApp(): Hono<{ Bindings: Env }> {
   // specific prefix wins.
   app.route('/api/admin', createAdminApi())
 
+  // The sign-in screen's branding, and the only public endpoint under /api.
+  //
+  // Public because the panel cannot read the site document until somebody is signed
+  // in, and because there is nothing here a visitor could not already see on the
+  // site itself: its name, and its logo.
+  app.get('/api/branding', async (c) => {
+    const store = repositoriesFor(c.env)
+    const site = store === null ? null : await store.sites.get(defaultContext()).catch(() => null)
+    const body: BrandingResponse = {
+      name: site?.name ?? 'Typeky',
+      logoUrl:
+        site?.logoMediaId == null
+          ? null
+          : `${new URL(c.req.url).origin}/media/${encodeURIComponent(site.logoMediaId)}`,
+    }
+
+    return c.json(body)
+  })
+
   // Public read-only API. Lands with the site rendering work.
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404))
 
-  // Admin SPA: static assets win first, so anything reaching here is a
-  // client-side route and must be answered with the shell. The shell itself is
-  // never cached (see public/_headers), while the hashed assets next to it are.
-  app.get('/admin/*', (c) => serveAdminShell(c.env, c.req.raw))
-  app.get('/admin', (c) => serveAdminShell(c.env, c.req.raw))
+  /**
+   * Where the panel is, decided before anything else looks at the path.
+   *
+   * A fixed `/admin` is the first thing a scanner tries, and the operator can move
+   * it -- so the segment is a setting rather than a route, and this middleware is
+   * what owns it. `admin-config.ts` explains why it has to be a middleware at all,
+   * and what the cache in front of the answer costs.
+   */
+  app.use('*', async (c, next) => {
+    const url = new URL(c.req.url)
+    const segment = firstPathSegment(url.pathname)
+    if (segment === '') return next()
+
+    const adminPath = await adminPathFor(c.env)
+
+    if (segment === adminPath) {
+      // The panel's own files, wherever the entry point is called: the build writes
+      // them under `ADMIN_BUILD_SEGMENT/assets/`, and only the way in is a secret.
+      // Checked by the asset prefix rather than by `ADMIN_BUILD_SEGMENT` alone --
+      // everything else under the entry point is a client-side route.
+      if (url.pathname.startsWith(`/${ADMIN_BUILD_SEGMENT}/assets/`)) {
+        return serveAdminAsset(c.env, url.pathname, c.req.raw)
+      }
+
+      // Anything else under the entry point is a client-side route, and the shell is
+      // what answers it. The shell itself is never cached (see public/_headers),
+      // while the hashed assets next to it are.
+      return serveAdminShell(c.env, c.req.raw)
+    }
+
+    if (segment !== ADMIN_BUILD_SEGMENT) return next()
+
+    if (url.pathname.startsWith(`/${ADMIN_BUILD_SEGMENT}/assets/`)) {
+      return serveAdminAsset(c.env, url.pathname, c.req.raw)
+    }
+
+    // The address the panel is *not* at. A scanner that knows the build directory
+    // gets a plain 404 rather than a sign-in screen -- and a browser holding the old
+    // address is sent to the new one, but only while it is already signed in, so the
+    // redirect never announces where the panel moved to. That is the way back in for
+    // an operator who has just changed the setting and cannot remember the value.
+    const moved = await panelMovedTo(c, adminPath)
+    if (moved !== null) return c.redirect(moved, 302)
+
+    return notFound(c)
+  })
 
   // Media, served to visitors. Registered before the catch-all because a media
   // URL has no file extension and would otherwise be treated as a page.
@@ -177,6 +241,43 @@ async function probeDatabase(env: Env): Promise<'ok' | 'unbound' | 'error'> {
     console.error('healthz database probe failed', error)
     return 'error'
   }
+}
+
+/**
+ * The panel's own files, fetched from the build directory.
+ *
+ * The entry point is a setting, so these cannot be served by the asset layer: the
+ * Worker owns them and hands them back from the binding. The path is used as given,
+ * because it is the build's own (`/admin/assets/<hash>.js`) rather than anything the
+ * request chose to put in front of it.
+ */
+async function serveAdminAsset(env: Env, pathname: string, request: Request): Promise<Response> {
+  return env.ASSETS.fetch(new Request(new URL(pathname, request.url), { method: 'GET' }))
+}
+
+/**
+ * Where a signed-in request should go now that the panel has moved, or null.
+ *
+ * The prefix is swapped rather than the request being rewritten, so the browser ends
+ * up on the address the panel really lives at -- which is the address its own links
+ * use, and therefore the one that has to work.
+ */
+async function panelMovedTo(c: Context<{ Bindings: Env }>, adminPath: string): Promise<string | null> {
+  const session = await readSession(c.env.CACHE, getCookie(c, SESSION_COOKIE))
+  if (session === null) return null
+
+  const url = new URL(c.req.url)
+  const rest = url.pathname.slice(ADMIN_BUILD_SEGMENT.length + 1)
+
+  return `/${adminPath}${rest}${url.search}`
+}
+
+/** A missing file, said in as few words as the asset layer would use. */
+function notFound(c: Context): Response {
+  return c.body('Not Found', 404, {
+    'content-type': 'text/plain; charset=utf-8',
+    'cache-control': 'no-store',
+  })
 }
 
 async function serveAdminShell(env: Env, request: Request): Promise<Response> {

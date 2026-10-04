@@ -9,7 +9,14 @@
  * client infers from them.
  */
 
-export { PLATFORM_PATHS, firstPathSegment, reservedPathFor } from './paths'
+export {
+  ADMIN_PATH_PATTERN,
+  DEFAULT_ADMIN_PATH,
+  PLATFORM_PATHS,
+  firstPathSegment,
+  isAdminPathSegment,
+  reservedPathFor,
+} from './paths'
 
 export {
   API_ERROR_CODES,
@@ -111,6 +118,11 @@ export {
   type MediaListResponse,
   type MediaUsage,
 } from './media'
+
+export {
+  brandingResponseSchema,
+  type BrandingResponse,
+} from './branding'
 
 export {
   licenseResponseSchema,

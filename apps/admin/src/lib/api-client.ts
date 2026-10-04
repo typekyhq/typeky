@@ -1,6 +1,7 @@
 import {
   CSRF_HEADER,
   apiErrorBodySchema,
+  brandingResponseSchema,
   getPageListResponseSchema,
   getPageResponseSchema,
   getPostListResponseSchema,
@@ -27,6 +28,7 @@ import {
   type BulkResult,
   type ContentSort,
   type ContentStatus,
+  type BrandingResponse,
   type LoginRequest,
   type MediaItem,
   type MediaListResponse,
@@ -103,6 +105,9 @@ export interface ApiClient {
   signIn(credentials: LoginRequest): Promise<Session>
   signOut(): Promise<void>
   loadSession(): Promise<Session>
+
+  /** The site's name and logo, for the screen shown before anybody signs in. */
+  readBranding(): Promise<BrandingResponse>
 
   getSite(): Promise<SiteResponse>
   saveSite(site: SiteWrite): Promise<SiteResponse>
@@ -318,6 +323,20 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       const session = await readSession(await send('GET', '/session'))
       csrfToken = session.csrfToken
       return session
+    },
+
+    async readBranding() {
+      // Not under the admin API: this is the one thing the sign-in screen needs, and
+      // it is asked for before there is a session to send.
+      const response = await doFetch('/api/branding', { credentials: 'same-origin' })
+
+      if (!response.ok) throw await toApiError(response)
+
+      return readContract(
+        brandingResponseSchema,
+        response,
+        'the branding did not match the contract',
+      )
     },
 
     async getSite() {

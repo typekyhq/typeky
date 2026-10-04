@@ -5,6 +5,7 @@ import { fakeAssets, fakeKv, makeTestEnv, type FakeKv } from '../testing/env'
 import { CSRF_HEADER } from '@typeky/api'
 import { DEFAULT_SCRYPT_PARAMS, hashPassword, type ScryptParams } from './password'
 import { SESSION_COOKIE } from './session'
+import { MAX_LOGIN_FAILURES } from './login-attempts'
 
 /** Cheap parameters: scrypt's own cost is measured and tested elsewhere. */
 const FAST: ScryptParams = { ...DEFAULT_SCRYPT_PARAMS, N: 1024 }
@@ -136,6 +137,63 @@ describe('login', () => {
     const { env } = environment()
 
     expect((await login(env, { username: 'admin', password: 'wrong' })).headers.get('set-cookie')).toBeNull()
+  })
+})
+
+/**
+ * The ceiling on guessing.
+ *
+ * Per client rather than per account, so that somebody hammering the login from
+ * elsewhere cannot lock the operator out -- and so an attacker cannot spend the
+ * operator's attempts from a second address.
+ */
+describe('too many attempts', () => {
+  function from(env: Env, ip: string, password: string): Promise<Response> {
+    return send('/api/admin/session', env, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'cf-connecting-ip': ip },
+      body: JSON.stringify({ username: 'admin', password }),
+    })
+  }
+
+  it('locks the client out on the last allowed failure, and says when to come back', async () => {
+    const { env } = environment()
+
+    for (let attempt = 1; attempt < MAX_LOGIN_FAILURES; attempt += 1) {
+      expect((await from(env, '203.0.113.9', 'wrong')).status, `attempt ${String(attempt)}`).toBe(401)
+    }
+
+    const last = await from(env, '203.0.113.9', 'wrong')
+
+    expect(last.status).toBe(429)
+    await expect(last.json()).resolves.toEqual({ error: 'too_many_attempts' })
+    expect(Number(last.headers.get('retry-after'))).toBeGreaterThan(0)
+
+    // And the right password does not get through either: the lock is the point.
+    const withRightPassword = await from(env, '203.0.113.9', PASSWORD)
+
+    expect(withRightPassword.status).toBe(429)
+    expect(withRightPassword.headers.get('set-cookie')).toBeNull()
+  })
+
+  it('leaves every other client alone', async () => {
+    const { env } = environment()
+
+    for (let attempt = 0; attempt < MAX_LOGIN_FAILURES; attempt += 1) await from(env, '203.0.113.9', 'wrong')
+
+    expect((await from(env, '198.51.100.4', 'wrong')).status).toBe(401)
+    expect((await from(env, '198.51.100.4', PASSWORD)).status).toBe(201)
+  })
+
+  it('clears the count once the password is right', async () => {
+    // Four mistakes and then the right password must not leave the fifth attempt
+    // spent: the next sign-in should be the first try again.
+    const { env } = environment()
+
+    for (let attempt = 0; attempt < MAX_LOGIN_FAILURES - 1; attempt += 1) await from(env, '203.0.113.9', 'wrong')
+
+    expect((await from(env, '203.0.113.9', PASSWORD)).status).toBe(201)
+    expect((await from(env, '203.0.113.9', 'wrong')).status).toBe(401)
   })
 })
 

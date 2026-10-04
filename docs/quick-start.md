@@ -113,6 +113,10 @@ says so. That is not a fault: nothing has told it what the site is called.
 1. Open `https://<your-worker>.workers.dev/admin/`.
 2. Sign in with `admin` and the password from step 5.
 3. Open **Settings**, type a name, press **Save changes**.
+4. Open **Settings → Reserved paths** and accept the suggested **panel address**.
+   `/admin` is the first thing a scanner tries, so the field offers a random one.
+   Save, then use the address it names — the old one forwards a browser that is
+   already signed in, which is the way back if you forget what you typed.
 
 The 503 is gone at that point, but `/` still answers **404**: it is the home page,
 and no page has been marked as one. A site can have any number of pages; exactly
@@ -145,8 +149,9 @@ back to the workers.dev address.
 
 Two things worth knowing about the domain:
 
-- The admin panel and the site are the same Worker, so `/admin/` is on your
-  domain. There is nothing separate to deploy or protect.
+- The admin panel and the site are the same Worker, so the panel is on your
+  domain -- under whatever address the settings give it, `/admin` until you move
+  it. There is nothing separate to deploy or protect.
 - A white-label licence is bound to a domain. Sign it for the domain you will
   serve on — `example.com` and `www.example.com` count as the same name, and
   anything else counts as a different site.

@@ -1,4 +1,4 @@
-import type { Site, SiteRepository } from '@typeky/db'
+import type { Repositories, Site, SiteRepository } from '@typeky/db'
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { AdminEnv } from './errors'
 import { createAdminApi } from './api'
@@ -45,12 +45,19 @@ function fakeSiteRepository() {
   return { repository, stored: () => site }
 }
 
-function setup(options: { withDatabase?: boolean } = {}) {
+function setup(options: { withDatabase?: boolean; pages?: Partial<Repositories['pages']> } = {}) {
   const { repository, stored } = fakeSiteRepository()
   const cache = fakeKv()
 
   const api = createAdminApi({
-    repositories: options.withDatabase === false ? () => null : () => stubRepositories({ sites: repository }),
+    repositories:
+      options.withDatabase === false
+        ? () => null
+        : () =>
+            stubRepositories({
+              sites: repository,
+              ...(options.pages === undefined ? {} : { pages: options.pages }),
+            }),
   })
 
   const env: AdminEnv['Bindings'] = makeTestEnv({
@@ -135,6 +142,31 @@ describe('reading the site', () => {
 })
 
 describe('writing the site', () => {
+  it('refuses to move the panel onto an address a page already holds', async () => {
+    // The same rule as the page editor's, read from the other side: a page keeps
+    // `/install` to itself, so the panel cannot be moved onto it.
+    const { send, signIn } = setup({
+      pages: { bySlug: async () => ({ id: 'p1', title: 'Installer' }) as never },
+    })
+    const { cookie, csrfToken } = await signIn()
+
+    const response = await send(
+      '/site',
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: csrfToken },
+        body: JSON.stringify({
+          ...DOCUMENT,
+          settings: { ...DOCUMENT.settings, admin: { path: 'install' } },
+        }),
+      },
+      cookie,
+    )
+
+    expect(response.status).toBe(409)
+    expect(((await response.json()) as { message: string }).message).toContain('Installer')
+  })
+
   it('stores what it was given', async () => {
     const { send, signIn, stored } = setup()
     const { cookie, csrfToken } = await signIn()

@@ -539,6 +539,53 @@ describe('the tabs', () => {
 })
 
 /**
+ * The panel's address.
+ *
+ * `/admin` is the first thing a scanner tries, so it is a setting -- and because it
+ * is the address everything bookmarked points at, the form has to say what it is and
+ * refuse the values that would take a URL the site already serves.
+ */
+describe('the panel address', () => {
+  it('saves the address it was given', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('Reserved paths')
+    const field = await screen.findByLabelText('Panel address')
+    await userEvent.clear(field)
+    await userEvent.type(field, 'x7f2k9')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(saveSite).toHaveBeenCalledTimes(1))
+    expect(saveSite.mock.calls[0]?.[0]).toMatchObject({ settings: { admin: { path: 'x7f2k9' } } })
+  })
+
+  it('offers an address nobody arrives at by guessing', async () => {
+    renderPage(fakeClient())
+
+    await openTab('Reserved paths')
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate one' }))
+
+    expect((screen.getByLabelText('Panel address') as HTMLInputElement).value).toMatch(/^[a-z0-9]{10}$/)
+  })
+
+  it('refuses an address the platform already answers', async () => {
+    const saveSite = vi.fn<ApiClient['saveSite']>(async (write) => ({ ...SITE, ...write }))
+    renderPage(fakeClient({ saveSite }))
+
+    await openTab('Reserved paths')
+    const field = await screen.findByLabelText('Panel address')
+    await userEvent.clear(field)
+    await userEvent.type(field, 'posts')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    // A panel at /posts would take the post list's URL, so the form refuses it
+    // rather than letting the site lose an address.
+    expect(saveSite).not.toHaveBeenCalled()
+  })
+})
+
+/**
  * The footer line, which used to have a panel of its own.
  *
  * It is one line about the site's identity, and a tab with one field in it is a tab

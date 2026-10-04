@@ -1,4 +1,5 @@
 import type { Env } from '../env'
+import { resetAdminPathCache } from '../admin-config'
 
 /**
  * Test doubles for the Worker bindings.
@@ -65,6 +66,11 @@ export function fakeDatabase(query: () => Promise<unknown>): D1Database {
 }
 
 export function makeTestEnv(overrides: Partial<Env> = {}): Env {
+  // The panel's path is cached per isolate, and a test process is one isolate running
+  // many cases: without this, a case that sets a path would decide the answer for
+  // every case after it.
+  resetAdminPathCache()
+
   return {
     APP_ENV: 'test',
     ASSETS: fakeAssets(),

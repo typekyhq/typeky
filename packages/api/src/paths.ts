@@ -44,6 +44,38 @@ export const PLATFORM_PATHS: readonly string[] = [
 ]
 
 /**
+ * What the panel's segment is called until an operator chooses another name.
+ *
+ * `admin` is guessable, which is the complaint the setting answers -- but it is
+ * also the address every existing deployment has bookmarked, so it stays the
+ * default and moving it is a decision rather than a surprise.
+ */
+export const DEFAULT_ADMIN_PATH = 'admin'
+
+/**
+ * The shape of the segment the panel may be served from.
+ *
+ * Lower-case, because a URL segment that differs by case is two URLs and only one
+ * of them is the one somebody typed. Three characters at the least: two is not a
+ * secret, it is a typo away from a path a scanner already tries.
+ */
+export const ADMIN_PATH_PATTERN = /^[a-z0-9][a-z0-9-]{2,62}$/
+
+/**
+ * Whether a value may be the panel's segment.
+ *
+ * The platform's own paths are refused -- a panel at `/posts` would shadow the
+ * post list -- with one exception: `admin` itself, which is the default. Refusing
+ * it would make the default value impossible to write back.
+ */
+export function isAdminPathSegment(value: string): boolean {
+  if (!ADMIN_PATH_PATTERN.test(value)) return false
+  if (value === DEFAULT_ADMIN_PATH) return true
+
+  return !PLATFORM_PATHS.some((path) => firstPathSegment(path) === value)
+}
+
+/**
  * The first path segment, normalised, or an empty string.
  *
  * Lenient on purpose: a settings textarea is written by a person, and `install`,

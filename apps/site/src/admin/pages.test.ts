@@ -358,6 +358,27 @@ describe('a slug the platform needs', () => {
     expect(((await response.json()) as { message: string }).message).toContain('/install')
   })
 
+  it('refuses wherever the panel has been moved to', async () => {
+    // The panel's address is a setting, so the reserved list has to be read from the
+    // site document rather than from the platform's constants -- otherwise a page
+    // could take the address the operator had just moved their own panel to.
+    const store = stubRepositories({
+      pages: fakePagesRepository().repository,
+      sites: {
+        get: async () =>
+          ({ id: 'default', name: 'Site', settings: { admin: { path: 'x7f2k9' } } }) as never,
+      },
+    })
+
+    const { signIn, write } = setup({ repositories: () => store })
+    const auth = await signIn()
+
+    const response = await write('POST', '/pages', { title: 'Panel', slug: 'x7f2k9' }, auth)
+
+    expect(response.status).toBe(409)
+    expect(((await response.json()) as { message: string }).message).toContain('/x7f2k9')
+  })
+
   it('allows a slug that only looks like one', async () => {
     const { signIn, write } = setup()
     const auth = await signIn()
