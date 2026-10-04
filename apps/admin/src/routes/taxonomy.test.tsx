@@ -164,6 +164,42 @@ describe('the taxonomy screen', () => {
     })
   })
 
+  it('refuses a slug another vocabulary already holds, before saving', async () => {
+    const second: Vocabulary = { ...VOCABULARY, id: 'v2', name: 'Topics' }
+    const foreign: Term = {
+      ...TERMS[0]!,
+      id: 't3',
+      vocabularyId: 'v2',
+      name: 'Engineering',
+      slug: 'engineering',
+    }
+    const createTerm = vi.fn(async (input: Term) => ({ ...TERMS[0], ...input, id: 't9' }))
+
+    renderPage(
+      withTaxonomy({
+        async readTaxonomy() {
+          return { vocabularies: [VOCABULARY, second], terms: [...TERMS, foreign] }
+        },
+        createTerm,
+      }),
+    )
+
+    await screen.findByTestId('term-tree')
+    await userEvent.click(screen.getByRole('button', { name: 'New term' }))
+
+    const form = await screen.findByTestId('term-editor')
+    await userEvent.type(within(form).getByLabelText('Name'), 'Engineering')
+
+    // The slug is derived from the name and already held by another vocabulary, so
+    // the field says so -- and the save is refused before any request goes out.
+    expect(within(form).getByText(/already used by/)).toBeTruthy()
+    const save = within(form).getByRole('button', { name: 'Create' })
+    expect(save).toHaveProperty('disabled', true)
+
+    await userEvent.click(save)
+    expect(createTerm).not.toHaveBeenCalled()
+  })
+
   it('creates a child under the row it was asked from', async () => {
     const createTerm = vi.fn(async (input: Term) => ({ ...TERMS[0], ...input, id: 't9' }))
     renderPage(withTaxonomy({ createTerm }))

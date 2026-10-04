@@ -110,6 +110,12 @@ export function TaxonomyPage(): ReactNode {
     () => data.terms.filter((term) => term.vocabularyId === selectedId),
     [data.terms, selectedId],
   )
+  // Every vocabulary's name, for the slug error that has to say where the other
+  // term lives -- the collision can be in a vocabulary this screen is not showing.
+  const vocabularyNames = useMemo(
+    () => Object.fromEntries(data.vocabularies.map((vocabulary) => [vocabulary.id, vocabulary.name])),
+    [data.vocabularies],
+  )
 
   // The delete confirmation names the vocabulary, and the term's names how much
   // content it would detach: a count is the difference between "are you sure" and
@@ -257,6 +263,8 @@ export function TaxonomyPage(): ReactNode {
                 <TermsPanel
                   vocabulary={selected}
                   terms={terms}
+                  allTerms={data.terms}
+                  vocabularyNames={vocabularyNames}
                   draft={draft}
                   onDraft={setDraft}
                   onDelete={(term) => void removeTerm(term)}
@@ -394,6 +402,8 @@ function VocabularyEditor({
 function TermsPanel({
   vocabulary,
   terms,
+  allTerms,
+  vocabularyNames,
   draft,
   onDraft,
   onDelete,
@@ -401,6 +411,9 @@ function TermsPanel({
 }: {
   vocabulary: Vocabulary
   terms: Term[]
+  /** Every term on the site, for the slug-uniqueness check. */
+  allTerms: Term[]
+  vocabularyNames: Record<string, string>
   draft: TermDraft | null
   onDraft: (draft: TermDraft | null) => void
   onDelete: (term: Term) => void
@@ -506,6 +519,8 @@ function TermsPanel({
           key={draft.id ?? `new:${draft.parentId}`}
           draft={draft}
           choices={choices}
+          allTerms={allTerms}
+          vocabularyNames={vocabularyNames}
           onCancel={() => onDraft(null)}
           onSave={async (saved) => {
             const body: TermWrite = {
@@ -539,11 +554,15 @@ function TermsPanel({
 function TermForm({
   draft,
   choices,
+  allTerms,
+  vocabularyNames,
   onSave,
   onCancel,
 }: {
   draft: TermDraft
   choices: Term[]
+  allTerms: Term[]
+  vocabularyNames: Record<string, string>
   onSave: (draft: TermDraft) => Promise<void>
   onCancel: () => void
 }): ReactNode {
@@ -552,6 +571,22 @@ function TermForm({
   const [saving, setSaving] = useState(false)
 
   const title = form.id === null ? t('taxonomy.addTerm') : t('taxonomy.editTerm')
+
+  // A term's slug is its archive address (`/category/{slug}`), so it has to be
+  // unique across the whole site -- not only inside this vocabulary. Checked here
+  // as well as on the server, so the refusal lands on the field instead of in a
+  // toast after a round trip. The other term may live in a vocabulary this screen
+  // is not showing, which is why the message names it.
+  const slug = form.slug.trim()
+  const clash =
+    slug === '' ? null : (allTerms.find((term) => term.slug === slug && term.id !== form.id) ?? null)
+  const slugError =
+    clash === null
+      ? undefined
+      : t('taxonomy.termSlug.taken', {
+          name: clash.name,
+          vocabulary: vocabularyNames[clash.vocabularyId] ?? '',
+        })
 
   return (
     <form
@@ -585,6 +620,7 @@ function TermForm({
         label={t('taxonomy.termSlug')}
         value={form.slug}
         hint={t('taxonomy.termSlug.hint')}
+        error={slugError}
         onChange={(value) => setForm((current) => ({ ...current, slug: value, slugTouched: true }))}
       />
 
@@ -618,7 +654,7 @@ function TermForm({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button type="submit" disabled={saving || form.name.trim() === '' || form.slug.trim() === ''}>
+        <Button type="submit" disabled={saving || form.name.trim() === '' || form.slug.trim() === '' || slugError !== undefined}>
           {form.id === null ? t('taxonomy.create') : t('taxonomy.save')}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>
