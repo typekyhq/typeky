@@ -217,6 +217,8 @@ export const es: Locale = {
   'media.viewSize': 'Tamaño',
   'media.viewDimensions': 'Dimensiones',
   'media.viewAlt': 'Texto alternativo',
+  'media.saveAlt': 'Guardar texto alternativo',
+  'media.altSaved': 'Texto alternativo guardado.',
   'media.uploading': 'Subiendo…',
   'media.searchPlaceholder': 'Nombre del archivo o texto alternativo',
   'media.empty': 'Todavía no hay medios. Sube el primero arriba.',

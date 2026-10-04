@@ -219,6 +219,8 @@ export const en: Locale = {
   'media.viewSize': 'Size',
   'media.viewDimensions': 'Dimensions',
   'media.viewAlt': 'Alt text',
+  'media.saveAlt': 'Save alt text',
+  'media.altSaved': 'Alt text saved.',
   'media.uploading': 'Uploading…',
   'media.searchPlaceholder': 'Filename or alt text',
   'media.empty': 'No media yet. Upload the first one above.',

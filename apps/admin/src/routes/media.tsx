@@ -48,6 +48,9 @@ export function MediaSection() {
    * it is a separate view.
    */
   const [viewing, setViewing] = useState<MediaItem | null>(null)
+  /** The alt text being edited in the viewer, which is not applied until saved. */
+  const [altDraft, setAltDraft] = useState('')
+  const [savingAlt, setSavingAlt] = useState(false)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -112,6 +115,27 @@ export function MediaSection() {
     }
   }
 
+  async function saveAlt(): Promise<void> {
+    if (viewing === null) return
+
+    setSavingAlt(true)
+
+    try {
+      // Empty means "no alt text", which is a real answer rather than a missing one:
+      // the filename takes over, and that is clearer than a sentence saying nothing.
+      const saved = await client.updateMedia(viewing.id, {
+        altText: altDraft.trim() === '' ? null : altDraft.trim(),
+      })
+      setViewing(saved)
+      setItems((current) => current.map((item) => (item.id === saved.id ? saved : item)))
+      toast.success(t('media.altSaved'))
+    } catch (thrown) {
+      toast.error(describeApiError(thrown, t))
+    } finally {
+      setSavingAlt(false)
+    }
+  }
+
   if (state === 'error') {
     return <ErrorState title={t('media.loadFailed')} description={error} onRetry={reload} />
   }
@@ -157,7 +181,10 @@ export function MediaSection() {
                 <li key={item.id} className="overflow-hidden rounded-md border">
                     <button
                       type="button"
-                      onClick={() => setViewing(item)}
+                      onClick={() => {
+                        setViewing(item)
+                        setAltDraft(item.altText ?? '')
+                      }}
                       aria-label={t('media.view', { name: item.altText ?? item.filename })}
                       className="block w-full focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                     >
@@ -229,14 +256,42 @@ export function MediaSection() {
                     </dd>
                   </>
                 )}
-
-                {viewing.altText !== null && (
-                  <>
-                    <dt className="text-muted-foreground">{t('media.viewAlt')}</dt>
-                    <dd>{viewing.altText}</dd>
-                  </>
-                )}
               </dl>
+
+              {/*
+                Editable rather than a read-only row: alt text is written for a screen
+                reader, and the line an operator had at upload time is often not the line
+                they want once they have seen the item in place. Clearing it is a real
+                answer, so empty saves as "none" rather than pretending the field was
+                never filled.
+              */}
+              <form
+                className="space-y-2"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void saveAlt()
+                }}
+              >
+                <Label htmlFor="media-alt">{t('media.viewAlt')}</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    id="media-alt"
+                    className="min-w-0 flex-1"
+                    maxLength={300}
+                    value={altDraft}
+                    disabled={savingAlt}
+                    onChange={(event) => setAltDraft(event.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={savingAlt || altDraft === (viewing.altText ?? '')}
+                  >
+                    {t('media.saveAlt')}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">{t('upload.alt.hint')}</p>
+              </form>
             </div>
           )}
         </SheetContent>

@@ -117,6 +117,7 @@ export function fakeApiClient(overrides: Partial<ApiClient> = {}): ApiClient {
     },
     uploadMedia: unexpected('uploadMedia'),
     mediaUsages: unexpected('mediaUsages'),
+    updateMedia: unexpected('updateMedia'),
     deleteMedia: unexpected('deleteMedia'),
     mediaContentUrl(id: string) {
       return `/api/admin/media/${id}/content`

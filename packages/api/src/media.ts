@@ -38,6 +38,20 @@ export const mediaListResponseSchema = z.object({
 export type MediaListResponse = z.infer<typeof mediaListResponseSchema>
 
 /**
+ * An edit to a stored item's metadata.
+ *
+ * Only the alt text: the bytes and their shape are set by the upload, and a client
+ * that could restate them could lie about what the file is. Null is allowed and means
+ * "no alt text", which is an answer rather than a missing field -- an operator clearing
+ * it should end up with nothing, not with the filename quietly taking its place.
+ */
+export const mediaMetadataSchema = z.object({
+  altText: z.nullable(z.string().check(z.maxLength(300))),
+})
+
+export type MediaMetadata = z.infer<typeof mediaMetadataSchema>
+
+/**
  * Where a piece of media is used.
  *
  * Shown before a delete rather than blocking it: the schema clears the

@@ -66,6 +66,21 @@ describe('media repository', () => {  it('inserts a row and reads it back with a
     expect((await media.list(ctx, { search: '   ' })).total).toBe(2)
   })
 
+  it('updates only the alt text and leaves the rest alone', async () => {
+    const { media } = setup()
+    const item = await media.insert(ctx, logo)
+
+    const saved = await media.update(ctx, item.id, { altText: 'A new description' })
+
+    expect(saved?.altText).toBe('A new description')
+    expect(saved?.storageKey).toBe('brand/logo.svg')
+    expect(saved?.byteSize).toBe(2048)
+    expect((await media.byId(ctx, item.id))?.altText).toBe('A new description')
+
+    // And "gone" is distinguishable from "saved", for a caller that raced a delete.
+    expect(await media.update(ctx, 'missing', { altText: null })).toBeNull()
+  })
+
   it('reports whether a delete removed anything', async () => {
     const { media } = setup()
     const item = await media.insert(ctx, logo)

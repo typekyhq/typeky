@@ -193,6 +193,18 @@ export interface MediaWrite {
   altText?: string | null
 }
 
+/**
+ * The metadata an edit may change.
+ *
+ * The bytes and the storage key are deliberately absent: those are what content
+ * references, and re-uploading is how they change. Alt text is the field a person
+ * comes back to fix, because it is written for a screen reader and that is rarely
+ * the sentence that was to hand at upload time.
+ */
+export interface MediaMetadataWrite {
+  altText: string | null
+}
+
 export interface PageWrite {
   id?: string
   title: string

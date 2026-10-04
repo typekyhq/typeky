@@ -217,6 +217,8 @@ export const fr: Locale = {
   'media.viewSize': 'Taille',
   'media.viewDimensions': 'Dimensions',
   'media.viewAlt': 'Texte alternatif',
+  'media.saveAlt': 'Enregistrer le texte alternatif',
+  'media.altSaved': 'Texte alternatif enregistré.',
   'media.uploading': 'Téléversement…',
   'media.searchPlaceholder': 'Nom de fichier ou texte alternatif',
   'media.empty': 'Aucun média. Téléversez le premier ci-dessus.',

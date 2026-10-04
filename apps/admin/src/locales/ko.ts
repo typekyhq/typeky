@@ -217,6 +217,8 @@ export const ko: Locale = {
   'media.viewSize': '크기',
   'media.viewDimensions': '치수',
   'media.viewAlt': '대체 텍스트',
+  'media.saveAlt': '대체 텍스트 저장',
+  'media.altSaved': '대체 텍스트를 저장했습니다.',
   'media.uploading': '업로드하는 중…',
   'media.searchPlaceholder': '파일 이름 또는 대체 텍스트',
   'media.empty': '아직 미디어가 없습니다. 위에서 첫 파일을 올리세요.',

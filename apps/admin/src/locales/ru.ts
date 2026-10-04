@@ -217,6 +217,8 @@ export const ru: Locale = {
   'media.viewSize': 'Размер',
   'media.viewDimensions': 'Размеры',
   'media.viewAlt': 'Alt-текст',
+  'media.saveAlt': 'Сохранить alt-текст',
+  'media.altSaved': 'Alt-текст сохранён.',
   'media.uploading': 'Загружаем…',
   'media.searchPlaceholder': 'Имя файла или alt-текст',
   'media.empty': 'Медиа пока нет. Загрузите первый файл выше.',

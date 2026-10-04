@@ -35,6 +35,7 @@ import {
   type LoginRequest,
   type MediaItem,
   type MediaListResponse,
+  type MediaMetadata,
   type MediaUsage,
   type PageListResponse,
   type PageResponse,
@@ -152,6 +153,8 @@ export interface ApiClient {
     details: { filename?: string; alt?: string; width?: number; height?: number },
   ): Promise<MediaItem>
   mediaUsages(id: string): Promise<MediaUsage>
+  /** Edits the alt text of a stored item. The bytes are not editable here. */
+  updateMedia(id: string, metadata: MediaMetadata): Promise<MediaItem>
   deleteMedia(id: string): Promise<void>
   /** Where the admin serves an item's bytes from. */
   mediaContentUrl(id: string): string
@@ -583,6 +586,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         mediaUsageSchema,
         await send('GET', `/media/${encodeURIComponent(id)}/usages`),
         'the usage response did not match the contract',
+      )
+    },
+
+    async updateMedia(id, metadata) {
+      return readContract(
+        mediaItemSchema,
+        await send('PATCH', `/media/${encodeURIComponent(id)}`, metadata),
+        'the media response did not match the contract',
       )
     },
 

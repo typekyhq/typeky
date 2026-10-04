@@ -1,4 +1,5 @@
 import {
+  mediaMetadataSchema,
   type MediaItem as MediaResponse,
   type MediaListResponse,
   type MediaUsage,
@@ -7,7 +8,7 @@ import { uuidv7 } from '@typeky/core'
 import { defaultContext, type MediaItem, type Repositories } from '@typeky/db'
 import type { BlobPort } from '@typeky/platform'
 import type { Context } from 'hono'
-import { apiError, type AdminEnv, type BlobResolver, type RepositoryResolver } from './errors'
+import { apiError, readJsonBody, type AdminEnv, type BlobResolver, type RepositoryResolver } from './errors'
 
 /**
  * The media library.
@@ -137,6 +138,35 @@ export async function uploadMedia(
   })
 
   return c.json(toResponse(item), 201)
+}
+
+/**
+ * Edits the metadata a person can change.
+ *
+ * Only the alt text. That is the one field worth coming back to: it is written for a
+ * screen reader, and the sentence an operator had at upload time is often not the
+ * sentence they want later. The bytes are not editable here -- replacing a file is an
+ * upload, which keeps the storage key and the object it points at in one piece.
+ */
+export async function updateMedia(
+  c: Context<AdminEnv>,
+  repositories: RepositoryResolver,
+): Promise<Response> {
+  const store = repositories(c.env)
+  if (store === null) return apiError(c, 'database_not_configured')
+
+  const item = await findMedia(store, c.req.param('id'))
+  if (item === null) return apiError(c, 'not_found', 'no media with that id')
+
+  const parsed = mediaMetadataSchema.safeParse(await readJsonBody(c.req.raw))
+  if (!parsed.success) {
+    return apiError(c, 'invalid_request', 'the alt text may be at most 300 characters')
+  }
+
+  const saved = await store.media.update(defaultContext(), item.id, parsed.data)
+  if (saved === null) return apiError(c, 'not_found', 'no media with that id')
+
+  return c.json(toResponse(saved))
 }
 
 /** The bytes, streamed back. Behind the session, like everything else here. */

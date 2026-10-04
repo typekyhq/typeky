@@ -19,6 +19,7 @@ import {
   readMedia,
   readMediaContent,
   readMediaUsages,
+  updateMedia,
   uploadMedia,
 } from './media'
 import {
@@ -278,6 +279,7 @@ export function createAdminApi(options: AdminApiOptions = {}): Hono<AdminEnv> {
   // the file's own; everything else about it is a query parameter.
   api.get('/media', (c) => readMedia(c, repositories))
   api.post('/media', (c) => uploadMedia(c, repositories, blobs))
+  api.patch('/media/:id', (c) => updateMedia(c, repositories))
   api.get('/media/:id/content', (c) => readMediaContent(c, repositories, blobs))
   api.get('/media/:id/usages', (c) => readMediaUsages(c, repositories))
   api.delete('/media/:id', (c) => deleteMedia(c, repositories, blobs))

@@ -217,6 +217,8 @@ export const ar: Locale = {
   'media.viewSize': 'الحجم',
   'media.viewDimensions': 'الأبعاد',
   'media.viewAlt': 'النص البديل',
+  'media.saveAlt': 'حفظ النص البديل',
+  'media.altSaved': 'حُفظ النص البديل.',
   'media.uploading': 'جارٍ الرفع…',
   'media.searchPlaceholder': 'اسم الملف أو النص البديل',
   'media.empty': 'لا وسائط بعد. ارفع أول ملف بالأعلى.',

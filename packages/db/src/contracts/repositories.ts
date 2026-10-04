@@ -16,6 +16,7 @@ import type {
   ListMediaQuery,
   ListQuery,
   MediaItem,
+  MediaMetadataWrite,
   MediaUsage,
   MediaWrite,
   Page,
@@ -100,6 +101,13 @@ export interface MediaRepository {
    * `cover_media_id` would quietly miss most of the places an image is used.
    */
   usages(ctx: TenantContext, id: string): Promise<MediaUsage>
+  /**
+   * Updates the part of an item a person edits. The bytes and the storage key are
+   * untouched -- editing is for the metadata the file itself does not carry. Returns
+   * null when there is no row with that id, so a caller that raced a delete can tell
+   * "gone" from "saved".
+   */
+  update(ctx: TenantContext, id: string, input: MediaMetadataWrite): Promise<MediaItem | null>
   /** Deleting media clears references to it rather than blocking the delete. */
   remove(ctx: TenantContext, id: string): Promise<boolean>
 }

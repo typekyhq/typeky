@@ -67,6 +67,14 @@ function fakeMediaRepository() {
     async usages(_ctx, id) {
       return (usages[id] ?? { total: 0, places: [] }) as never
     },
+    async update(_ctx, id, input) {
+      const existing = rows.get(id)
+      if (existing === undefined) return null
+
+      const saved = { ...existing, altText: input.altText }
+      rows.set(id, saved)
+      return saved
+    },
     async remove(_ctx, id) {
       return rows.delete(id)
     },
@@ -294,6 +302,98 @@ describe('reading back', () => {
 
     expect((await send('/media/ghost/content', undefined, auth.cookie)).status).toBe(404)
     expect((await send('/media/ghost/usages', undefined, auth.cookie)).status).toBe(404)
+  })
+})
+
+describe('editing the alt text', () => {
+  it('changes it and answers with the item', async () => {
+    const { signIn, upload, send, rows } = setup()
+    const auth = await signIn()
+    const created = (await (await upload(BYTES, { query: '?filename=photo.png&alt=old' }, auth)).json()) as {
+      id: string
+    }
+
+    const response = await send(
+      `/media/${created.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: auth.csrfToken },
+        body: JSON.stringify({ altText: 'a red bicycle' }),
+      },
+      auth.cookie,
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ altText: 'a red bicycle' })
+    expect([...rows.values()][0]!.altText).toBe('a red bicycle')
+  })
+
+  it('clears it when asked for none', async () => {
+    const { signIn, upload, send } = setup()
+    const auth = await signIn()
+    const created = (await (await upload(BYTES, { query: '?filename=photo.png&alt=old' }, auth)).json()) as {
+      id: string
+    }
+
+    const response = await send(
+      `/media/${created.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: auth.csrfToken },
+        body: JSON.stringify({ altText: null }),
+      },
+      auth.cookie,
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ altText: null })
+  })
+
+  it('refuses text longer than an upload would keep', async () => {
+    const { signIn, upload, send } = setup()
+    const auth = await signIn()
+    const created = (await (await upload(BYTES, {}, auth)).json()) as { id: string }
+
+    const response = await send(
+      `/media/${created.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: auth.csrfToken },
+        body: JSON.stringify({ altText: 'a'.repeat(301) }),
+      },
+      auth.cookie,
+    )
+
+    expect(response.status).toBe(400)
+  })
+
+  it('says so when there is nothing with that id', async () => {
+    const { signIn, send } = setup()
+    const auth = await signIn()
+
+    const response = await send(
+      '/media/ghost',
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', [CSRF_HEADER]: auth.csrfToken },
+        body: JSON.stringify({ altText: 'x' }),
+      },
+      auth.cookie,
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  it('needs a session', async () => {
+    const { send } = setup()
+
+    const response = await send('/media/ghost', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ altText: 'x' }),
+    })
+
+    expect(response.status).toBe(401)
   })
 })
 

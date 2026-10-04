@@ -19,6 +19,7 @@ export {
   type ListMediaQuery,
   type ListQuery,
   type MediaItem,
+  type MediaMetadataWrite,
   type MediaUsage,
   type MediaUsagePlace,
   type MediaWrite,

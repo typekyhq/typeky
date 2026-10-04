@@ -173,3 +173,61 @@ describe('uploading', () => {
     })
   })
 })
+
+/**
+ * Editing the alt text.
+ *
+ * The upload asks for one, but what an operator writes at upload time is a guess:
+ * the sentence worth keeping is usually the one written after seeing the image in
+ * place. The field lives in the larger view, beside the image it describes, and
+ * clearing it is a real answer rather than a missing one.
+ */
+describe('editing the alt text', () => {
+  function withUpdate() {
+    const updateMedia = vi.fn<ApiClient['updateMedia']>(async (id, metadata) => ({
+      ...ITEMS[0]!,
+      id,
+      altText: metadata.altText,
+    }))
+
+    return { updateMedia, client: withMedia({ updateMedia }) }
+  }
+
+  it('saves a new description and shows it in the open view', async () => {
+    const { updateMedia, client } = withUpdate()
+    renderSection(client)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Look at A tall screenshot' }))
+    const viewer = await screen.findByTestId('media-viewer')
+    const field = await screen.findByLabelText('Alt text')
+
+    // The field starts at what is stored, not empty.
+    expect(field).toHaveProperty('value', 'A tall screenshot')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'A phone on a desk')
+    await userEvent.click(screen.getByRole('button', { name: 'Save alt text' }))
+
+    await waitFor(() => {
+      expect(updateMedia).toHaveBeenCalledWith('media_one', { altText: 'A phone on a desk' })
+    })
+    // The open view carries the new text, from the one response rather than a reload.
+    // Queried inside the sheet: while it is open the page behind it is `aria-hidden`.
+    expect(within(viewer).getByRole('img', { name: 'A phone on a desk' })).toBeTruthy()
+  })
+
+  it('saves an empty field as no alt text, rather than leaving the old one', async () => {
+    const { updateMedia, client } = withUpdate()
+    renderSection(client)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Look at A tall screenshot' }))
+    const field = await screen.findByLabelText('Alt text')
+
+    await userEvent.clear(field)
+    await userEvent.click(screen.getByRole('button', { name: 'Save alt text' }))
+
+    await waitFor(() => {
+      expect(updateMedia).toHaveBeenCalledWith('media_one', { altText: null })
+    })
+  })
+})

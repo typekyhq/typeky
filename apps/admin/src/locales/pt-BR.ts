@@ -217,6 +217,8 @@ export const ptBR: Locale = {
   'media.viewSize': 'Tamanho',
   'media.viewDimensions': 'Dimensões',
   'media.viewAlt': 'Texto alternativo',
+  'media.saveAlt': 'Salvar texto alternativo',
+  'media.altSaved': 'Texto alternativo salvo.',
   'media.uploading': 'Enviando…',
   'media.searchPlaceholder': 'Nome do arquivo ou texto alternativo',
   'media.empty': 'Ainda não há mídia. Envie a primeira acima.',

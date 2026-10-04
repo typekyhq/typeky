@@ -113,9 +113,11 @@ export {
   MEDIA_USAGE_KINDS,
   mediaItemSchema,
   mediaListResponseSchema,
+  mediaMetadataSchema,
   mediaUsageSchema,
   type MediaItem,
   type MediaListResponse,
+  type MediaMetadata,
   type MediaUsage,
 } from './media'
 

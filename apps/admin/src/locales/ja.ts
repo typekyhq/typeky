@@ -217,6 +217,8 @@ export const ja: Locale = {
   'media.viewSize': 'サイズ',
   'media.viewDimensions': '寸法',
   'media.viewAlt': '代替テキスト',
+  'media.saveAlt': '代替テキストを保存',
+  'media.altSaved': '代替テキストを保存しました。',
   'media.uploading': 'アップロードしています…',
   'media.searchPlaceholder': 'ファイル名または代替テキスト',
   'media.empty': 'まだメディアがありません。上の欄から最初のひとつをアップロードしてください。',

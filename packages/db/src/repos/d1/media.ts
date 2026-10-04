@@ -4,6 +4,7 @@ import { resolveWindow } from '../../contracts'
 import type {
   ListMediaQuery,
   MediaItem,
+  MediaMetadataWrite,
   MediaRepository,
   MediaUsage,
   MediaWrite,
@@ -157,6 +158,16 @@ export function createMediaRepository(db: DbPort): MediaRepository {
       const saved = await findById(id)
       if (saved === null) throw new Error(`media ${id} disappeared during insert`)
       return saved
+    },
+
+    async update(_ctx: TenantContext, id: string, input: MediaMetadataWrite): Promise<MediaItem | null> {
+      // A whole-document write would have to restate the storage key and the byte
+      // size, which this call does not own; the metadata a person edits is the part
+      // that is safe to set on its own.
+      const changes = await db.run('UPDATE media SET alt_text = ? WHERE id = ?', [input.altText, id])
+      if (changes === 0) return null
+
+      return findById(id)
     },
 
     async remove(_ctx: TenantContext, id: string): Promise<boolean> {

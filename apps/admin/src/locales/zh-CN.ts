@@ -206,6 +206,8 @@ export const zhCN: Locale = {
   'media.viewSize': '大小',
   'media.viewDimensions': '尺寸',
   'media.viewAlt': '替代文本',
+  'media.saveAlt': '保存替代文本',
+  'media.altSaved': '替代文本已保存。',
   'media.uploading': '正在上传…',
   'media.searchPlaceholder': '文件名或替代文本',
   'media.empty': '还没有媒体。在上方上传第一个。',
