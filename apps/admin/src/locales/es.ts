@@ -499,6 +499,7 @@ export const es: Locale = {
   'theme.file.snippets.pagination': 'Los enlaces de más nueva/más vieja y el recuento de páginas bajo una lista.',
   'theme.file.snippets.cookie-consent': 'El aviso de cookies, mostrado hasta que un visitante lo acepta.',
   'theme.file.snippets.seo-meta': 'Lo que lee un buscador o un cliente de chat: título, descripción, Open Graph y datos estructurados.',
+  'theme.file.snippets.category-nav': 'Las categorías bajo las que se puede archivar un contenido, en la barra lateral de una lista.',
 
   // The theme screen.
   'theme.title': 'Tema',

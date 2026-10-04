@@ -178,6 +178,22 @@ async function writeTerm(
     if (existing === null) return apiError(c, 'not_found', 'no term with that id')
   }
 
+  // The archive URL is one segment (`/category/{slug}`), so a slug may be held by
+  // only one term on the whole site -- not merely by one term of this vocabulary,
+  // which is the constraint the table states. Without this check two vocabularies
+  // could hold the same slug and only one of them would ever be reachable.
+  const owner = await store.terms.bySlug(ctx, parsed.data.slug)
+  if (owner !== null && owner.id !== (id ?? '')) {
+    const holder = await store.vocabularies.byId(ctx, owner.vocabularyId)
+    return apiError(
+      c,
+      'slug_taken',
+      `The slug "${parsed.data.slug}" is already used by "${owner.name}"${
+        holder === null ? '' : ` in ${holder.name}`
+      }. A term's slug has to be unique across the site, because it is its address.`,
+    )
+  }
+
   try {
     const saved = await store.terms.upsert(ctx, {
       ...(id === undefined ? {} : { id }),

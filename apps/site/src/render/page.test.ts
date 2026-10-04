@@ -143,10 +143,12 @@ function setUp(
     // vocabulary names only when it has any to print.
     vocabularies: {
       async list() {
-        return [{ id: 'vocab_1', name: 'Categories' }]
+        return [{ id: 'vocab_1', name: 'Categories', contentTypes: ['post', 'product'] }]
       },
       async byId(_ctx: unknown, id: string) {
-        return id === 'vocab_1' ? { id: 'vocab_1', name: 'Categories', description: null } : null
+        return id === 'vocab_1'
+          ? { id: 'vocab_1', name: 'Categories', contentTypes: ['post', 'product'], description: null }
+          : null
       },
     },
     terms: {
@@ -293,14 +295,14 @@ describe('rendering the front page', () => {
   })
 })
 
-describe('breaking the site into categories', () => {
-  it('links every category from the header', async () => {
+describe('breaking a list into categories', () => {
+  it('offers the categories for the content type in a sidebar', async () => {
     const { render } = setUp({
-      pages: [page({ title: 'Home', slug: 'home', isHome: true })],
+      posts: [post({ title: 'Hello', slug: 'hello' })],
       taxonomyTerms: [term({ slug: 'news', name: 'News' })],
     })
 
-    const result = await render('/')
+    const result = await render('/posts')
 
     expect(result.status).toBe(200)
     expect(result.html).toContain('category-nav')
@@ -309,9 +311,19 @@ describe('breaking the site into categories', () => {
     expect(result.html).toMatch(/href="\/category\/news"[^>]*>News<\/a>/)
   })
 
-  it('renders no menu when the site keeps no taxonomy', async () => {
-    const { render } = setUp({ pages: [page({ title: 'Home', slug: 'home', isHome: true })] })
+  it('renders no sidebar when the site keeps no taxonomy', async () => {
+    const { render } = setUp({ posts: [post({ title: 'Hello', slug: 'hello' })] })
 
+    expect((await render('/posts')).html).not.toContain('category-nav')
+  })
+
+  it('keeps the categories off the front page', async () => {
+    const { render } = setUp({
+      pages: [page({ title: 'Home', slug: 'home', isHome: true })],
+      taxonomyTerms: [term({ slug: 'news', name: 'News' })],
+    })
+
+    // The menu belongs beside a list, not above every page.
     expect((await render('/')).html).not.toContain('category-nav')
   })
 })

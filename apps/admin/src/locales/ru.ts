@@ -499,6 +499,7 @@ export const ru: Locale = {
   'theme.file.snippets.pagination': 'Ссылки «новее» и «старее» и число страниц под списком.',
   'theme.file.snippets.cookie-consent': 'Уведомление о cookie: показывается, пока посетитель его не примет.',
   'theme.file.snippets.seo-meta': 'Что читает поисковик или клиент чата: заголовок, описание, Open Graph и структурированные данные.',
+  'theme.file.snippets.category-nav': 'Категории, под которые можно отнести материал, в боковой колонке рядом со списком.',
 
   // The theme screen.
   'theme.title': 'Тема',

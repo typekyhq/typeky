@@ -51,6 +51,7 @@ const SAMPLE_SITE: SiteInput = {
   taxonomy: [
     {
       name: 'Categories',
+      contentTypes: ['post', 'product'],
       terms: [
         { name: 'News', slug: 'news' },
         { name: 'Guides', slug: 'guides' },

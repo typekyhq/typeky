@@ -499,6 +499,7 @@ export const ja: Locale = {
   'theme.file.snippets.pagination': '一覧の下の「新しい／古い」リンクとページ数。',
   'theme.file.snippets.cookie-consent': 'Cookie の通知。訪問者が受け入れるまで表示されます。',
   'theme.file.snippets.seo-meta': '検索エンジンやチャットのクライアントが読むもの。タイトル、説明、Open Graph、構造化データ。',
+  'theme.file.snippets.category-nav': '一覧のサイドバーに表示する、コンテンツを分類できるカテゴリ。',
 
   // The theme screen.
   'theme.title': 'テーマ',

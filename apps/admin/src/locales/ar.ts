@@ -499,6 +499,7 @@ export const ar: Locale = {
   'theme.file.snippets.pagination': 'رابطا الأحدث/الأقدم وعدد الصفحات أسفل القائمة.',
   'theme.file.snippets.cookie-consent': 'إشعار ملفات تعريف الارتباط، يظهر حتى يقبله الزائر.',
   'theme.file.snippets.seo-meta': 'ما يقرأه محرك بحث أو عميل محادثة: العنوان، والوصف، وOpen Graph، والبيانات المنظَّمة.',
+  'theme.file.snippets.category-nav': 'التصنيفات التي يمكن إدراج المحتوى تحتها، في شريط جانبي بجانب القائمة.',
 
   // The theme screen.
   'theme.title': 'القالب',

@@ -501,6 +501,7 @@ export const en: Locale = {
   'theme.file.snippets.pagination': 'The newer/older links and the page count under a list.',
   'theme.file.snippets.cookie-consent': 'The cookie notice, shown until a visitor accepts it.',
   'theme.file.snippets.seo-meta': 'What a search engine or a chat client reads: title, description, Open Graph and structured data.',
+  'theme.file.snippets.category-nav': 'The categories a piece of content can be filed under, as the sidebar beside a list.',
 
   // The theme screen.
   'theme.title': 'Theme',

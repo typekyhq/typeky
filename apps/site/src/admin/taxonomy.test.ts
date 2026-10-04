@@ -304,6 +304,28 @@ describe('writing terms', () => {
     expect(await errorCode(response)).toBe('slug_taken')
   })
 
+  it('refuses a slug another vocabulary already holds', async () => {
+    const { asAdmin } = setup()
+    const call = await asAdmin()
+    const first = await makeVocabulary(call)
+    const second = await makeVocabulary(call, { name: 'Topics' })
+    await makeTerm(call, { vocabularyId: first.id, name: 'News', slug: 'news' })
+
+    const response = await call('POST', '/taxonomy/terms', {
+      vocabularyId: second.id,
+      name: 'News',
+      slug: 'news',
+    })
+
+    // The archive URL is one segment (`/category/{slug}`), so a term's slug has to
+    // be unique across the whole site, not only inside its own vocabulary -- without
+    // this, only one of the two could ever be reached.
+    expect(response.status).toBe(409)
+    const body = (await response.json()) as { error: string; message?: string }
+    expect(body.error).toBe('slug_taken')
+    expect(body.message).toContain('Categories')
+  })
+
   it('rejects a slug that is not a path segment', async () => {
     const { asAdmin } = setup()
     const call = await asAdmin()

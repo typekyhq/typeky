@@ -40,6 +40,13 @@ export interface TaxonomyTermForTemplates {
  */
 export interface TaxonomyForTemplates {
   name: string
+  /**
+   * The content types this vocabulary's terms may be attached to: `post` or
+   * `product`. A sidebar on the post list shows the vocabularies that name `post`,
+   * so an author can filter by what the page is about without the platform having
+   * to hand each page its own slice.
+   */
+  content_types: string[]
   terms: TaxonomyTermForTemplates[]
 }
 

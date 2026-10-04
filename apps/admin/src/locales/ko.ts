@@ -499,6 +499,7 @@ export const ko: Locale = {
   'theme.file.snippets.pagination': '목록 아래의 “새것/오래된 것” 링크와 쪽 수.',
   'theme.file.snippets.cookie-consent': '쿠키 알림. 방문자가 받아들일 때까지 보입니다.',
   'theme.file.snippets.seo-meta': '검색 엔진이나 채팅 클라이언트가 읽는 것. 제목, 설명, Open Graph, 구조화 데이터.',
+  'theme.file.snippets.category-nav': '목록 옆 사이드바로 보여 주는, 콘텐츠를 분류할 수 있는 카테고리.',
 
   // The theme screen.
   'theme.title': '테마',

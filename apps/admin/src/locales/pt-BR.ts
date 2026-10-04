@@ -499,6 +499,7 @@ export const ptBR: Locale = {
   'theme.file.snippets.pagination': 'Os links de mais novo/mais antigo e a contagem de páginas sob uma lista.',
   'theme.file.snippets.cookie-consent': 'O aviso de cookies, mostrado até um visitante aceitá-lo.',
   'theme.file.snippets.seo-meta': 'O que um buscador ou um cliente de conversa lê: título, descrição, Open Graph e dados estruturados.',
+  'theme.file.snippets.category-nav': 'As categorias sob as quais um conteúdo pode ser arquivado, na barra lateral de uma lista.',
 
   // The theme screen.
   'theme.title': 'Tema',

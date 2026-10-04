@@ -499,6 +499,7 @@ export const fr: Locale = {
   'theme.file.snippets.pagination': 'Les liens plus récent/plus ancien et le nombre de pages sous une liste.',
   'theme.file.snippets.cookie-consent': 'L’avis de cookies, affiché jusqu’à ce qu’un visiteur l’accepte.',
   'theme.file.snippets.seo-meta': 'Ce que lit un moteur de recherche ou un client de discussion : titre, description, Open Graph et données structurées.',
+  'theme.file.snippets.category-nav': 'Les catégories sous lesquelles un contenu peut être classé, en barre latérale de la liste.',
 
   // The theme screen.
   'theme.title': 'Thème',

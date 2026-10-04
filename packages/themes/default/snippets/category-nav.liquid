@@ -1,0 +1,29 @@
+{% comment %}
+  The categories a page's content type can be filed under, as a sidebar.
+
+  Filtered here rather than by the platform, because one `site.taxonomy` serves both
+  the post list and the product list: a page passes the type it is about and gets the
+  vocabularies that name it. Nothing renders when none do, which is what lets the
+  layout fall back to one column.
+{% endcomment %}
+{% assign matching = false %}
+{% for group in site.taxonomy %}
+  {% if group.content_types contains type %}{% assign matching = true %}{% endif %}
+{% endfor %}
+
+{% if matching %}
+  <nav class="category-nav" aria-label="Categories">
+    {% for group in site.taxonomy %}
+      {% if group.content_types contains type %}
+        <div class="category-group">
+          <p class="category-group-name">{{ group.name }}</p>
+          <ul>
+            {% for term in group.terms %}
+              <li><a href="{{ term.url | url }}">{{ term.name }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </nav>
+{% endif %}

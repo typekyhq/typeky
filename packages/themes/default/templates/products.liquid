@@ -1,14 +1,26 @@
 {% layout 'layouts/base' %}
-<header class="list-header">
-  <h1>{{ page.title | default: 'Products' }}</h1>
-</header>
+{% comment %}
+  The product list, with the product categories in a sidebar. The same snippet the
+  post list uses, given `product`.
+{% endcomment %}
+<div class="list-layout">
+  <div class="list-main">
+    <header class="list-header">
+      <h1>{{ page.title | default: 'Products' }}</h1>
+    </header>
 
-<ul class="product-list">
-  {% for product in content %}
-    <li>{% render 'snippets/product-card', product: product %}</li>
-  {% else %}
-    <li class="empty">No products have been published yet.</li>
-  {% endfor %}
-</ul>
+    <ul class="product-list">
+      {% for product in content %}
+        <li>{% render 'snippets/product-card', product: product %}</li>
+      {% else %}
+        <li class="empty">No products have been published yet.</li>
+      {% endfor %}
+    </ul>
 
-{% render 'snippets/pagination', page: page %}
+    {% render 'snippets/pagination', page: page %}
+  </div>
+
+  <aside class="list-side">
+    {% render 'snippets/category-nav', site: site, type: 'product' %}
+  </aside>
+</div>

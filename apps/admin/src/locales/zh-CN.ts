@@ -486,6 +486,7 @@ export const zhCN: Locale = {
   'theme.file.snippets.pagination': '列表下方的「更新/更早」链接与页码。',
   'theme.file.snippets.cookie-consent': 'Cookie 提示条，在访客接受之前一直显示。',
   'theme.file.snippets.seo-meta': '搜索引擎与聊天客户端读到的内容：标题、描述、Open Graph 与结构化数据。',
+  'theme.file.snippets.category-nav': '内容可归入的分类，作为列表页的侧边栏。',
 
   // The theme screen.
   'theme.title': '主题',

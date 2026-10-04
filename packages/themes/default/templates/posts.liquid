@@ -1,18 +1,31 @@
 {% layout 'layouts/base' %}
-<header class="list-header">
-  <h1>{{ page.title | default: 'Posts' }}</h1>
-</header>
+{% comment %}
+  The post list, with the post categories in a sidebar. The sidebar is the same
+  snippet the product list uses, given `post`; it renders nothing when the site
+  keeps no post categories, and the layout falls back to one column.
+{% endcomment %}
+<div class="list-layout">
+  <div class="list-main">
+    <header class="list-header">
+      <h1>{{ page.title | default: 'Posts' }}</h1>
+    </header>
 
-<ul class="post-list">
-  {% for post in content %}
-    <li>{% render 'snippets/post-card', post: post, site: site %}</li>
-  {% else %}
-    {% comment %}
-      `for ... else` rather than a length check: with an empty list there is
-      nothing to count, and this reads as what it is.
-    {% endcomment %}
-    <li class="empty">Nothing has been published yet.</li>
-  {% endfor %}
-</ul>
+    <ul class="post-list">
+      {% for post in content %}
+        <li>{% render 'snippets/post-card', post: post, site: site %}</li>
+      {% else %}
+        {% comment %}
+          `for ... else` rather than a length check: with an empty list there is
+          nothing to count, and this reads as what it is.
+        {% endcomment %}
+        <li class="empty">Nothing has been published yet.</li>
+      {% endfor %}
+    </ul>
 
-{% render 'snippets/pagination', page: page %}
+    {% render 'snippets/pagination', page: page %}
+  </div>
+
+  <aside class="list-side">
+    {% render 'snippets/category-nav', site: site, type: 'post' %}
+  </aside>
+</div>

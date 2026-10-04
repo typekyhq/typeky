@@ -33,7 +33,7 @@ export interface SiteInput {
   settings: Record<string, unknown>
   nav: { label: string; href: string; order: number }[]
   /** The site's vocabularies and their terms, in the order they are shown. */
-  taxonomy?: { name: string; terms: { name: string; slug: string }[] }[]
+  taxonomy?: { name: string; contentTypes: string[]; terms: { name: string; slug: string }[] }[]
   /**
    * Whether a licence removes the attribution.
    *
@@ -284,6 +284,9 @@ export function buildRenderContext(input: BuildContextInput): RenderContext {
         : {
             taxonomy: site.taxonomy.map((group) => ({
               name: decodeCharacterReferences(group.name),
+              // Defensive: a vocabulary row written before this field existed, or a
+              // caller that did not set it, must not take the whole site down.
+              content_types: Array.isArray(group.contentTypes) ? [...group.contentTypes] : [],
               terms: group.terms.map((term) => ({
                 name: decodeCharacterReferences(term.name),
                 slug: term.slug,

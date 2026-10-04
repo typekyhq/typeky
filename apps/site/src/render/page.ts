@@ -550,9 +550,12 @@ function siteInput(
 async function loadTaxonomy(
   store: Repositories,
   ctx: ReturnType<typeof defaultContext>,
-): Promise<{ name: string; terms: { name: string; slug: string }[] }[] | undefined> {
+): Promise<
+  { name: string; contentTypes: string[]; terms: { name: string; slug: string }[] }[] | undefined
+> {
   const vocabularies = await store.vocabularies.list(ctx)
-  const groups: { name: string; terms: { name: string; slug: string }[] }[] = []
+  const groups: { name: string; contentTypes: string[]; terms: { name: string; slug: string }[] }[] =
+    []
 
   for (const vocabulary of vocabularies) {
     const terms = await store.terms.list(ctx, vocabulary.id)
@@ -560,6 +563,7 @@ async function loadTaxonomy(
 
     groups.push({
       name: vocabulary.name,
+      contentTypes: [...vocabulary.contentTypes],
       terms: terms.map((term) => ({ name: term.name, slug: term.slug })),
     })
   }
