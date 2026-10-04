@@ -1,7 +1,7 @@
 import type { BrandingResponse, LoginRequest } from '@typeky/api'
 import { type FormEvent, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useApiClient } from '@/lib/client-context'
@@ -52,6 +52,8 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
     }
   }, [client])
 
+  // The name is not printed on the screen -- the card says what it is and nothing
+  // else -- but it is what the logo stands for, and what the tab is called.
   const name = brand !== null && brand.name !== '' ? brand.name : t('signIn.subtitle')
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -71,7 +73,12 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
   return (
     <main id="main" className="flex min-h-dvh items-center justify-center p-6">
       <Card className="w-full max-w-sm">
-        <CardHeader className="items-center text-center">
+        {/*
+          `justify-items-center` rather than `items-center`: the header is a grid, so
+          `items` aligns along the block axis and a logo with an intrinsic width would
+          sit at the start of its column. The title above the form is centred to match.
+        */}
+        <CardHeader className="justify-items-center text-center">
           {brand?.logoUrl != null && (
             <img
               src={brand.logoUrl}
@@ -83,7 +90,6 @@ export function SignInScreen({ onSubmit }: { onSubmit: (credentials: LoginReques
             />
           )}
           <CardTitle>{t('signIn.title')}</CardTitle>
-          <CardDescription>{name}</CardDescription>
         </CardHeader>
         <CardContent>
           <form

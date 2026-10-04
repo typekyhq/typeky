@@ -37,15 +37,18 @@ describe('the sign-in screen', () => {
     // The name, not the word "logo": a screen reader reads the name out, and a logo
     // is a picture of the name.
     expect(logo.getAttribute('alt')).toBe('Typeky Demo')
-    expect(screen.getByText('Typeky Demo')).toBeTruthy()
+    // The name is not printed as text: the card says what it is, and the logo says
+    // whose site it is.
+    expect(screen.queryByText('Typeky Demo')).toBeNull()
   })
 
-  it('names the platform when the site has no logo', async () => {
+  it('shows no logo when the site has none', async () => {
     renderScreen()
 
-    // No logo, and no empty <img> either: the panel's own name is what a deployment
-    // without branding shows.
-    expect(await screen.findByText('Typeky')).toBeTruthy()
+    // No logo, no empty <img>, and no placeholder name either: the card says what
+    // it is and nothing more. The form is the anchor -- "Sign in" is both the title
+    // and the button.
+    expect(await screen.findByLabelText('Username')).toBeTruthy()
     expect(screen.queryByTestId('sign-in-logo')).toBeNull()
   })
 
@@ -58,7 +61,7 @@ describe('the sign-in screen', () => {
       }),
     )
 
-    expect(await screen.findByText('Typeky admin')).toBeTruthy()
+    expect(await screen.findByLabelText('Username')).toBeTruthy()
     expect(screen.queryByTestId('sign-in-logo')).toBeNull()
   })
 })
