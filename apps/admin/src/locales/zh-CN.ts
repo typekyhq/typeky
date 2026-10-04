@@ -366,7 +366,7 @@ export const zhCN: Locale = {
   'settings.timezone': '站点时区',
   'settings.timezone.hint': '形如 Asia/Shanghai 的 IANA 时区。日期按它书写，与读者身在何处无关。',
   'settings.adminLanguage': '面板语言',
-  'settings.adminLanguage.hint': '这里只列出本面板已有译文的语言。目前内置一种。',
+  'settings.adminLanguage.hint': '这里只列出本面板已有译文的语言。加一种就是加一个文件。',
   'settings.adminDateFormat': '面板日期格式',
   'settings.adminDateFormat.preview': '→ {formatted}（你自己所在的时区）',
 

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ApiError, type ApiClient } from '@/lib/api-client'
 import { ApiClientProvider } from '@/lib/client-context'
 import { fakeApiClient } from '@/lib/testing'
+import { LOCALE_OPTIONS } from '@/locales'
 import { SettingsPage } from './settings'
 
 const SITE: SiteResponse = {
@@ -452,9 +453,11 @@ describe('language and dates', () => {
     const select = await screen.findByLabelText('Panel language')
     const options = [...select.querySelectorAll('option')].map((option) => option.getAttribute('value'))
 
-    // The list is what the panel can actually render, so it grows when a
-    // translation is added rather than when somebody wants one.
-    expect(options).toEqual(['en', 'zh-CN'])
+    // The list is what the panel can actually render, so it grows when a translation
+    // is added rather than when somebody wants one -- which is why the expectation is
+    // derived from the same source rather than written out here. Adding a language is
+    // adding a file, and this test should not have to hear about it.
+    expect(options).toEqual(LOCALE_OPTIONS.map((option) => option.value))
   })
 })
 

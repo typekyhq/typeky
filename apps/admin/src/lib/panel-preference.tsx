@@ -51,6 +51,19 @@ const LOCAL_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
  * not been saved yet -- and through the same zone, or the preview would be of a
  * different date than the one it is about to produce.
  */
+/**
+ * Whether a panel language is written right to left.
+ *
+ * A list rather than a property of the language file, because what it decides is the
+ * document's direction and not its words: a translation that got the layout wrong is
+ * a translation that is worse than the English it replaced.
+ */
+const RIGHT_TO_LEFT = new Set(['ar', 'fa', 'he', 'ur'])
+
+function isRightToLeft(language: string): boolean {
+  return RIGHT_TO_LEFT.has(language.split('-')[0]?.toLowerCase() ?? '')
+}
+
 export function formatLocal(value: string | null | undefined, format: string): string {
   return formatDate(value, format, { timeZone: LOCAL_ZONE })
 }
@@ -107,8 +120,16 @@ export function PanelPreferenceProvider({ children }: { children: ReactNode }) {
   // The panel's own `lang`, which is what a screen reader reads the interface
   // aloud in. It is the panel's language and not the site's: they are two
   // different readers.
+  //
+  // `dir` is set beside it, and that is the half that is easy to forget: Arabic is
+  // written right to left, and a panel that kept a left-to-right layout would put
+  // the interface in the wrong place rather than merely in the wrong words. What
+  // this does *not* do is mirror the components -- Tailwind's physical utilities
+  // (`px-`, `ml-`, and the drawn chevron on a select) still point the way they were
+  // written, so a full right-to-left pass is still owed.
   useEffect(() => {
     document.documentElement.lang = language
+    document.documentElement.dir = isRightToLeft(language) ? 'rtl' : 'ltr'
   }, [language])
 
   return (

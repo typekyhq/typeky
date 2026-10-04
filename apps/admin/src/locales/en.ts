@@ -382,7 +382,7 @@ export const en: Locale = {
     'An IANA zone such as Asia/Shanghai. Dates are written in it, wherever the reader is.',
   'settings.adminLanguage': 'Panel language',
   'settings.adminLanguage.hint':
-    'Only the languages this panel has been translated into appear here. It ships with one.',
+    'Only the languages this panel has been translated into appear here. Adding one is adding a file.',
   'settings.adminDateFormat': 'Panel date format',
   'settings.adminDateFormat.preview': '→ {formatted} in your own time zone',
 
